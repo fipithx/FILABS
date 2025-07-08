@@ -1,5 +1,23 @@
 {% extends "base.html" %}
 
+{% block title %}
+    {% if request.endpoint == 'agents.dashboard' %}
+        {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
+    {% elif request.endpoint == 'agents.assist_trader_records' %}
+        {{ t('agents_assist_trader_records', default='Assist Trader Records') }} - FiCore
+    {% elif request.endpoint == 'agents.generate_trader_report' %}
+        {{ t('reports_generate_trader_report', default='Generate Trader Report') }} - FiCore
+    {% elif request.endpoint == 'agents.manage_tokens' %}
+        {{ t('agents_manage_tokens', default='Manage Tokens') }} - FiCore
+    {% elif request.endpoint == 'agents.my_activity' %}
+        {{ t('agents_my_activity', default='My Activity') }} - FiCore
+    {% elif request.endpoint == 'agents.register_trader' %}
+        {{ t('agents_register_trader', default='Register Trader') }} - FiCore
+    {% else %}
+        {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
+    {% endif %}
+{% endblock %}
+
 {% macro page_header(title, show_back_button=true) %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ t(title, default=title|replace('_', ' ')|title) }}</h1>
@@ -158,7 +176,6 @@
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
             {% if request.endpoint == 'agents.dashboard' %}
-                {% block title %}{{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore{% endblock %}
                 {{ page_header('agents_dashboard') }}
 
                 <!-- Performance Metrics -->
@@ -168,7 +185,7 @@
                             <div class="card-body">
                                 <h5 class="card-title text-primary">{{ t('agents_traders_registered', default='Traders Registered') }}</h5>
                                 <h2 class="card-text" id="traders-registered">{{ traders_registered }}</h2>
-                                <small class="text-muted">{{ t('agents_total_registered', default='Total registered') }}</small>
+                                <small class="text-muted">{{ t('agents_total_registered', default='Total Host registered') }}</small>
                             </div>
                         </div>
                     </div>
@@ -288,7 +305,6 @@
                 </div>
 
             {% elif request.endpoint == 'agents.assist_trader_records' %}
-                {% block title %}{{ t('agents_assist_trader_records', default='Assist Trader Records') }} - FiCore{% endblock %}
                 {{ page_header('agents_assist_trader_records') }}
                 {{ trader_info(trader) }}
                 {{ quick_actions(trader._id) }}
@@ -407,7 +423,6 @@
                 </div>
 
             {% elif request.endpoint == 'agents.generate_trader_report' %}
-                {% block title %}{{ t('reports_generate_trader_report', default='Generate Trader Report') }} - FiCore{% endblock %}
                 {{ page_header('reports_generate_trader_report') }}
                 {{ trader_info(trader) }}
 
@@ -560,7 +575,6 @@
                 </div>
 
             {% elif request.endpoint == 'agents.manage_tokens' %}
-                {% block title %}{{ t('agents_manage_tokens', default='Manage Tokens') }} - FiCore{% endblock %}
                 {{ page_header('agents_manage_tokens') }}
 
                 <div class="row justify-content-center">
@@ -642,7 +656,6 @@
                 </div>
 
             {% elif request.endpoint == 'agents.my_activity' %}
-                {% block title %}{{ t('agents_my_activity', default='My Activity') }} - FiCore{% endblock %}
                 {{ page_header('agents_my_activity') }}
 
                 <!-- Performance Metrics -->
@@ -798,7 +811,6 @@
                 {% endif %}
 
             {% elif request.endpoint == 'agents.register_trader' %}
-                {% block title %}{{ t('agents_register_trader', default='Register Trader') }} - FiCore{% endblock %}
                 {{ page_header('agents_register_trader') }}
 
                 <div class="row justify-content-center">
@@ -862,9 +874,9 @@
                                         {% if form.industry.errors %}
                                             {% for error in form.industry.errors %}
                                                 <div class="invalid-feedback d-block">{{ error }}</div>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
                                     
                                     <div class="alert alert-info">
                                         <i class="bi bi-info-circle me-2"></i>
