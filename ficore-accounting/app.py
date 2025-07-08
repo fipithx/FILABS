@@ -1337,18 +1337,6 @@ def create_app():
     mongo_client_closed = False
 
     @app.teardown_appcontext
-    def cleanup_mongo_client(exception):
-        nonlocal mongo_client_closed
-        mongo = app.extensions.get('mongo')
-        if mongo and not mongo_client_closed:
-            try:
-                mongo.close()
-                logger.info('MongoDB client closed')
-                mongo_client_closed = True
-            except Exception as e:
-                logger.error(f'MongoDB close error: {str(e)}')
-
-    @app.teardown_appcontext
     def cleanup_scheduler(exception):
         nonlocal scheduler_shutdown_done
         scheduler = app.config.get('SCHEDULER')
