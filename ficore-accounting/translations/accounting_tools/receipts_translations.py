@@ -4,7 +4,7 @@ Receipt management translations for accounting tools
 
 RECEIPTS_TRANSLATIONS = {
     'en': {
-        'receipts_dashboard': 'Manage and track the money you received',
+        'receipts_dashboard': 'Receipts',
         'receipts_list': 'Receipts List',
         # Receipts
         'receipts_payer_name': 'Payer Name',
@@ -22,7 +22,7 @@ RECEIPTS_TRANSLATIONS = {
         'receipts_customer': 'Customer',
         'receipts_amount': 'Amount',
         'receipts_payment_method': 'Payment Method',
-        'receipts_description': 'Description',
+        'receipts_description': 'Track incoming money',
         'receipts_items': 'Items',
         'receipts_quantity': 'Quantity',
         'receipts_unit_price': 'Unit Price',
@@ -56,7 +56,7 @@ RECEIPTS_TRANSLATIONS = {
         'receipts_monthly_receipts': 'Monthly Receipts',
     },
     'ha': {
-        'receipts_dashboard': 'Kula da Shigar Kudi',
+        'receipts_dashboard': 'Shigar Kudi',
         'receipts_list': 'Jerin Rasit',
         'receipts_add_receipt': 'Ƙara Rasit',
         'receipts_edit_receipt': 'Gyara Rasit',
