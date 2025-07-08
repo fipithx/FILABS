@@ -994,14 +994,14 @@ def create_app():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
                 creditors_pipeline = [
-                    {'$match': [{'user_id': user_id}, {'type': 'creditor'}]},
-                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
+                    {'$match': {'user_id': user_id}, {'type': 'creditor'}},
+                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
                 ]
                 creditors_result = list(db.records.aggregate([creditors_pipeline]))
                 total_i_owe = creditors_result[0]['total'] if creditors_result else 0
                 debtors_pipeline = [
-                    {'$match': [{'user_id': user_id}, {'type': 'debtor'}]},
-                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
+                    {'$match': {'user_id': user_id}, {'type': 'debtor'}},
+                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
                 ]
                 debtors_result = list(db.records.aggregate([debtors_pipeline]))
                 total_i_am_owed = debtors_result[0]['total'] if debtors_result else 0
@@ -1025,13 +1025,13 @@ def create_app():
                 month_start = datetime.datetime(now.year, now.month, 1)
                 next_month_end = month_start.month + 1 if month_start.month < 12 else datetime(month_start.year + 1, 1, 1)
                 receipts_pipeline = [
-                    {'$match': [{'user_id': user_id}, {'type': 'receipt'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}]},
-                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
+                    {'$match': {'user_id': user_id}, {'type': 'receipt'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}},
+                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
                 ]
                 receipts_result = list(db.cashflows.aggregate([receipts_pipeline]))
                 total_receipts = receipts_result[0]['total'] if receipts_result else 0
                 payments_pipeline = [
-                    {'$match': [{'user_id': user_id}, {'type': 'payment'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}]},
+                    {'$match': {'user_id': user_id}, {'type': 'payment'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}},
                     {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
                 ]
                 payments_result = list(db.cashflows.aggregate([payments_pipeline]))
@@ -1058,10 +1058,10 @@ def create_app():
                     {'$match': {'user_id': user_id}},
                     {'$addFields': {
                         'item_total': {
-                            '$multiply': [{'$item_qty': 1}, {'$default_price': 0}]
+                            '$multiply': {'$item_qty': 1}, {'$default_price': 0}
                         }
                     }},
-                    {'$group': [{'id': None}, {'totalValue': {'$sum': '$item_total'}}]}
+                    {'$group': {'id': None}, {'totalValue': {'$sum': '$item_total'}}}
                 ]
                 result = list(db.inventory.aggregate([pipeline]))
                 total_value = result[0]['totalValue'] if result else 0
