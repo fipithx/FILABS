@@ -1306,7 +1306,7 @@ def create_app():
         logger.error(f'Not found: {request.url}')
         try:
             return render_template(
-                'error/404.html', 
+                'personal/GENERAL/404.html', 
                 error=str(e), 
                 title=utils.trans('not_found', lang=session.get('lang', 'en'))
             ), 404
