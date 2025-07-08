@@ -12,7 +12,6 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
-import atexit
 from functools import wraps
 from mailersend_email import init_email_config
 from scheduler_setup import init_scheduler
@@ -291,7 +290,6 @@ def create_app():
             except Exception as e:
                 logger.error(f'Error closing MongoDB client: {str(e)}', exc_info=True)
         
-        atexit.register(shutdown_mongo_client)
     except Exception as e:
         logger.error(f'MongoDB connection test failed: {str(e)}', exc_info=True)
         raise RuntimeError(f'Failed to connect to MongoDB: {str(e)}')
@@ -348,7 +346,6 @@ def create_app():
                         logger.info('Scheduler shutdown successfully')
                 except Exception as e:
                     logger.error(f'Error shutting down scheduler: {str(e)}', exc_info=True)
-            atexit.register(shutdown_scheduler)
 
             # Initialize personal finance collections
             personal_finance_collections = [
@@ -683,11 +680,11 @@ def create_app():
                         {
                             "endpoint": "coins.history",
                             "label": "Coins",
-                            "label_key": "coins_dashboard",
-                            "description_key": "coins_dashboard_desc",
+                            "label_key": "proof_coins_dashboard",
+                            "description_key": "proof_coins_desc",
                             "tooltip_key": "coins_tooltip",
                             "icon": "bi-coin",
-                            "category": "Agent"
+                            "category": "Proof of Concept"
                         },
                         {
                             "endpoint": "news_bp.news_list",
@@ -696,7 +693,7 @@ def create_app():
                             "description_key": "news_list_desc",
                             "tooltip_key": "news_tooltip",
                             "icon": "bi-newspaper",
-                            "category": "Agent"
+                            "category": "News'
                         }
                     ])
 
@@ -709,7 +706,7 @@ def create_app():
                 # Removed excessive debug logging to reduce noise
                 logger.info('Navigation data injected for template rendering')
         except Exception as e:
-            logger.error(f'Error in inject_role_nav: {str(e)}', exc_info=True)
+            logger.error(f'Error in inject_role_nav: {str(e)})', exc_info=True)
 
         return dict(
             tools_for_template=tools_for_template,
@@ -747,7 +744,7 @@ def create_app():
             'current_lang': lang,
             'current_user': current_user if has_request_context() else None,
             'available_languages': [
-                {'code': code, 'name': utils.trans(f'general_{code}', lang=lang, default=code.capitalize())}
+                {'code': code, 'name': utils.trans(f'lang_{code}', lang=lang, default=code.capitalize())}
                 for code in supported_languages
             ]
         }
@@ -755,19 +752,19 @@ def create_app():
     # Security headers
     @app.after_request
     def add_security_headers(response):
-        if not request.path.startswith('/static'):
+        if not request.path.startswith('/api'):
             response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-            "img-src 'self' data:; "
-            "connect-src 'self' https://api.ficore.app; "
-            "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com;"
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com/ajax/libs;"
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com/ajax/libs;"
+            "img-src 'self' data:image/*;"
+            "connect-src 'self' https://api.ficore.app;"
+            "font-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com;"
         )
-        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Strict-Transport-Security'] = 'max-age=3600; includeSubDomains'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         return response
     
@@ -796,20 +793,20 @@ def create_app():
                 
                 return jsonify({
                     'success': True, 
-                    'message': utils.trans('general_language_changed', lang=new_lang)
+                    'message': utils.trans('lang_change_success', lang=new_lang)
                 })
             else:
                 logger.warning(f'Invalid language requested: {new_lang}')
                 return jsonify({
                     'success': False, 
-                    'message': utils.trans('general_invalid_language')
+                    'message': utils.trans('lang_invalid')
                 }), 400
         except Exception as e:
             logger.error(f'Error changing language: {str(e)}', 
                         extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
             return jsonify({
                 'success': False, 
-                'message': utils.trans('general_error')
+                'message': utils.trans('error_general')
             }), 500
     
     # Routes
@@ -825,14 +822,14 @@ def create_app():
             if current_user.role == 'agent':
                 return redirect(url_for('agents_bp.agent_portal'))
             elif current_user.role == 'trader':
-                return redirect(url_for('general_bp.home'))
+                return redirect(url_for('general'))
             elif current_user.role == 'admin':
                 try:
-                    return redirect(url_for('admin.dashboard'))
+                    return redirect(url_for('dashboard'))
                 except:
-                    return redirect(url_for('general_bp.home'))
+                    return redirect(url_for('general'))
             elif current_user.role == 'personal':
-                return redirect(url_for('personal.index'))
+                return redirect(url_for('personal_info'))
         try:
             with app.app_context():
                 courses = app.config.get('COURSES', [])
@@ -841,39 +838,39 @@ def create_app():
                 'personal/GENERAL/index.html',
                 courses=courses,
                 sample_courses=courses,
-                title=utils.trans('general_welcome', lang=lang),
-                is_anonymous=session.get('is_anonymous', False),
+                title=utils.trans('welcome', lang=lang),
+                is_anonymous=True,
                 is_public=True
             )
         except TemplateNotFound as e:
-            logger.error(f'Template not found: {str(e)}', exc_info=True)
-            flash(utils.trans('general_error', default='Template not found'), 'danger')
+            logger.error(f'Template not found: {str(e)}')
+            flash(utils.error('template_not_found'), 'danger')
             return render_template(
-                'personal/GENERAL/error.html',
+                'general/error.html',
                 error=str(e),
-                title=utils.trans('general_welcome', lang=lang)
+                title=utils.trans('error')
             ), 404
         except Exception as e:
-            logger.error(f'Error in index route: {str(e)}', exc_info=True)
-            flash(utils.trans('general_error', default='An error occurred'), 'danger')
+            logger.error(f'Error rendering index: {str(e)}')
+            flash(utils.error(f'error: {str(e)}'), 'danger')
             try:
                 return render_template(
-                    'errors/500.html',
+                    'error/500.html',
                     error=str(e),
-                    title=utils.trans('general_error', lang=lang)
+                    title=utils.trans('error')
                 ), 500
             except TemplateNotFound as e:
-                logger.error(f'Template not found: {str(e)}', exc_info=True)
+                logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'personal/GENERAL/error.html',
+                    'general/error.html',
                     error=str(e),
-                    title=utils.trans('general_error', lang=lang)
+                    title=utils.trans('error')
                 ), 500
     
     @app.route('/general_dashboard')
     @ensure_session_id
     def general_dashboard():
-        logger.info(f'Redirecting to unified dashboard for {"authenticated" if current_user.is_authenticated else "anonymous"} user', 
+        logger.info(f'Redirecting to unified dashboard for {"authenticated" if current_user.is_authenticated else "anonymous"}', 
                     extra={'ip_address': request.remote_addr})
         return redirect(url_for('dashboard_bp.index'))
     
@@ -881,8 +878,7 @@ def create_app():
     @ensure_session_id
     def business_agent_home():
         lang = session.get('lang', 'en')
-        logger.info(f'Serving business/agent home page, authenticated: {current_user.is_authenticated}', 
-                    extra={'ip_address': request.remote_addr})
+        logger.info(f'Serving business-agent home, authenticated: {current_user.is_authenticated}')
         if current_user.is_authenticated:
             if current_user.role == 'agent':
                 return redirect(url_for('agents_bp.agent_portal'))
@@ -890,44 +886,44 @@ def create_app():
                 try:
                     return render_template(
                         'general/home.html',
-                        title=utils.trans('general_business_home', lang=lang)
+                        title=utils.trans('business_home', lang=lang)
                     )
                 except TemplateNotFound as e:
-                    logger.error(f'Template not found: {str(e)}', exc_info=True)
+                    logger.error(f'Template not found: {str(e)}')
                     return render_template(
-                        'personal/GENERAL/error.html',
+                        'general/error.html',
                         error=str(e),
-                        title=utils.trans('general_business_home', lang=lang)
+                        title=utils.trans('business_home', lang=lang)
                     ), 404
             else:
-                flash(utils.trans('general_no_permission', default='You do not have permission to access this page.'), 'danger')
+                flash(utils.trans('no_permission'), 'error')
                 return redirect(url_for('index'))
         try:
-            logger.info('Rendering public business-agent-home page')  # Changed from debug to info
+            logger.info('Serving public business-agent-home')
             return render_template(
                 'general/home.html',
                 is_public=True,
-                title=utils.trans('general_business_home', lang=lang)
+                title=utils.trans('business_home', lang=lang)
             )
         except TemplateNotFound as e:
-            logger.error(f'Template not found: {str(e)}', exc_info=True)
+            logger.error(f'Template not found: {str(e)}')
             return render_template(
-                'personal/GENERAL/error.html',
+                'general/error.html',
                 error=str(e),
-                title=utils.trans('general_business_home', lang=lang)
+                title=utils.trans('business_home', lang=lang)
             ), 404
     
     @app.route('/health')
     @utils.limiter.limit('10 per minute')
     def health():
-        logger.info('Health check')  # Changed from debug to info
+        logger.info('Performing health check')
         status = {'status': 'healthy'}
         try:
             with app.app_context():
                 app.extensions['mongo'].admin.command('ping')
             return jsonify(status), 200
         except Exception as e:
-            logger.error(f'Health check failed: {str(e)}', exc_info=True)
+            logger.error(f'Health check failed: {str(e)}')
             status['status'] = 'unhealthy'
             status['details'] = str(e)
             return jsonify(status), 500
@@ -938,7 +934,7 @@ def create_app():
         try:
             supported_languages = app.config.get('SUPPORTED_LANGUAGES', ['en', 'ha'])
             if lang not in supported_languages:
-                return jsonify({'error': utils.trans('general_invalid_language')}), 400
+                return jsonify({'error': utils.trans('invalid_language')}), 400
             
             all_translations = get_all_translations()
             result = {}
@@ -948,9 +944,8 @@ def create_app():
             
             return jsonify({'translations': result})
         except Exception as e:
-            logger.error(f'API translations error: {str(e)}', 
-                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error')}), 500
+            logger.error(f'Translation API error: {str(e)}')
+            return jsonify({'error': utils.trans('error')}), 500
     
     @app.route('/api/translate')
     @utils.limiter.limit('10 per minute')
@@ -960,16 +955,15 @@ def create_app():
             lang = request.args.get('lang', session.get('lang', 'en'))
             supported_languages = app.config.get('SUPPORTED_LANGUAGES', ['en', 'ha'])
             if not key:
-                return jsonify({'error': utils.trans('general_missing_key')}), 400
+                return jsonify({'error': utils.trans('missing_key')}), 400
             if lang not in supported_languages:
-                return jsonify({'error': utils.trans('general_invalid_language')}), 400
+                return jsonify({'error': utils.trans('invalid_language')}), 400
             
             translation = utils.trans(key, lang=lang)
             return jsonify({'key': key, 'translation': translation, 'lang': lang})
         except Exception as e:
-            logger.error(f'API translate error: {str(e)}', 
-                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error')}), 500
+            logger.error(f'Translate API error: {str(e)}')
+            return jsonify({'error': utils.trans('error')}), 500
     
     @app.route('/set_language/<lang>')
     @utils.limiter.limit('10 per minute')
@@ -980,15 +974,17 @@ def create_app():
             session['lang'] = new_lang
             with app.app_context():
                 if current_user.is_authenticated:
-                    app.extensions['mongo']['ficodb'].users.update_one({'_id': current_user.id}, {'$set': {'language': new_lang}})
-            logger.info(f'Language set to {new_lang}', extra={'ip_address': request.remote_addr})
-            flash(utils.trans('general_language_changed', default='Language updated successfully'), 'success')
+                    app.extensions['mongo']['ficodb'].users.update_one({'user_id': id}, {'$set': {'lang': new_lang}})
+                except Exception as e:
+                    logger.warning(f'Could not update user language: {str(e)}')
+            logger.info(f'Set language to {new_lang}')
+            flash(utils.trans('lang_updated'), 'success')
         except Exception as e:
-            logger.error(f'Session operation failed: {str(e)}', extra={'ip_address': request.remote_addr})
-            flash(utils.trans('general_invalid_language', default='Invalid language'), 'danger')
-        return redirect(request.referrer or url_for('index'))
-        
-    # Accounting API routes (for non-personal users)
+            logger.error(f'Session error: {str(e)}')
+            flash(utils.trans('invalid_lang'), 'danger')
+        return redirect(request.referer or url_for('index'))
+    
+    # Accounting API routes
     @app.route('/api/debt-summary')
     @login_required
     @utils.limiter.limit('10 per minute')
@@ -998,47 +994,47 @@ def create_app():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
                 creditors_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'creditor'}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount_owed'}}}
+                    {'$match': [{'user_id': user_id}, {'type': 'creditor'}]},
+                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
                 ]
-                creditors_result = list(db.records.aggregate(creditors_pipeline))
+                creditors_result = list(db.records.aggregate([creditors_pipeline]))
                 total_i_owe = creditors_result[0]['total'] if creditors_result else 0
                 debtors_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'debtor'}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount_owed'}}}
+                    {'$match': [{'user_id': user_id}, {'type': 'debtor'}]},
+                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
                 ]
-                debtors_result = list(db.records.aggregate(debtors_pipeline))
+                debtors_result = list(db.records.aggregate([debtors_pipeline]))
                 total_i_am_owed = debtors_result[0]['total'] if debtors_result else 0
                 return jsonify({
                     'totalIOwe': total_i_owe,
                     'totalIAmOwed': total_i_am_owed
                 })
         except Exception as e:
-            logger.error(f'Error fetching debt summary: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch debt summary')}), 500
+            logger.error(f'Debt summary error: {str(e)}')
+            return jsonify({'error': utils.trans('debt_summary_error')}), 500
     
-    @app.route('/api/cashflow-summary')
+    @app.route('/api/cashflow')
     @login_required
     @utils.limiter.limit('10 per minute')
     def cashflow_summary():
         try:
             with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                now = datetime.utcnow()
-                month_start = datetime(now.year, now.month, 1)
-                next_month = month_start.replace(month=month_start.month + 1) if month_start.month < 12 else month_start.replace(year=month_start.year + 1, month=1)
+                db = app.extensions.get['mongo']['ficodb']
+                user_id = current_user.user_id
+                now = datetime.now()
+                month_start = datetime.now.year, month_start.month, 1)
+                next_month_end = month_start.month + 1 if month_start.month < 12 else datetime(month_start.year + 1, 1, 1)
                 receipts_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'receipt', 'created_at': {'$gte': month_start, '$lt': next_month}}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
+                    {'$match': [{'user_id': user_id}, {'type': 'receipt'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}]},
+                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
                 ]
-                receipts_result = list(db.cashflows.aggregate(receipts_pipeline))
+                receipts_result = list(db.cashflows.aggregate([receipts_pipeline]))
                 total_receipts = receipts_result[0]['total'] if receipts_result else 0
                 payments_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'payment', 'created_at': {'$gte': month_start, '$lt': next_month}}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
+                    {'$match': [{'user_id': user_id}, {'type': 'payment'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}]},
+                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
                 ]
-                payments_pipeline = list(db.cashflows.aggregate(payments_pipeline))
+                payments_result = list(db.cashflows.aggregate([payments_pipeline]))
                 total_payments = payments_result[0]['total'] if payments_result else 0
                 net_cashflow = total_receipts - total_payments
                 return jsonify({
@@ -1047,8 +1043,8 @@ def create_app():
                     'totalPayments': total_payments
                 })
         except Exception as e:
-            logger.error(f'Error fetching cashflow summary: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch cashflow summary')}), 500
+            logger.error(f'Cashflow summary error: {str(e)}')
+            return jsonify({'error': utils.trans('cashflow_error')}), 500
     
     @app.route('/api/inventory-summary')
     @login_required
@@ -1061,23 +1057,20 @@ def create_app():
                 pipeline = [
                     {'$match': {'user_id': user_id}},
                     {'$addFields': {
-                        'item_group': {
-                            '$multiply': [
-                                '$qty',
-                                {'$ifNull': ['$buying_price', 0]}
-                            ]
+                        'item_total': {
+                            '$multiply': [{'$item_qty': 1}, {'$default_price': 0}]
                         }
                     }},
-                    {'$group': {'_id': None, 'totalValue': {'$sum': '$item_group'}}}
+                    {'$group': [{'id': None}, {'totalValue': {'$sum': '$item_total'}}]}
                 ]
-                result = list(db.inventory.aggregate(pipeline))
+                result = list(db.inventory.aggregate([pipeline]))
                 total_value = result[0]['totalValue'] if result else 0
                 return jsonify({
                     'totalValue': total_value
                 })
         except Exception as e:
-            logger.error(f'Error fetching inventory summary: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch inventory summary')}), 500
+            logger.error(f'Inventory summary error: {str(e)}')
+            return jsonify({'error': utils.trans('inventory_error')}), 500
     
     @app.route('/api/recent-activity')
     @login_required
@@ -1088,9 +1081,7 @@ def create_app():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
                 activities = []
-                recent_records = list(db.records.find(
-                    {'user_id': user_id}
-                ).sort('created_at', -1).limit(3))
+                recent_records = list(db.records.find({'user_id': user_id}).sort('created_at', -1).limit(3))
                 for record in recent_records:
                     activity_type = 'debt_added'
                     description = f'Added {record["type"]}: {record["name"]}'
@@ -1100,9 +1091,7 @@ def create_app():
                         'amount': record['amount_owed'],
                         'timestamp': record['created_at']
                     })
-                recent_cashflows = list(db.cashflows.find(
-                    {'user_id': user_id}
-                ).sort('created_at', -1).limit(3))
+                recent_cashflows = list(db.cashflows.find({'user_id': user_id}).sort('created_at', -1).limit(3))
                 for cashflow in recent_cashflows:
                     activity_type = 'money_in' if cashflow['type'] == 'receipt' else 'money_out'
                     description = f'{"Received" if cashflow["type"] == "receipt" else "Paid"} {cashflow["party_name"]}'
@@ -1118,8 +1107,8 @@ def create_app():
                     activity['timestamp'] = activity['timestamp'].isoformat()
                 return jsonify(activities)
         except Exception as e:
-            logger.error(f'Error fetching recent activity: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch recent activity')}), 500
+            logger.error(f'Recent activity error: {str(e)}')
+            return jsonify({'error': utils.trans('activity_error')}), 500
     
     @app.route('/api/notifications/count')
     @login_required
@@ -1129,14 +1118,11 @@ def create_app():
             with app.app_context():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
-                count = db.reminder_logs.count_documents({
-                    'user_id': user_id,
-                    'read_status': False
-                })
+                count = db.notification.count_documents({'user_id': user_id, 'read_status': False})
                 return jsonify({'count': count})
         except Exception as e:
-            logger.error(f'Error fetching notification count: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch notification count')}), 500
+            logger.error(f'Notification count error: {str(e)}')
+            return jsonify({'error': utils.trans('notification_count_error')}), 500
     
     @app.route('/api/notifications')
     @login_required
@@ -1147,81 +1133,76 @@ def create_app():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
                 lang = session.get('lang', 'en')
-                notifications = list(db.reminder_logs.find({
-                    'user_id': user_id
-                }).sort('sent_at', -1).limit(10))
+                notifications = list(db.notification.find({'user_id': user_id}).sort('sent_at', -1).limit(10))
                 logger.info(f"Fetched {len(notifications)} notifications for user {user_id}")
                 result = [{
                     'id': str(n['notification_id']),
-                    'message': utils.trans(n['message'], lang=lang, default=n['message']),
+                    'message': utils.trans(n['message'], lang=lang),
                     'type': n['type'],
                     'timestamp': n['sent_at'].isoformat(),
                     'read': n.get('read_status', False)
                 } for n in notifications]
                 notification_ids = [n['notification_id'] for n in notifications if not n.get('read_status', False)]
                 if notification_ids:
-                    db.reminder_logs.update_many(
-                        {'notification_id': {'$in': notification_ids}, 'user_id': user_id},
+                    db.notification.update_many(
+                        {'notification_id': {'$in': notification_ids}}, {'user_id': user_id},
                         {'$set': {'read_status': True}}
                     )
-                    logger.info(f"Marked {len(notification_ids)} notifications as read for user {user_id}")
+                    logger.info(f"Marked {len(notification_ids)} notifications read")
                     return jsonify({'notifications': result}), 200
         except Exception as e:
-            logger.error(f'Error fetching notifications: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
-            return jsonify({'error': utils.trans('general_error', default='Failed to fetch notifications')}), 500
+            logger.error(f'Notifications error: {str(e)}')
+            return jsonify({'error': utils.trans('notifications_error')}), 500
     
     @app.route('/setup', methods=['GET'])
     @utils.limiter.limit('10 per minute')
     def setup_database_route():
         setup_key = request.args.get('key')
-        if not app.config['SETUP_KEY'] or setup_key != app.config['SETUP_KEY']:
-            logger.warning(f'Invalid setup key: {setup_key}', extra={'ip_address': request.remote_addr})
+        if not app.config.get['SETUP_KEY'] or setup_key != app.config['SETUP_KEY']:
+            logger.warning(f'Invalid setup key: {setup_key}')
             try:
                 return render_template(
-                    'errors/403.html',
-                    content=utils.trans('general_access_denied', default='Access denied'),
-                    title=utils.trans('general_access_denied', lang=session.get('lang', 'en'))
+                    'error/403.html',
+                    content=utils.trans('access_denied'),
+                    title=utils.trans('access_denied', lang=session.get('lang', 'en'))
                 ), 403
             except TemplateNotFound as e:
-                logger.error(f'Template not found: {str(e)}', exc_info=True)
+                logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'personal/GENERAL/error.html',
-                    content=utils.trans('general_access_denied', default='Access denied'),
-                    error=str(e),
-                    title=utils.trans('general_access_denied', lang=session.get('lang', 'en'))
+                    'general/error.html',
+                    content=errors.access_denied(),
+                    title=utils.trans('access_denied', lang=lang)
                 ), 403
         try:
             with app.app_context():
                 initialize_database(app)
-            flash(utils.trans('general_success', default='Database setup successful'), 'success')
-            logger.info('Database setup completed', extra={'ip_address': request.remote_addr})
+            flash(utils.trans('db_setup_success'), 'success')
+            logger.info('Database setup completed')
             return redirect(url_for('index'))
         except Exception as e:
-            flash(utils.trans('general_error', default='An error occurred during database setup'), 'danger')
-            logger.error(f'Database setup error: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
+            flash(utils.trans('db_setup_error'), 'danger')
+            logger.error(f'DB setup error: {str(e)}')
             try:
                 return render_template(
-                    'errors/500.html',
-                    content=utils.trans('general_error', default='Internal server error'),
-                    error=str(e),
-                    title=utils.trans('general_error', lang=session.get('lang', 'en'))
+                    'error/500.html',
+                    content=utils.error('server_error'),
+                    title=utils.trans('error', lang=lang)
                 ), 500
             except TemplateNotFound as e:
-                logger.error(f'Template not found: {str(e)}', exc_info=True)
+                logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'personal/GENERAL/error.html',
-                    content=utils.trans('general_error', default='Internal server error'),
-                    error=str(e),
-                    title=utils.trans('general_error', lang=session.get('lang', 'en'))
+                    'general/error.html',
+                    content=errors.server_error(),
+                    title=utils.trans('error', lang=lang)
                 ), 500
     
     @app.route('/static/<path:filename>')
     def static_files(filename):
         if '..' in filename or filename.startswith('/'):
-            logger.warning(f'Invalid static file path: {filename}', extra={'ip_address': request.remote_addr})
-            abort(403)
+            logger.warning(f'Invalid static path: {filename}')
+            abort(404)
         response = send_from_directory('static', filename)
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
 
     @app.route('/static_personal/<path:filename>')
@@ -1229,26 +1210,26 @@ def create_app():
         allowed_extensions = {'.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}
         file_ext = os.path.splitext(filename)[1].lower()
         if '..' in filename or filename.startswith('/') or file_ext not in allowed_extensions:
-            logger.warning(f'Invalid static_personal file path or extension: {filename}', extra={'ip_address': request.remote_addr})
-            abort(403)
+            logger.warning(f'Invalid personal file path or ext: {filename}')
+            abort(404)
 
         try:
             response = send_from_directory('static_personal', filename)
             if file_ext in {'.css', '.js'}:
-                response.headers['Cache-Control'] = 'public, max-age=31536000'
+                response.headers['Cache-Control'] = 'public, max-age=3600'
             elif file_ext in {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}:
                 response.headers['Cache-Control'] = 'public, max-age=604800'
             return response
         except FileNotFoundError:
-            logger.error(f'Static file not found: {filename}', extra={'ip_address': request.remote_addr})
+            logger.error(f'File not found: {filename}')
             abort(404)
-                
+    
     @app.route('/favicon.ico')
     def favicon():
         try:
             return send_from_directory(app.static_folder, 'img/favicon.ico')
         except FileNotFoundError:
-            logger.error('Favicon not found', extra={'ip_address': request.remote_addr})
+            logger.error('Favicon not found')
             abort(404)
     
     @app.route('/service-worker.js')
@@ -1256,15 +1237,15 @@ def create_app():
         try:
             return app.send_static_file('js/service-worker.js')
         except FileNotFoundError:
-            logger.error('Service worker file not found', extra={'ip_address': request.remote_addr})
+            logger.error('Service worker not found')
             abort(404)
     
     @app.route('/manifest.json')
     def manifest():
         manifest_data = {
-            "name": "FiCore",
+            "name": "FiCore App",
             "short_name": "FiCore",
-            "description": "Financial management application for personal and business use",
+            "description": "Financial management for personal and business use",
             "start_url": "/",
             "display": "standalone",
             "background_color": "#ffffff",
@@ -1293,56 +1274,83 @@ def create_app():
     # Error handlers
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):
-        logger.error(f'CSRF error: {str(e)}', extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        logger.error(f'CSRF error: {str(e)}')
         try:
             return render_template(
-                'errors/403.html', 
-                error=utils.trans('general_csrf_error', default='Invalid CSRF token'), 
-                title=utils.trans('general_csrf_error', lang=session.get('lang', 'en'))
-            ), 403
+                'error/403.html', 
+                error=utils.trans('csrf_error'), 
+                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
+            ), 400
         except TemplateNotFound:
             return render_template(
-                'personal/GENERAL/error.html', 
-                error=utils.trans('general_csrf_error', default='Invalid CSRF token'), 
-                title=utils.trans('general_csrf_error', lang=session.get('lang', 'en'))
-            ), 403
+                'general/error.html', 
+                error=utils.trans('csrf_error'), 
+                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
+            ), 400
 
     @app.errorhandler(404)
     def page_not_found(e):
-        logger.error(f'Page not found: {request.url}', extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        logger.error(f'Not found: {request.url}')
         try:
             return render_template(
-                'errors/404.html', 
+                'error/404.html', 
                 error=str(e), 
-                title=utils.trans('general_not_found', lang=session.get('lang', 'en'))
+                title=utils.trans('not_found', lang=session.get('lang', 'en'))
             ), 404
         except TemplateNotFound:
             return render_template(
-                'personal/GENERAL/error.html', 
+                'general/error.html', 
                 error=str(e), 
-                title=utils.trans('general_not_found', lang=session.get('lang', 'en'))
+                title=utils.trans('not_found', lang=session.get('lang', 'en'))
             ), 404
 
     @app.errorhandler(500)
     def internal_server_error(e):
-        logger.error(f'Internal server error: {str(e)}', exc_info=True, extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        logger.error(f'Server error: {str(e)}')
         try:
             return render_template(
-                'errors/500.html', 
+                'error/500.html', 
                 error=str(e), 
-                title=utils.trans('general_error', lang=session.get('lang', 'en'))
+                title=utils.trans('server_error', lang=session.get('lang', 'en'))
             ), 500
         except TemplateNotFound:
             return render_template(
-                'personal/GENERAL/error.html', 
+                'general/error.html', 
                 error=str(e), 
-                title=utils.trans('general_error', lang=session.get('lang', 'en'))
+                title=utils.trans('server_error', lang=session.get('lang', 'en'))
             ), 500
+    
+    scheduler_shutdown_done = False
+    mongo_client_closed = False
+
+    @app.teardown_appcontext
+    def cleanup_mongo_client(exception):
+        global mongo_client_closed
+        mongo = app.extensions.get['mongo']
+        if mongo and not mongo_closed:
+            try:
+                mongo.close()
+                logger.info('MongoDB client closed')
+                mongo_closed = True
+            except Exception as e:
+                logger.error(f'MongoDB close error: {str(e)}')
+
+    @app.teardown_appcontext
+    def cleanup_scheduler(exception):
+        global scheduler_shutdown
+        scheduler = app.get_config.get('SCHEDULER')
+        if scheduler and scheduler.running and not scheduler_shutdown:
+            try:
+                scheduler.shutdown()
+                logger.info('Scheduler shutdown')
+                scheduler_shutdown = True
+            except Exception as e:
+                logger.error(f'Scheduler shutdown error: {str(e)}')
 
     return app
 
 app = create_app()
 
 if __name__ == '__main__':
-    logger.info('Starting Flask app with gunicorn')
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.getenv('FLASK_ENV', 'development') == 'development')
+    logger.info('Starting Flask application')
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
