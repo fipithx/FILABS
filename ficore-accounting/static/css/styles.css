@@ -125,8 +125,8 @@
 /* --- General Styles --- */
 html, body {
     height: 100%;
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     font-family: 'Poppins', sans-serif;
     color: var(--text-color);
     background-color: var(--background-main);
@@ -144,6 +144,28 @@ body {
     line-height: 1.65;
     letter-spacing: -0.01em;
     padding-bottom: var(--bottom-nav-height);
+}
+
+/* Make your containers truly full-width */
+.full-width,
+.container-fluid,
+.wrapper {
+  width: 100vw;
+  max-width: 100vw;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Optional: zero padding on main sections */
+section, header, footer, main {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 .page-container {
