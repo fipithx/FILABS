@@ -498,7 +498,7 @@ def create_app():
         FACEBOOK_URL=app.config.get('FACEBOOK_URL', 'https://facebook.com/ficoreafrica'),
         TWITTER_URL=app.config.get('TWITTER_URL', 'https://x.com/ficoreafrica'),
         LINKEDIN_URL=app.config.get('LINKEDIN_URL', 'https://linkedin.com/company/ficoreafrica'),
-        FEEDBACK_FORM_URL=app.config.get('FEEDBACK_FORM_URL', url_for('general_bp.feedback')),
+        FEEDBACK_FORM_URL=app.config.get('FEEDBACK_FORM_URL', '#'),
         WAITLIST_FORM_URL=app.config.get('WAITLIST_FORM_URL', '#'),
         CONSULTANCY_FORM_URL=app.config.get('CONSULTANCY_FORM_URL', '#'),
         trans=trans,
