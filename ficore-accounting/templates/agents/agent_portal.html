@@ -11,7 +11,7 @@
         {{ t('agents_manage_tokens', default='Manage Tokens') }} - FiCore
     {% elif request.endpoint == 'agents.my_activity' %}
         {{ t('agents_my_activity', default='My Activity') }} - FiCore
-    {% elif request.endpoint == 'agents.register_trader' %}
+    {% elif request.endpoint == 'agents_bp.register_trader' %}
         {{ t('agents_register_trader', default='Register Trader') }} - FiCore
     {% else %}
         {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
@@ -93,7 +93,7 @@
                     </div>
                     {% else %}
                     <div class="col-md-3 mb-2">
-                        <a href="{{ url_for('agents.register_trader') }}" class="btn btn-primary w-100">
+                        <a href="{{ url_for('agents_bp.register_trader') }}" class="btn btn-primary w-100">
                             <i class="bi bi-person-plus me-2"></i>{{ t('agents_register_new_trader', default='Register New Trader') }}
                         </a>
                     </div>
@@ -140,7 +140,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'agents.register_trader' %}active{% endif %}" href="{{ url_for('agents.register_trader') }}">
+                        <a class="nav-link {% if request.endpoint == 'agents_bp.register_trader' %}active{% endif %}" href="{{ url_for('agents_bp.register_trader') }}">
                             <i class="bi bi-person-plus me-2"></i>
                             {{ t('agents_register_trader', default='Register Trader') }}
                         </a>
@@ -785,7 +785,7 @@
                                         <i class="bi bi-activity text-muted" style="font-size: 3rem;"></i>
                                         <h5 class="mt-3 text-muted">{{ t('agents_no_activities_yet', default='No activities yet') }}</h5>
                                         <p class="text-muted">{{ t('agents_start_by_registering_trader', default='Start by registering a trader or facilitating token purchases') }}</p>
-                                        <a href="{{ url_for('agents.register_trader') }}" class="btn btn-primary">
+                                        <a href="{{ url_for('agents_bp.register_trader') }}" class="btn btn-primary">
                                             <i class="bi bi-person-plus me-2"></i>{{ t('agents_register_first_trader', default='Register First Trader') }}
                                         </a>
                                     </div>
@@ -810,7 +810,7 @@
                 </div>
                 {% endif %}
 
-            {% elif request.endpoint == 'agents.register_trader' %}
+            {% elif request.endpoint == 'agents_bp.register_trader' %}
                 {{ page_header('agents_register_trader') }}
 
                 <div class="row justify-content-center">
