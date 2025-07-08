@@ -34,7 +34,7 @@ from news.routes import seed_news
 from taxation.routes import seed_tax_data
 from coins.routes import coins_bp
 import re
-from flask_mail import Mail
+from flask_mailman import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
@@ -47,7 +47,7 @@ load_dotenv()
 
 # Set up logging
 root_logger = logging.getLogger('ficore_app')
-root_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO to reduce noise
+root_logger.setLevel(logging.INFO)
 
 class SessionFormatter(logging.Formatter):
     def format(self, record):
@@ -129,7 +129,7 @@ def ensure_session_id(f):
 
 def setup_logging(app):
     handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.INFO)  # Changed from DEBUG to INFO
+    handler.setLevel(logging.INFO)
     handler.setFormatter(SessionFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s [session: %(session_id)s, role: %(user_role)s, ip: %(ip_address)s]'))
     root_logger.handlers = []
     root_logger.addHandler(handler)
@@ -143,9 +143,9 @@ def setup_logging(app):
     flask_logger.addHandler(handler)
     werkzeug_logger.addHandler(handler)
     pymongo_logger.addHandler(handler)
-    flask_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
-    werkzeug_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
-    pymongo_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
+    flask_logger.setLevel(logging.INFO)
+    werkzeug_logger.setLevel(logging.INFO)
+    pymongo_logger.setLevel(logging.INFO)
     
     logger.info('Logging setup complete with StreamHandler for ficore_app, flask, werkzeug, and pymongo')
 
@@ -298,7 +298,8 @@ def create_app():
     setup_logging(app)
     utils.compress.init_app(app)
     utils.csrf.init_app(app)
-    mail = utils.get_mail(app)
+    mail = Mail()
+    mail.init_app(app)
     utils.limiter.init_app(app)
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     utils.babel.init_app(app)
@@ -703,10 +704,9 @@ def create_app():
                             logger.warning(f'Invalid or missing icon in navigation item: {item}')
                             item['icon'] = 'bi-question-circle'
 
-                # Removed excessive debug logging to reduce noise
                 logger.info('Navigation data injected for template rendering')
         except Exception as e:
-            logger.error(f'Error in inject_role_nav: {str(e)})', exc_info=True)
+            logger.error(f'Error in inject_role_nav: {str(e)}', exc_info=True)
 
         return dict(
             tools_for_template=tools_for_template,
@@ -782,7 +782,7 @@ def create_app():
                     if current_user.is_authenticated:
                         try:
                             app.extensions['mongo']['ficodb'].users.update_one(
-                                {'_id': current_user.id}, 
+                                {'_id': current_user.id},
                                 {'$set': {'language': new_lang}}
                             )
                         except Exception as e:
@@ -844,7 +844,7 @@ def create_app():
             )
         except TemplateNotFound as e:
             logger.error(f'Template not found: {str(e)}')
-            flash(utils.error('template_not_found'), 'danger')
+            flash(utils.trans('template_not_found'), 'danger')
             return render_template(
                 'general/error.html',
                 error=str(e),
@@ -852,7 +852,7 @@ def create_app():
             ), 404
         except Exception as e:
             logger.error(f'Error rendering index: {str(e)}')
-            flash(utils.error(f'error: {str(e)}'), 'danger')
+            flash(utils.trans(f'error: {str(e)}'), 'danger')
             try:
                 return render_template(
                     'error/500.html',
@@ -974,9 +974,13 @@ def create_app():
             session['lang'] = new_lang
             with app.app_context():
                 if current_user.is_authenticated:
-                    app.extensions['mongo']['ficodb'].users.update_one({'user_id': id}, {'$set': {'lang': new_lang}})
-                except Exception as e:
-                    logger.warning(f'Could not update user language: {str(e)}')
+                    try:
+                        app.extensions['mongo']['ficodb'].users.update_one(
+                            {'_id': current_user.id},
+                            {'$set': {'lang': new_lang}}
+                        )
+                    except Exception as e:
+                        logger.warning(f'Could not update user language: {str(e)}')
             logger.info(f'Set language to {new_lang}')
             flash(utils.trans('lang_updated'), 'success')
         except Exception as e:
@@ -994,23 +998,23 @@ def create_app():
                 db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
                 creditors_pipeline = [
-                    {'$match': {'user_id': user_id}, {'type': 'creditor'}},
-                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
+                    {'$match': {'user_id': user_id, 'type': 'creditor'}},
+                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
                 ]
-                creditors_result = list(db.records.aggregate([creditors_pipeline]))
+                creditors_result = list(db.records.aggregate(creditors_pipeline))
                 total_i_owe = creditors_result[0]['total'] if creditors_result else 0
                 debtors_pipeline = [
-                    {'$match': {'user_id': user_id}, {'type': 'debtor'}},
-                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
+                    {'$match': {'user_id': user_id, 'type': 'debtor'}},
+                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
                 ]
-                debtors_result = list(db.records.aggregate([debtors_pipeline]))
+                debtors_result = list(db.records.aggregate(debtors_pipeline))
                 total_i_am_owed = debtors_result[0]['total'] if debtors_result else 0
                 return jsonify({
                     'totalIOwe': total_i_owe,
                     'totalIAmOwed': total_i_am_owed
                 })
         except Exception as e:
-            logger.error(f'Debt summary error: {str(e)}')
+            logger.error(f'Debt summary error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('debt_summary_error')}), 500
     
     @app.route('/api/cashflow')
@@ -1019,22 +1023,22 @@ def create_app():
     def cashflow_summary():
         try:
             with app.app_context():
-                db = app.extensions.get['mongo']['ficodb']
+                db = app.extensions['mongo']['ficodb']
                 user_id = current_user.id
-                now = datetime.now()
+                now = datetime.datetime.now()
                 month_start = datetime.datetime(now.year, now.month, 1)
-                next_month_end = month_start.month + 1 if month_start.month < 12 else datetime(month_start.year + 1, 1, 1)
+                next_month_end = datetime.datetime(now.year, now.month + 1, 1) if now.month < 12 else datetime.datetime(now.year + 1, 1, 1)
                 receipts_pipeline = [
-                    {'$match': {'user_id': user_id}, {'type': 'receipt'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}},
-                    {'$group': {'id': None}, {'total': {'$sum': '$amount'}}}
+                    {'$match': {'user_id': user_id, 'type': 'receipt', 'created_at': {'$gte': month_start, '$lte': next_month_end}}},
+                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
                 ]
-                receipts_result = list(db.cashflows.aggregate([receipts_pipeline]))
+                receipts_result = list(db.cashflows.aggregate(receipts_pipeline))
                 total_receipts = receipts_result[0]['total'] if receipts_result else 0
                 payments_pipeline = [
-                    {'$match': {'user_id': user_id}, {'type': 'payment'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}},
-                    {'$group': [{'id': None}, {'total': {'$sum': '$amount'}}]}
+                    {'$match': {'user_id': user_id, 'type': 'payment', 'created_at': {'$gte': month_start, '$lte': next_month_end}}},
+                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
                 ]
-                payments_result = list(db.cashflows.aggregate([payments_pipeline]))
+                payments_result = list(db.cashflows.aggregate(payments_pipeline))
                 total_payments = payments_result[0]['total'] if payments_result else 0
                 net_cashflow = total_receipts - total_payments
                 return jsonify({
@@ -1043,7 +1047,7 @@ def create_app():
                     'totalPayments': total_payments
                 })
         except Exception as e:
-            logger.error(f'Cashflow summary error: {str(e)}')
+            logger.error(f'Cashflow summary error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('cashflow_error')}), 500
     
     @app.route('/api/inventory-summary')
@@ -1058,18 +1062,18 @@ def create_app():
                     {'$match': {'user_id': user_id}},
                     {'$addFields': {
                         'item_total': {
-                            '$multiply': {'$item_qty': 1}, {'$default_price': 0}
+                            '$multiply': ['$item_qty', '$default_price']
                         }
                     }},
-                    {'$group': {'id': None}, {'totalValue': {'$sum': '$item_total'}}}
+                    {'$group': {'_id': None, 'totalValue': {'$sum': '$item_total'}}}
                 ]
-                result = list(db.inventory.aggregate([pipeline]))
+                result = list(db.inventory.aggregate(pipeline))
                 total_value = result[0]['totalValue'] if result else 0
                 return jsonify({
                     'totalValue': total_value
                 })
         except Exception as e:
-            logger.error(f'Inventory summary error: {str(e)}')
+            logger.error(f'Inventory summary error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('inventory_error')}), 500
     
     @app.route('/api/recent-activity')
@@ -1107,7 +1111,7 @@ def create_app():
                     activity['timestamp'] = activity['timestamp'].isoformat()
                 return jsonify(activities)
         except Exception as e:
-            logger.error(f'Recent activity error: {str(e)}')
+            logger.error(f'Recent activity error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('activity_error')}), 500
     
     @app.route('/api/notifications/count')
@@ -1121,7 +1125,7 @@ def create_app():
                 count = db.notification.count_documents({'user_id': user_id, 'read_status': False})
                 return jsonify({'count': count})
         except Exception as e:
-            logger.error(f'Notification count error: {str(e)}')
+            logger.error(f'Notification count error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('notification_count_error')}), 500
     
     @app.route('/api/notifications')
@@ -1145,32 +1149,33 @@ def create_app():
                 notification_ids = [n['notification_id'] for n in notifications if not n.get('read_status', False)]
                 if notification_ids:
                     db.notification.update_many(
-                        {'notification_id': {'$in': notification_ids}}, {'user_id': user_id},
+                        {'notification_id': {'$in': notification_ids}, 'user_id': user_id},
                         {'$set': {'read_status': True}}
                     )
-                    logger.info(f"Marked {len(notification_ids)} notifications read")
-                    return jsonify({'notifications': result}), 200
+                    logger.info(f"Marked {len(notification_ids)} notifications read for user {user_id}")
+                return jsonify({'notifications': result}), 200
         except Exception as e:
-            logger.error(f'Notifications error: {str(e)}')
+            logger.error(f'Notifications error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('notifications_error')}), 500
     
     @app.route('/setup', methods=['GET'])
     @utils.limiter.limit('10 per minute')
     def setup_database_route():
         setup_key = request.args.get('key')
-        if not app.config.get['SETUP_KEY'] or setup_key != app.config['SETUP_KEY']:
+        lang = session.get('lang', 'en')
+        if not app.config.get('SETUP_KEY') or setup_key != app.config['SETUP_KEY']:
             logger.warning(f'Invalid setup key: {setup_key}')
             try:
                 return render_template(
                     'error/403.html',
                     content=utils.trans('access_denied'),
-                    title=utils.trans('access_denied', lang=session.get('lang', 'en'))
+                    title=utils.trans('access_denied', lang=lang)
                 ), 403
             except TemplateNotFound as e:
                 logger.error(f'Template not found: {str(e)}')
                 return render_template(
                     'general/error.html',
-                    content=errors.access_denied(),
+                    content=utils.trans('access_denied'),
                     title=utils.trans('access_denied', lang=lang)
                 ), 403
         try:
@@ -1185,14 +1190,14 @@ def create_app():
             try:
                 return render_template(
                     'error/500.html',
-                    content=utils.error('server_error'),
+                    content=utils.trans('server_error'),
                     title=utils.trans('error', lang=lang)
                 ), 500
             except TemplateNotFound as e:
                 logger.error(f'Template not found: {str(e)}')
                 return render_template(
                     'general/error.html',
-                    content=errors.server_error(),
+                    content=utils.trans('server_error'),
                     title=utils.trans('error', lang=lang)
                 ), 500
     
@@ -1201,9 +1206,17 @@ def create_app():
         if '..' in filename or filename.startswith('/'):
             logger.warning(f'Invalid static path: {filename}')
             abort(404)
-        response = send_from_directory('static', filename)
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
+        try:
+            response = send_from_directory('static', filename)
+            if filename.endswith('.woff2'):
+                response.headers['Content-Type'] = 'font/woff2'
+                response.headers['Cache-Control'] = 'public, max-age=604800'
+            else:
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+        except FileNotFoundError:
+            logger.error(f'Static file not found: {filename}')
+            abort(404)
 
     @app.route('/static_personal/<path:filename>')
     def static_personal(filename):
@@ -1325,25 +1338,25 @@ def create_app():
 
     @app.teardown_appcontext
     def cleanup_mongo_client(exception):
-        global mongo_client_closed
-        mongo = app.extensions.get['mongo']
-        if mongo and not mongo_closed:
+        nonlocal mongo_client_closed
+        mongo = app.extensions.get('mongo')
+        if mongo and not mongo_client_closed:
             try:
                 mongo.close()
                 logger.info('MongoDB client closed')
-                mongo_closed = True
+                mongo_client_closed = True
             except Exception as e:
                 logger.error(f'MongoDB close error: {str(e)}')
 
     @app.teardown_appcontext
     def cleanup_scheduler(exception):
-        global scheduler_shutdown
-        scheduler = app.get_config.get('SCHEDULER')
-        if scheduler and scheduler.running and not scheduler_shutdown:
+        nonlocal scheduler_shutdown_done
+        scheduler = app.config.get('SCHEDULER')
+        if scheduler and scheduler.running and not scheduler_shutdown_done:
             try:
                 scheduler.shutdown()
                 logger.info('Scheduler shutdown')
-                scheduler_shutdown = True
+                scheduler_shutdown_done = True
             except Exception as e:
                 logger.error(f'Scheduler shutdown error: {str(e)}')
 
