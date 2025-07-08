@@ -108,7 +108,7 @@ def agent_portal():
         logger.error(f"Error loading agent dashboard for {current_user.id}: {str(e)}")
         flash(trans('agents_dashboard_error', default='An error occurred while loading the dashboard'), 'danger')
         return render_template(
-            'agents/error.html',
+            'personal/GENERAL/error.html',
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
         )
 
@@ -336,7 +336,7 @@ def assist_trader_records(trader_id):
         logger.error(f"Error accessing trader records for agent {current_user.id}: {str(e)}")
         flash(trans('agents_records_access_error', default='An error occurred while accessing trader records'), 'danger')
         return render_template(
-            'agents/error.html',
+            'personal/GENERAL/error.html',
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
         )
 
@@ -413,7 +413,7 @@ def generate_trader_report(trader_id):
         logger.error(f"Error generating trader report for agent {current_user.id}: {str(e)}")
         flash(trans('agents_report_generation_error', default='An error occurred while generating the report'), 'danger')
         return render_template(
-            'agents/error.html',
+            'personal/GENERAL/error.html',
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
         )
 

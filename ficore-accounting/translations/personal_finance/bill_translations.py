@@ -4,7 +4,8 @@ Bill management translations for personal finance tools
 
 BILL_TRANSLATIONS = {
     'en': {
-        'bill_bill_planner': 'Bill Planner',
+        'bill_bill_planner': 'Bills',
+        'bill_tooltip': 'Manage your upcoming and paid bills.',
         'bill_bill_planner_tab': 'Bill',
         'bill_bill_dashboard': 'Bill Dashboard',
         'bill_view_edit_bills': 'View and Edit Bills',
@@ -448,6 +449,7 @@ BILL_TRANSLATIONS = {
         'bill_invalid_records_skipped': 'An tsallake bayanan kuɗin biya guda {count} saboda rashin maɓallan da ake buƙata ko bayanan da ba daidai ba.',
         'bill_dashboard': 'Allon Kuɗin Biya',
         'bill_title': 'Mai Tsara Kuɗin Kuɗi',
+        'bill_tooltip': 'Sarrafa kuɗaɗenka masu zuwa da waɗanda aka biya.',
         'bill_manage_track_bills': 'Sarrafa da bin diddigin duk kuɗin ka a wuri ɗaya',
         'bill_email_preferences': 'Zaɓin Imel',
         'bill_unsubscribe_description': 'Danna ƙasa don cire rajista daga imel ɗin tunatar da kuɗi.',

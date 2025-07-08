@@ -5,10 +5,40 @@ Budget management translations for personal finance tools
 BUDGET_TRANSLATIONS = {
     'en': {
         'budget_budget_planner': 'Budget',
+        'budget_budget_desc': 'Plan and track your spending with a budget.',
+        'budget_tooltip': 'Create and manage your budget.',
         'monthly_income': 'Monthly Income',
         'budget_monthly_income': 'Monthly Income',
         'budget_housing_rent': 'Housing/Rent',
         'budget_budget_status': 'Budget status',
+        'budget_first_name_required': 'First name is required.',
+        'budget_email': 'Email',
+        'budget_email_placeholder': 'Enter your email',
+        'budget_email_required': 'Email is required.',
+        'budget_send_email': 'Send Email',
+        'budget_income_placeholder': 'Enter your monthly income',
+        'budget_income_required': 'Monthly income is required.',
+        'budget_income_help': 'This is your total income before taxes and deductions.',
+        'budget_housing_placeholder': 'Enter your monthly housing cost',
+        'budget_housing_required': 'Housing cost is required.',
+        'budget_food_placeholder': 'Enter your monthly food expenses',
+        'budget_food_required': 'Food expense is required.',
+        'budget_transport_placeholder': 'Enter your monthly transport cost',
+        'budget_transport_required': 'Transport cost is required.',
+        'budget_dependents_placeholder': 'Enter your monthly dependents cost',
+        'budget_dependents_required': 'Dependents cost is required.',
+        'budget_miscellaneous_placeholder': 'Enter your monthly miscellaneous expenses',
+        'budget_miscellaneous_required': 'Miscellaneous expense is required.',
+        'budget_others_placeholder': 'Enter other monthly expenses',
+        'budget_others_required': 'Other expenses is required.',
+        'budget_monthly_savings_goal': 'Monthly Savings Goal',
+        'budget_savings_goal_placeholder': 'Enter your monthly savings goal',
+        'budget_savings_goal_required': 'Monthly savings goal is required.',
+        'budget_savings_goal_help': 'This is the amount you aim to save each month.',
+        'budget_calculate_budget': 'Calculate Budget',
+        'budget_summary': 'Budget Summary',
+        'budget_surplus_deficit': 'Surplus/Deficit',
+        'budget_expense_breakdown': 'Expense Breakdown',
         'budget_tooltip': 'Budget information',
         'budget_budget_desc': 'Manage your personal budget effectively.',
         'budget_food': 'Food',
@@ -114,6 +144,9 @@ BUDGET_TRANSLATIONS = {
         'budget_budget_planner_tab': 'Kasafi',
         'transport': 'Sufuri',
         'dependents_support': 'Tallafin Masu Dogara',
+        'budget_budget_planner': 'Kasafin Kudi', # "Budget"
+        'budget_budget_desc': 'Tsara da bibiyar kashe-kashenka da kasafin kudi.', # "Plan and track your spending with a budget."
+        'budget_tooltip': 'Ƙirƙira da sarrafa kasafin kudinka.',
         'miscellaneous': 'Sauran',
         'others': 'Wasu',
         'savings_goal': 'Manufar Tattara Kuɗi',
@@ -132,5 +165,33 @@ BUDGET_TRANSLATIONS = {
         'budget_submit': 'Mika Kasafin Kuɗi',
         'budget_allocate_income': 'Raba Kuɗin Shigarka',
         'budget_start_budget_planner': 'Fara Mai Tsara Kasafin Kuɗi',
+        'budget_first_name_required': 'Ana buƙatar suna na farko.', # "First name is required."
+        'budget_email': 'Imel', # "Email"
+        'budget_email_placeholder': 'Shigar da imel dinka', # "Enter your email"
+        'budget_email_required': 'Ana buƙatar imel.', # "Email is required."
+        'budget_send_email': 'Aika Imel', # "Send Email"
+        'budget_income_placeholder': 'Shigar da kuɗin shigarka na wata-wata', # "Enter your monthly income"
+        'budget_income_required': 'Ana buƙatar kuɗin shiga na wata-wata.', # "Monthly income is required."
+        'budget_income_help': 'Wannan shine jimlar kuɗin shigarka kafin haraji da cirewa.', # "This is your total income before taxes and deductions."
+        'budget_housing_placeholder': 'Shigar da kuɗin gidanka na wata-wata', # "Enter your monthly housing cost"
+        'budget_housing_required': 'Ana buƙatar kuɗin gida.', # "Housing cost is required."
+        'budget_food_placeholder': 'Shigar da kuɗin abincinka na wata-wata', # "Enter your monthly food expenses"
+        'budget_food_required': 'Ana buƙatar kuɗin abinci.', # "Food expense is required."
+        'budget_transport_placeholder': 'Shigar da kuɗin jigilarka na wata-wata', # "Enter your monthly transport cost"
+        'budget_transport_required': 'Ana buƙatar kuɗin jigila.', # "Transport cost is required."
+        'budget_dependents_placeholder': 'Shigar da kuɗin da kake kashewa ga masu dogara gareka na wata-wata', # "Enter your monthly dependents cost"
+        'budget_dependents_required': 'Ana buƙatar kuɗin masu dogara.', # "Dependents cost is required."
+        'budget_miscellaneous_placeholder': 'Shigar da sauran kuɗaɗen kashewa na wata-wata', # "Enter your monthly miscellaneous expenses"
+        'budget_miscellaneous_required': 'Ana buƙatar sauran kuɗaɗen kashewa.', # "Miscellaneous expense is required."
+        'budget_others_placeholder': 'Shigar da sauran kuɗaɗen kashewa na wata-wata', # "Enter other monthly expenses"
+        'budget_others_required': 'Ana buƙatar sauran kuɗaɗen kashewa.', # "Other expenses is required."
+        'budget_monthly_savings_goal': 'Burin Ajiya na Wata-wata', # "Monthly Savings Goal"
+        'budget_savings_goal_placeholder': 'Shigar da burinka na ajiya na wata-wata', # "Enter your monthly savings goal"
+        'budget_savings_goal_required': 'Ana buƙatar burin ajiya na wata-wata.', # "Monthly savings goal is required."
+        'budget_savings_goal_help': 'Wannan shine adadin da kake son adanawa kowane wata.', # "This is the amount you aim to save each month."
+        'budget_calculate_budget': 'Lissafta Kasafin Kudi', # "Calculate Budget"
+        'budget_summary': 'Takaitaccen Kasafin Kudi', # "Budget Summary"
+        'budget_surplus_deficit': 'Riba/Rashi', # "Surplus/Deficit"
+        'budget_expense_breakdown': 'Rabon Kashe-kashe', # "Expense Breakdown"
     }
 }

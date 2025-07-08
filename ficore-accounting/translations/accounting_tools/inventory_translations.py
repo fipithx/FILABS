@@ -4,11 +4,12 @@ Inventory management translations for accounting tools
 
 INVENTORY_TRANSLATIONS = {
     'en': {
-        'inventory_dashboard': 'Inventory',
         'inventory_list': 'Inventory List',
         'inventory_add_item': 'Add Item',
-        'inventory_hausa': 'Inventory',
-        'inventory_dashboard_desc': 'Inventory',
+        'inventory_dashboard': 'Inventory',
+        'inventory_dashboard_desc': 'Manage your product stock and inventory.',
+        'inventory_tooltip': 'View and manage your inventory.',
+        'inventory_dashboard_desc': 'Manage and Track Your Business Stock',
         'inventory_management_tab': 'Inventory',
         'inventory_tooltip': 'Manage your inventory',
         'inventory_title': 'Inventory Management',
@@ -112,6 +113,8 @@ INVENTORY_TRANSLATIONS = {
         'inventory_total_value_stock': 'Jimillar Ƙimar Ajiya',
         'inventory_low_stock_alerts': 'Sanarwar Ƙarancin Ajiya',
         'inventory_add_goods_stock': 'Ƙara Kaya zuwa Jari',
+        'inventory_dashboard_desc': 'Sarrafa kayanka da ajiyarka.', # "Manage your product stock and inventory."
+        'inventory_tooltip': 'Duba da sarrafa kayanka.',
         'inventory_tooltip': 'Sarrafa kayan ajiya',
         'inventory_management': 'Sarrafa Jari',
         'inventory_desc': 'Bi diddigin jarin ka kuma sarrafa jari cikin inganci',
@@ -120,7 +123,7 @@ INVENTORY_TRANSLATIONS = {
         'inventory_no_inventory': 'Babu jari da aka rubuta',
         # Inventory
         'inventory_unit': 'Naúri',
-        'inventory_dashboard_desc': 'Haja',
+        'inventory_dashboard_desc': 'Kula da Hajarku ta kasuwa',
         'inventory_buying_price': 'Farashin Saye',
         'inventory_selling_price': 'Farashin Sayarwa',
         'inventory_threshold': 'Ƙofa',

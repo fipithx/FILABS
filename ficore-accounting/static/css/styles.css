@@ -594,11 +594,26 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 }
 
 /* Quick Actions - Streamlined */
+.quick-actions-section {
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.quick-actions-heading {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    text-align: left;
+    padding-left: 1rem;
+}
+
 .quick-actions {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Force two columns always */
+    grid-template-columns: repeat(auto-fit, minmax(calc(50% - 0.5rem), 1fr));
     gap: 1rem;
-    margin: 1rem 1rem;
+    margin: 0 1rem;
     padding: 0;
     background: transparent;
     border-radius: 0;
@@ -622,6 +637,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     min-height: 120px;
     word-break: break-word;
+    flex-grow: 1;
 }
 
 .quick-action-card:hover {
@@ -697,7 +713,6 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     color: var(--text-muted);
     margin: 0.5rem 0 0;
 }
-
 /* Recent Activity */
 .recent-activity {
     margin: 2rem 0;
@@ -2157,4 +2172,289 @@ h2.card-title {
     .btn, .btn-primary, .btn-secondary {
         display: none;
     }
+}
+/* General container styling */
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Section card styling */
+.section-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Hero section */
+.hero {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: #fff;
+    padding: 3rem;
+    border-radius: 12px;
+}
+.hero .section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+.hero .lead {
+    font-size: 1.25rem;
+}
+.hero-actions .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+}
+.hero-actions .dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Role cards */
+.role-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+.role-card:hover {
+    transform: translateY(-5px);
+}
+.role-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+.role-card p {
+    font-size: 0.95rem;
+}
+
+/* Tools section */
+.tools-section .tool-card {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+.tools-section .tool-card:hover {
+    transform: translateY(-5px);
+}
+.tools-section h3 {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+.tools-section .tool-card h4 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.tools-section .tool-card p {
+    font-size: 0.9rem;
+}
+.tools-section .btn {
+    width: 100%;
+}
+
+/* Why FiCore section */
+.why-section .why-item {
+    padding: 1rem;
+}
+.why-section .why-item i {
+    font-size: 2rem;
+}
+.why-section p {
+    font-size: 0.95rem;
+}
+.animated-counter {
+    font-weight: 700;
+}
+
+/* Testimonials section */
+.testimonials-section .testimonial {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.testimonials-section .avatar-circle {
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #007bff, #00d4ff);
+    color: #fff;
+    border-radius: 50%;
+}
+.testimonials-section .carousel-control-prev,
+.testimonials-section .carousel-control-next {
+    width: 5%;
+}
+.testimonials-section .carousel-control-prev-icon,
+.testimonials-section .carousel-control-next-icon {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+}
+
+/* FAQ section */
+.faq-section .accordion-button {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+.faq-section .accordion-body {
+    font-size: 0.95rem;
+}
+
+/* CTA section */
+.cta-section {
+    background: #f8f9fa;
+    padding: 3rem;
+    border-radius: 12px;
+}
+.cta-section .section-title {
+    font-size: 2rem;
+}
+.cta-section .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hero .section-title {
+        font-size: 2rem;
+    }
+    .hero .lead {
+        font-size: 1rem;
+    }
+    .tools-section .tool-card h4 {
+        font-size: 1.1rem;
+    }
+    .tools-section .tool-card p {
+        font-size: 0.85rem;
+    }
+}
+.tool-card {
+    position: relative;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+}
+.tool-card .bi-lock-fill {
+    font-size: 1.2rem;
+}
+.tool-card .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+.tool-card .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+/* Dropdown Menu for Hero Section */
+.hero .dropdown-menu {
+    background: var(--card-bg); /* #ffffff in light mode, #1e293b in dark mode */
+    border: 1px solid var(--card-border); /* #e5e7eb in light mode, #4b5563 in dark mode */
+    border-radius: 8px;
+    box-shadow: var(--card-shadow); /* 0 4px 12px rgba(0, 0, 0, 0.08) in light mode */
+    min-width: 200px; /* Ensure sufficient width for dropdown items */
+    z-index: 1050; /* Higher than hero section's z-index (z-index: 1 for hero content) */
+    padding: 0.5rem 0; /* Add padding to the menu container */
+}
+
+.hero .dropdown-item {
+    color: var(--text-color); /* #1e293b in light mode, #f1f5f9 in dark mode */
+    padding: 0.5rem 1rem; /* Consistent padding for each item */
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    transition: var(--transition-base); /* Smooth hover effect */
+    background: transparent; /* Ensure no inherited background */
+    border-radius: 4px; /* Subtle rounding for hover effect */
+    margin: 0.125rem 0.5rem; /* Small margin to prevent text clipping */
+}
+
+.hero .dropdown-item:hover,
+.hero .dropdown-item:focus {
+    background: var(--button-secondary-hover); /* #e8f0ff in light mode, #334155 in dark mode */
+    color: var(--accent-blue); /* #3A86FF in light mode, #93c5fd in dark mode */
+}
+
+.hero .dropdown-divider {
+    border-top: 1px solid var(--card-border); /* #e5e7eb in light mode, #4b5563 in dark mode */
+    margin: 0.5rem 0; /* Consistent spacing */
+}
+
+/* Ensure dropdown menu is visible in hero section */
+.hero .dropdown {
+    position: relative;
+    z-index: 1050; /* Ensure dropdown container is above hero's ::before overlay */
+}
+
+/* Dark mode specific adjustments */
+.dark-mode .hero .dropdown-menu {
+    background: var(--card-bg); /* #1e293b */
+    border: 1px solid var(--card-border); /* #4b5563 */
+    box-shadow: var(--card-shadow); /* 0 4px 12px rgba(0, 0, 0, 0.2) */
+}
+
+.dark-mode .hero .dropdown-item {
+    color: var(--text-color); /* #f1f5f9 */
+}
+
+.dark-mode .hero .dropdown-item:hover,
+.dark-mode .hero .dropdown-item:focus {
+    background: var(--button-secondary-hover); /* #334155 */
+    color: var(--accent-blue); /* #93c5fd */
+}
+
+.dark-mode .hero .dropdown-divider {
+    border-top: 1px solid var(--card-border); /* #4b5563 */
+}
+/* Remove text truncation and ensure proper text wrapping */
+.snapshot-label,
+.notification-description,
+.activity-description,
+.action-label {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    max-width: 100%;
+    text-overflow: unset !important; /* Override Bootstrap's text-truncate */
+}
+
+/* Enhance tool-card padding and spacing for text wrapping */
+.tool-card {
+    padding: 1.75rem !important; /* Increased padding for more space */
+    min-height: 200px; /* Ensure enough height for wrapped text */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s ease;
+}
+
+.tool-card h4 {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.75rem;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}
+
+.tool-card p {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}
+
+.tool-card .btn {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: clamp(0.875rem, 2vw, 1rem);
 }

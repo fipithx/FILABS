@@ -6,6 +6,7 @@ from translations import trans
 import utils
 import bleach
 import datetime
+from babel.dates import format_date
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,20 @@ def news_list():
         query['category'] = category
     
     articles = list(db.news.find(query).sort('published_at', -1))
+    lang = session.get('lang', 'en')
     for article in articles:
         article['_id'] = str(article['_id'])
+        # Format date for translation
+        try:
+            article['published_at_formatted'] = format_date(
+                article['published_at'], 
+                format='medium', 
+                locale=lang
+            )
+        except Exception as e:
+            logger.error(f"Date formatting failed for article {article['_id']}: {str(e)}")
+            article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+    
     categories = db.news.distinct('category')
     logger.info(f"News list queried: user={current_user.id}, search={search_query}, category={category}, articles={len(articles)}")
     
@@ -49,12 +62,26 @@ def news_list():
             'content': article['content'][:100] + '...' if len(article['content']) > 100 else article['content']
         } for article in articles])
     
+    # Pass formatted date to trans function for news_published_on
+    articles = [
+        {
+            **article,
+            'published_on': trans(
+                'news_published_on', 
+                default='Published on {date}', 
+                lang=lang, 
+                date=article['published_at_formatted']
+            )
+        } for article in articles
+    ]
+    
     return render_template(
         'news/news.html',
         section='list',
         articles=articles,
         categories=categories,
-        title=trans('news_list_title', default='News', lang=session.get('lang', 'en'))
+        title=trans('news_list_title', default='News', lang=lang),
+        no_articles_message=trans('news_no_articles_found', default='No articles found', lang=lang)
     )
 
 @news_bp.route('/news/<article_id>', methods=['GET'])
@@ -62,6 +89,7 @@ def news_list():
 @login_required
 def news_detail(article_id):
     db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
     try:
         article = db.news.find_one({'_id': ObjectId(article_id), 'is_active': True})
     except Exception as e:
@@ -70,16 +98,34 @@ def news_detail(article_id):
     
     if not article:
         logger.warning(f"News article not found: id={article_id}")
-        flash(trans('news_article_not_found', default='Article not found'), 'danger')
+        flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
         return redirect(url_for('news_bp.news_list'))
     
     article['_id'] = str(article['_id'])
+    # Format date for translation
+    try:
+        article['published_at_formatted'] = format_date(
+            article['published_at'], 
+            format='medium', 
+            locale=lang
+        )
+    except Exception as e:
+        logger.error(f"Date formatting failed for article {article_id}: {str(e)}")
+        article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+    
+    article['published_on'] = trans(
+        'news_published_on', 
+        default='Published on {date}', 
+        lang=lang, 
+        date=article['published_at_formatted']
+    )
+    
     logger.info(f"News detail viewed: id={article_id}, title={article['title']}, user={current_user.id}")
     return render_template(
         'news/news.html',
         section='detail',
         article=article,
-        title=trans('news_detail_title', default='Article', lang=session.get('lang', 'en'))
+        title=trans('news_detail_title', default='Article', lang=lang)
     )
 
 @news_bp.route('/admin/news_management', methods=['GET', 'POST'])
@@ -87,6 +133,7 @@ def news_detail(article_id):
 @login_required
 def news_management():
     db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
@@ -96,7 +143,7 @@ def news_management():
         
         if not title or not content:
             logger.error(f"News creation failed: title={title}, content={content}, user={current_user.id}")
-            flash(trans('news_title_content_required', default='Title and content are required'), 'danger')
+            flash(trans('news_title_content_required', default='Title and content are required', lang=lang), 'danger')
         else:
             sanitized_content = sanitize_input(content)
             article = {
@@ -110,17 +157,35 @@ def news_management():
             }
             db.news.insert_one(article)
             logger.info(f"News article created: title={title}, user={current_user.id}")
-            flash(trans('news_article_added', default='News article added successfully'), 'success')
+            flash(trans('news_article_added', default='News article added successfully', lang=lang), 'success')
             return redirect(url_for('news_bp.news_management'))
     
     articles = list(db.news.find().sort('published_at', -1))
     for article in articles:
         article['_id'] = str(article['_id'])
+        # Format date for translation
+        try:
+            article['published_at_formatted'] = format_date(
+                article['published_at'], 
+                format='medium', 
+                locale=lang
+            )
+        except Exception as e:
+            logger.error(f"Date formatting failed for article {article['_id']}: {str(e)}")
+            article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+        
+        article['published_on'] = trans(
+            'news_published_on', 
+            default='Published on {date}', 
+            lang=lang, 
+            date=article['published_at_formatted']
+        )
+    
     return render_template(
         'news/news.html',
         section='admin',
         articles=articles,
-        title=trans('news_management_title', default='News Management', lang=session.get('lang', 'en'))
+        title=trans('news_management_title', default='News Management', lang=lang)
     )
 
 @news_bp.route('/admin/news_management/edit/<article_id>', methods=['GET', 'POST'])
@@ -128,6 +193,7 @@ def news_management():
 @login_required
 def edit_news(article_id):
     db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
     try:
         article = db.news.find_one({'_id': ObjectId(article_id)})
     except Exception as e:
@@ -136,7 +202,7 @@ def edit_news(article_id):
     
     if not article:
         logger.warning(f"Edit news article not found: id={article_id}, user={current_user.id}")
-        flash(trans('news_article_not_found', default='Article not found'), 'danger')
+        flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
         return redirect(url_for('news_bp.news_management'))
     
     if request.method == 'POST':
@@ -148,7 +214,7 @@ def edit_news(article_id):
         
         if not title or not content:
             logger.error(f"News update failed: title={title}, content={content}, user={current_user.id}")
-            flash(trans('news_title_content_required', default='Title and content are required'), 'danger')
+            flash(trans('news_title_content_required', default='Title and content are required', lang=lang), 'danger')
         else:
             sanitized_content = sanitize_input(content)
             db.news.update_one(
@@ -163,15 +229,32 @@ def edit_news(article_id):
                 }}
             )
             logger.info(f"News article updated: id={article_id}, title={title}, user={current_user.id}")
-            flash(trans('news_article_updated', default='News article updated successfully'), 'success')
+            flash(trans('news_article_updated', default='News article updated successfully', lang=lang), 'success')
             return redirect(url_for('news_bp.news_management'))
     
     article['_id'] = str(article['_id'])
+    try:
+        article['published_at_formatted'] = format_date(
+            article['published_at'], 
+            format='medium', 
+            locale=lang
+        )
+    except Exception as e:
+        logger.error(f"Date formatting failed for article {article_id}: {str(e)}")
+        article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+    
+    article['published_on'] = trans(
+        'news_published_on', 
+        default='Published on {date}', 
+        lang=lang, 
+        date=article['published_at_formatted']
+    )
+    
     return render_template(
         'news/news.html',
         section='edit',
         article=article,
-        title=trans('news_edit_title', default='Edit News Article', lang=session.get('lang', 'en'))
+        title=trans('news_edit_title', default='Edit News Article', lang=lang)
     )
 
 @news_bp.route('/admin/news_management/delete/<article_id>', methods=['POST'])
@@ -179,17 +262,18 @@ def edit_news(article_id):
 @login_required
 def delete_news(article_id):
     db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
     try:
         result = db.news.delete_one({'_id': ObjectId(article_id)})
         if result.deleted_count > 0:
             logger.info(f"News article deleted: id={article_id}, user={current_user.id}")
-            flash(trans('news_article_deleted', default='News article deleted successfully'), 'success')
+            flash(trans('news_article_deleted', default='News article deleted successfully', lang=lang), 'success')
         else:
             logger.warning(f"News article not found for deletion: id={article_id}, user={current_user.id}")
-            flash(trans('news_article_not_found', default='Article not found'), 'danger')
+            flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
     except Exception as e:
         logger.error(f"Error deleting news article: id={article_id}, user={current_user.id}, error={str(e)}")
-        flash(trans('news_error', default='Error deleting article'), 'danger')
+        flash(trans('news_error', default='Error deleting article', lang=lang), 'danger')
     return redirect(url_for('news_bp.news_management'))
 
 def seed_news():

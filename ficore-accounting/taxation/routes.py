@@ -105,7 +105,13 @@ def calculate_paye_2026(taxable_income):
     return round(tax_due, 2), trans('tax_paye_explanation_2026', default="PAYE 2026: 0% up to ₦800,000, 15% next ₦2,200,000, 18% next ₦9,000,000, 21% next ₦13,000,000, 23% next ₦25,000,000, 25% above ₦50,000,000")
 
 def calculate_paye_tax(year, gross, pension, rent_relief):
-    year = int(year)
+    try:
+        year = int(year)
+        if year < 0:
+            raise ValueError("Tax year cannot be negative")
+    except ValueError as e:
+        logger.error(f"Invalid tax year: {year}, error: {str(e)}")
+        raise
     if year >= 2026:
         taxable = max(0, gross - pension - rent_relief)
         return calculate_paye_2026(taxable)
@@ -128,7 +134,13 @@ def calculate_vat(amount, category, is_business=False):
     return round(vat_due, 2), explanation
 
 def calculate_cit(turnover, tax_year):
-    tax_year = int(tax_year)
+    try:
+        tax_year = int(tax_year)
+        if tax_year < 0:
+            raise ValueError("Tax year cannot be negative")
+    except ValueError as e:
+        logger.error(f"Invalid tax year: {tax_year}, error: {str(e)}")
+        raise
     if tax_year <= 2025:
         if turnover <= 25000000:
             tax = 0.0
@@ -186,6 +198,7 @@ def seed_tax_data():
     for collection in ['tax_rates', 'vat_rules', 'payment_locations', 'tax_reminders']:
         if collection not in db.list_collection_names():
             db.create_collection(collection)
+            logger.info(f"Created collection: {collection}")
 
     if db.tax_rates.count_documents({}) == 0:
         tax_rates = [
@@ -206,7 +219,11 @@ def seed_tax_data():
             {'role': 'company', 'min_income': 0.0, 'max_income': 50000000.0, 'rate': 0.0, 'description': trans('tax_rate_cit_small', default='0% CIT for turnover ≤ ₦50M, simplified return, no audit'), 'year': 2026},
             {'role': 'company', 'min_income': 50000001.0, 'max_income': float('inf'), 'rate': 0.30, 'description': trans('tax_rate_cit_large', default='30% CIT for turnover > ₦50M'), 'year': 2026}
         ]
-        db.tax_rates.insert_many(tax_rates)
+        for rate in tax_rates:
+            if 'role' not in rate:
+                logger.error(f"Tax rate missing 'role' field: {rate}")
+                continue
+            db.tax_rates.insert_one(rate)
         logger.info("Seeded tax rates")
 
     if db.vat_rules.count_documents({}) == 0:
@@ -215,7 +232,11 @@ def seed_tax_data():
         ] + [
             {'category': 'business_credit', 'vat_exempt': False, 'description': trans('tax_vat_reclaimed', default='Input VAT reclaimed for business')}
         ]
-        db.vat_rules.insert_many(vat_rules)
+        for rule in vat_rules:
+            if 'category' not in rule:
+                logger.error(f"VAT rule missing 'category' field: {rule}")
+                continue
+            db.vat_rules.insert_one(rule)
         logger.info("Seeded VAT rules")
 
     if db.payment_locations.count_documents({}) == 0:
@@ -240,24 +261,32 @@ def seed_tax_data():
 def calculate_tax():
     form = TaxCalculationForm()
     db = get_mongo_db()
-    tax_rates = list(db.tax_rates.find())
+    tax_rates = list(db.tax_rates.find({'role': {'$exists': True}}))
     vat_rules = list(db.vat_rules.find())
+    logger.debug(f"Fetched tax_rates: {tax_rates}")
+    logger.debug(f"Fetched vat_rules: {vat_rules}")
+    for rate in tax_rates:
+        if 'role' not in rate:
+            logger.warning(f"Unexpected tax_rates document without 'role': {rate}")
+    for rule in vat_rules:
+        if 'category' not in rule:
+            logger.warning(f"Unexpected vat_rules document without 'category': {rule}")
     serialized_tax_rates = [
         {
-            'role': rate['role'],
-            'min_income': rate['min_income'],
-            'max_income': rate['max_income'],
-            'rate': rate['rate'],
-            'description': rate['description'],
+            'role': rate.get('role', 'unknown'),
+            'min_income': rate.get('min_income', 0.0),
+            'max_income': rate.get('max_income', float('inf')),
+            'rate': rate.get('rate', 0.0),
+            'description': rate.get('description', ''),
             '_id': str(rate['_id']),
             'year': rate.get('year', '')
-        } for rate in tax_rates
+        } for rate in tax_rates if rate.get('_id') != 'version'
     ]
     serialized_vat_rules = [
         {
-            'category': rule['category'],
-            'vat_exempt': rule['vat_exempt'],
-            'description': rule['description'],
+            'category': rule.get('category', 'unknown'),
+            'vat_exempt': rule.get('vat_exempt', False),
+            'description': rule.get('description', ''),
             '_id': str(rule['_id'])
         } for rule in vat_rules
     ]
@@ -360,9 +389,9 @@ def payment_info():
     locations = list(db.payment_locations.find())
     serialized_locations = [
         {
-            'name': loc['name'],
-            'address': loc['address'],
-            'contact': loc['contact'],
+            'name': loc.get('name', 'Unknown'),
+            'address': loc.get('address', 'Unknown'),
+            'contact': loc.get('contact', 'Unknown'),
             '_id': str(loc['_id'])
         } for loc in locations
     ]
@@ -387,18 +416,18 @@ def reminders():
             'reminder_date': form.reminder_date.data,
             'created_at': datetime.datetime.utcnow()
         }
-        db.tax_reminders.insert_one(reminder)
-        logger.info(f"Reminder added: user={current_user.id}, message={form.message.data}")
+        result = db.tax_reminders.insert_one(reminder)
+        logger.info(f"Reminder added: user={current_user.id}, message={form.message.data}, reminder_id={result.inserted_id}")
         flash(trans('tax_reminder_added', default='Reminder added successfully'), 'success')
         return redirect(url_for('taxation_bp.reminders'))
     reminders = list(db.tax_reminders.find({'user_id': current_user.id}))
     serialized_reminders = [
         {
-            'message': rem['message'],
-            'reminder_date': rem['reminder_date'],
-            'created_at': rem['created_at'],
+            'message': rem.get('message', 'Unknown'),
+            'reminder_date': rem.get('reminder_date'),
+            'created_at': rem.get('created_at'),
             '_id': str(rem['_id']),
-            'user_id': str(rem['user_id'])
+            'user_id': str(rem.get('user_id', 'Unknown'))
         } for rem in reminders
     ]
     return render_template(
@@ -424,28 +453,36 @@ def manage_tax_rates():
             'rate': form.rate.data,
             'description': form.description.data
         }
-        db.tax_rates.insert_one(tax_rate)
-        logger.info(f"Tax rate added: user={current_user.id}, role={form.role.data}, rate={form.rate.data}")
+        result = db.tax_rates.insert_one(tax_rate)
+        logger.info(f"Tax rate added: user={current_user.id}, role={form.role.data}, rate={form.rate.data}, rate_id={result.inserted_id}")
         flash(trans('tax_rate_added', default='Tax rate added successfully'), 'success')
         return redirect(url_for('taxation_bp.manage_tax_rates'))
-    rates = list(db.tax_rates.find())
+    rates = list(db.tax_rates.find({'role': {'$exists': True}}))
     vat_rules = list(db.vat_rules.find())
+    logger.debug(f"Fetched tax_rates: {rates}")
+    logger.debug(f"Fetched vat_rules: {vat_rules}")
+    for rate in rates:
+        if 'role' not in rate:
+            logger.warning(f"Unexpected tax_rates document without 'role': {rate}")
+    for rule in vat_rules:
+        if 'category' not in rule:
+            logger.warning(f"Unexpected vat_rules document without 'category': {rule}")
     serialized_rates = [
         {
-            'role': rate['role'],
-            'min_income': rate['min_income'],
-            'max_income': rate['max_income'],
-            'rate': rate['rate'],
-            'description': rate['description'],
+            'role': rate.get('role', 'unknown'),
+            'min_income': rate.get('min_income', 0.0),
+            'max_income': rate.get('max_income', float('inf')),
+            'rate': rate.get('rate', 0.0),
+            'description': rate.get('description', ''),
             '_id': str(rate['_id']),
             'year': rate.get('year', '')
-        } for rate in rates
+        } for rate in rates if rate.get('_id') != 'version'
     ]
     serialized_vat_rules = [
         {
-            'category': rule['category'],
-            'vat_exempt': rule['vat_exempt'],
-            'description': rule['description'],
+            'category': rule.get('category', 'unknown'),
+            'vat_exempt': rule.get('vat_exempt', False),
+            'description': rule.get('description', ''),
             '_id': str(rule['_id'])
         } for rule in vat_rules
     ]
@@ -469,12 +506,12 @@ def manage_payment_locations():
         address = request.form.get('address')
         contact = request.form.get('contact')
         if name and address and contact:
-            db.payment_locations.insert_one({
+            result = db.payment_locations.insert_one({
                 'name': name,
                 'address': address,
                 'contact': contact
             })
-            logger.info(f"Payment location added: user={current_user.id}, name={name}")
+            logger.info(f"Payment location added: user={current_user.id}, name={name}, location_id={result.inserted_id}")
             flash(trans('tax_location_added', default='Location added successfully'), 'success')
             return redirect(url_for('taxation_bp.manage_payment_locations'))
         else:
@@ -483,9 +520,9 @@ def manage_payment_locations():
     locations = list(db.payment_locations.find())
     serialized_locations = [
         {
-            'name': loc['name'],
-            'address': loc['address'],
-            'contact': loc['contact'],
+            'name': loc.get('name', 'Unknown'),
+            'address': loc.get('address', 'Unknown'),
+            'contact': loc.get('contact', 'Unknown'),
             '_id': str(loc['_id'])
         } for loc in locations
     ]
@@ -508,11 +545,11 @@ def manage_tax_deadlines():
         if deadline_date and description:
             try:
                 deadline_date = datetime.datetime.strptime(deadline_date, '%Y-%m-%d')
-                db.tax_reminders.insert_one({
+                result = db.tax_reminders.insert_one({
                     'deadline_date': deadline_date,
                     'description': description
                 })
-                logger.info(f"Tax deadline added: user={current_user.id}, description={description}")
+                logger.info(f"Tax deadline added: user={current_user.id}, description={description}, deadline_id={result.inserted_id}")
                 flash(trans('tax_deadline_added', default='Deadline added successfully'), 'success')
             except ValueError:
                 logger.error(f"Invalid date format for deadline: user={current_user.id}, date={deadline_date}")
@@ -524,8 +561,8 @@ def manage_tax_deadlines():
     deadlines = list(db.tax_reminders.find())
     serialized_deadlines = [
         {
-            'deadline_date': dl['deadline_date'],
-            'description': dl['description'],
+            'deadline_date': dl.get('deadline_date'),
+            'description': dl.get('description', 'Unknown'),
             '_id': str(dl['_id'])
         } for dl in deadlines
     ]

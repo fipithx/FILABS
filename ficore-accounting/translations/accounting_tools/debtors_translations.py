@@ -4,17 +4,17 @@ Debtors management translations for accounting tools
 
 DEBTORS_TRANSLATIONS = {
     'en': {
-        'debtors_dashboard': 'Debtors',
+        'debtors_dashboard': 'They Owe',
+        'debtors_dashboard_desc': 'Manage money owed to you by others.',
+        'debtors_tooltip': 'Manage money owed to you by debtors.',
         'debtors_list': 'Debtors List',
         'debtors_add_debtor': 'Add Debtor',
         'debtors_edit_debtor': 'Edit Debtor',
         'debtors_title': 'Debtors',
         'debtors_subtitle': 'Manage your debtors',
-        'debtors_dashboard_desc': 'Manage accounts receivable from debtors.',
         'debtors_create_title': 'Create New Debtor',
         'debtors_no_records': 'No debtor records found',
         'debtors_create_first': 'Create your first debtor',
-        'debtors_tooltip': 'Track and manage your debtors',
         'debtors_debt_details': 'Debt Details',
         'debtors_reminders': 'Reminders',
         'debtors_download_iou': 'Download IOU',

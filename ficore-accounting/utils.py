@@ -1,8 +1,10 @@
 import re
 import logging
 import uuid
+import os
+import certifi
 from datetime import datetime
-from flask import session, has_request_context, current_app, url_for
+from flask import session, has_request_context, current_app, url_for, request
 from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -12,7 +14,7 @@ from translations import trans
 import requests
 from werkzeug.routing import BuildError
 
-# Flask extensions - defined here to avoid having too many files
+# Flask extensions
 from flask_login import LoginManager
 from flask_session import Session
 from flask_wtf.csrf import CSRFProtect
@@ -28,55 +30,34 @@ compress = Compress()
 limiter = Limiter(key_func=get_remote_address, default_limits=['200 per day', '50 per hour'], storage_uri='memory://')
 
 # Set up logging with session support
-root_logger = logging.getLogger('ficore_app')
-root_logger.setLevel(logging.INFO)
+root_logger = logging.getLogger('ficore_app.utils')
+root_logger.setLevel(logging.DEBUG)  # Changed to DEBUG for better deployment diagnostics
 
 class SessionFormatter(logging.Formatter):
     def format(self, record):
         record.session_id = getattr(record, 'session_id', 'no_session_id')
+        record.ip_address = getattr(record, 'ip_address', 'unknown')
         return super().format(record)
 
 class SessionAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         kwargs['extra'] = kwargs.get('extra', {})
         session_id = 'no-session-id'
+        ip_address = 'unknown'
         try:
             if has_request_context():
                 session_id = session.get('sid', 'no-session-id')
+                ip_address = request.remote_addr
             else:
                 session_id = 'no-request-context'
         except Exception as e:
             session_id = 'session-error'
             kwargs['extra']['session_error'] = str(e)
         kwargs['extra']['session_id'] = session_id
+        kwargs['extra']['ip_address'] = ip_address
         return msg, kwargs
 
 logger = SessionAdapter(root_logger, {})
-
-# Helper function to generate URLs for tools/navigation
-def generate_tools_with_urls(tools):
-    '''
-    Generate a list of tools with resolved URLs.
-    
-    Args:
-        tools: List of dictionaries containing 'endpoint' keys
-    
-    Returns:
-        List of dictionaries with 'url' keys added
-    '''
-    result = []
-    for tool in tools:
-        try:
-            with current_app.app_context():
-                url = url_for(tool['endpoint'], _external=True)
-                result.append({**tool, 'url': url})
-        except BuildError as e:
-            logger.error(f"Failed to generate URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}. Ensure endpoint is defined in blueprint.")
-            result.append({**tool, 'url': '#'})
-        except RuntimeError as e:
-            logger.warning(f"Runtime error generating URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
-            result.append({**tool, 'url': '#'})
-    return result
 
 # Tool/navigation lists with endpoints
 _PERSONAL_TOOLS = [
@@ -89,12 +70,12 @@ _PERSONAL_TOOLS = [
         "icon": "bi-wallet"
     },
     {
-        "endpoint": "personal.quiz.main",
-        "label": "Quiz",
-        "label_key": "quiz_personality_quiz",
-        "description_key": "quiz_personality_desc",
-        "tooltip_key": "quiz_tooltip",
-        "icon": "bi-question-circle"
+        "endpoint": "personal.bill.main",
+        "label": "Bills",
+        "label_key": "bill_bill_planner",
+        "description_key": "bill_bill_desc",
+        "tooltip_key": "bill_tooltip",
+        "icon": "bi-receipt"
     },
     {
         "endpoint": "taxation_bp.calculate_tax",
@@ -105,12 +86,12 @@ _PERSONAL_TOOLS = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "news_bp.news_list",
-        "label": "News",
-        "label_key": "news_list",
-        "description_key": "news_list_desc",
-        "tooltip_key": "news_tooltip",
-        "icon": "bi-newspaper"
+        "endpoint": "coins.history",
+        "label": "Coins",
+        "label_key": "coins_dashboard",
+        "description_key": "coins_dashboard_desc",
+        "tooltip_key": "coins_tooltip",
+        "icon": "bi-coin"
     },
 ]
 
@@ -166,7 +147,6 @@ _PERSONAL_EXPLORE_FEATURES = [
         "tooltip_key": "emergency_fund_tooltip",
         "icon": "bi-shield"
     },
-    
     {
         "endpoint": "coins.history",
         "label": "Coins",
@@ -215,7 +195,6 @@ _PERSONAL_EXPLORE_FEATURES = [
         "tooltip_key": "news_tooltip",
         "icon": "bi-newspaper"
     },
-    
     {
         "endpoint": "personal.bill.main",
         "label": "Bills",
@@ -243,7 +222,6 @@ _BUSINESS_TOOLS = [
         "tooltip_key": "creditors_tooltip",
         "icon": "bi-person-lines"
     },
-    
     {
         "endpoint": "taxation_bp.calculate_tax",
         "label": "Taxation",
@@ -251,6 +229,14 @@ _BUSINESS_TOOLS = [
         "description_key": "taxation_calculator_desc",
         "tooltip_key": "taxation_tooltip",
         "icon": "bi-calculator"
+    },
+    {
+        "endpoint": "coins.history",
+        "label": "Coins",
+        "label_key": "coins_dashboard",
+        "description_key": "coins_dashboard_desc",
+        "tooltip_key": "coins_tooltip",
+        "icon": "bi-coin"
     },
 ]
 
@@ -263,7 +249,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "inventory_tooltip",
         "icon": "bi-box"
     },
-    
     {
         "endpoint": "coins.history",
         "label": "Coins",
@@ -280,7 +265,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "taxation_tooltip",
         "icon": "bi-calculator"
     },
-    
     {
         "endpoint": "debtors.index",
         "label": "They Owe",
@@ -289,7 +273,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "debtors_tooltip",
         "icon": "bi-person-plus"
     },
-    
     {
         "endpoint": "taxation_bp.calculate_tax",
         "label": "Taxation",
@@ -298,7 +281,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "taxation_tooltip",
         "icon": "bi-calculator"
     },
-    
     {
         "endpoint": "news_bp.news_list",
         "label": "News",
@@ -315,14 +297,13 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "receipts_tooltip",
         "icon": "bi-cash-coin"
     },
-
-    {"endpoint": "payments.index",
-     "label": "MoneyOut",
-     "label_key": "payments_dashboard",
-     "description_key": "payments_dashboard",
-     "tooltip_key": "payments_tooltip",
-     "icon": "bi-person-minus"
-    
+    {
+        "endpoint": "payments.index",
+        "label": "MoneyOut",
+        "label_key": "payments_dashboard",
+        "description_key": "payments_dashboard",
+        "tooltip_key": "payments_tooltip",
+        "icon": "bi-person-minus"
     },
 ]
 
@@ -351,7 +332,6 @@ _BUSINESS_NAV = [
         "tooltip_key": "inventory_tooltip",
         "icon": "bi-box"
     },
-    
     {
         "endpoint": "settings.profile",
         "label": "Profile",
@@ -378,14 +358,6 @@ _AGENT_TOOLS = [
         "description_key": "coins_dashboard_desc",
         "tooltip_key": "coins_tooltip",
         "icon": "bi-coin"
-    },
-    {
-        "endpoint": "news_bp.news_list",
-        "label": "News",
-        "label_key": "news_list",
-        "description_key": "news_list_desc",
-        "tooltip_key": "news_tooltip",
-        "icon": "bi-newspaper"
     },
 ]
 
@@ -609,34 +581,66 @@ def initialize_tools_with_urls(app):
     global ADMIN_TOOLS, ADMIN_NAV, ADMIN_EXPLORE_FEATURES
     global ALL_TOOLS
     
-    with app.app_context():
-        PERSONAL_TOOLS = generate_tools_with_urls(_PERSONAL_TOOLS)
-        PERSONAL_NAV = generate_tools_with_urls(_PERSONAL_NAV)
-        PERSONAL_EXPLORE_FEATURES = generate_tools_with_urls(_PERSONAL_EXPLORE_FEATURES)
-        BUSINESS_TOOLS = generate_tools_with_urls(_BUSINESS_TOOLS)
-        BUSINESS_NAV = generate_tools_with_urls(_BUSINESS_NAV)
-        BUSINESS_EXPLORE_FEATURES = generate_tools_with_urls(_BUSINESS_EXPLORE_FEATURES)
-        AGENT_TOOLS = generate_tools_with_urls(_AGENT_TOOLS)
-        AGENT_NAV = generate_tools_with_urls(_AGENT_NAV)
-        AGENT_EXPLORE_FEATURES = generate_tools_with_urls(_AGENT_EXPLORE_FEATURES)
-        ADMIN_TOOLS = generate_tools_with_urls(_ADMIN_TOOLS)
-        ADMIN_NAV = generate_tools_with_urls(_ADMIN_NAV)
-        ADMIN_EXPLORE_FEATURES = generate_tools_with_urls(_ADMIN_EXPLORE_FEATURES)
-        ALL_TOOLS = (
-            PERSONAL_TOOLS +
-            BUSINESS_TOOLS +
-            AGENT_TOOLS +
-            ADMIN_TOOLS +
-            generate_tools_with_urls([{
-                "endpoint": "admin.dashboard",
-                "label": "Management",
-                "label_key": "admin_dashboard",
-                "description_key": "admin_dashboard_desc",
-                "tooltip_key": "admin_dashboard_tooltip",
-                "icon": "bi-speedometer"
-            }])
-        )
-        logger.info('Initialized tools and navigation with resolved URLs')
+    try:
+        with app.app_context():
+            PERSONAL_TOOLS = generate_tools_with_urls(_PERSONAL_TOOLS)
+            PERSONAL_NAV = generate_tools_with_urls(_PERSONAL_NAV)
+            PERSONAL_EXPLORE_FEATURES = generate_tools_with_urls(_PERSONAL_EXPLORE_FEATURES)
+            BUSINESS_TOOLS = generate_tools_with_urls(_BUSINESS_TOOLS)
+            BUSINESS_NAV = generate_tools_with_urls(_BUSINESS_NAV)
+            BUSINESS_EXPLORE_FEATURES = generate_tools_with_urls(_BUSINESS_EXPLORE_FEATURES)
+            AGENT_TOOLS = generate_tools_with_urls(_AGENT_TOOLS)
+            AGENT_NAV = generate_tools_with_urls(_AGENT_NAV)
+            AGENT_EXPLORE_FEATURES = generate_tools_with_urls(_AGENT_EXPLORE_FEATURES)
+            ADMIN_TOOLS = generate_tools_with_urls(_ADMIN_TOOLS)
+            ADMIN_NAV = generate_tools_with_urls(_ADMIN_NAV)
+            ADMIN_EXPLORE_FEATURES = generate_tools_with_urls(_ADMIN_EXPLORE_FEATURES)
+            ALL_TOOLS = (
+                PERSONAL_TOOLS +
+                BUSINESS_TOOLS +
+                AGENT_TOOLS +
+                ADMIN_TOOLS +
+                generate_tools_with_urls([{
+                    "endpoint": "admin.dashboard",
+                    "label": "Management",
+                    "label_key": "admin_dashboard",
+                    "description_key": "admin_dashboard_desc",
+                    "tooltip_key": "admin_dashboard_tooltip",
+                    "icon": "bi-speedometer"
+                }])
+            )
+            logger.info('Initialized tools and navigation with resolved URLs')
+    except Exception as e:
+        logger.error(f'Error initializing tools with URLs: {str(e)}', exc_info=True)
+        raise
+
+def generate_tools_with_urls(tools):
+    '''
+    Generate a list of tools with resolved URLs and validated icons.
+    
+    Args:
+        tools: List of dictionaries containing 'endpoint' and 'icon' keys
+    
+    Returns:
+        List of dictionaries with 'url' keys added and validated 'icon' fields
+    '''
+    result = []
+    for tool in tools:
+        try:
+            url = url_for(tool['endpoint'], _external=True)
+            # Validate icon field; use fallback if missing or invalid
+            icon = tool.get('icon', 'bi-question-circle')
+            if not icon or not icon.startswith('bi-'):
+                logger.warning(f"Invalid or missing icon for tool {tool.get('label', 'unknown')}: {icon}. Using fallback 'bi-question-circle'.")
+                icon = 'bi-question-circle'
+            result.append({**tool, 'url': url, 'icon': icon})
+        except BuildError as e:
+            logger.warning(f"Failed to generate URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}. Ensure endpoint is defined in blueprint.")
+            result.append({**tool, 'url': '#', 'icon': tool.get('icon', 'bi-question-circle')})
+        except RuntimeError as e:
+            logger.warning(f"Runtime error generating URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
+            result.append({**tool, 'url': '#', 'icon': tool.get('icon', 'bi-question-circle')})
+    return result
 
 def get_limiter():
     '''
@@ -652,14 +656,16 @@ def create_anonymous_session():
     Create a guest session for anonymous access.
     '''
     try:
-        session['sid'] = str(uuid.uuid4())
-        session['is_anonymous'] = True
-        session['created_at'] = datetime.utcnow().isoformat()
-        if 'lang' not in session:
-            session['lang'] = 'en'
-        logger.info(f"{trans('general_anonymous_session_created', default='Created anonymous session')}: {session['sid']}")
+        with current_app.app_context():
+            session['sid'] = str(uuid.uuid4())
+            session['is_anonymous'] = True
+            session['created_at'] = datetime.utcnow().isoformat()
+            if 'lang' not in session:
+                session['lang'] = 'en'
+            logger.info(f"{trans('general_anonymous_session_created', default='Created anonymous session')}: {session['sid']}")
     except Exception as e:
         logger.error(f"{trans('general_anonymous_session_error', default='Error creating anonymous session')}: {str(e)}", exc_info=True)
+        raise
 
 def trans_function(key, lang=None, **kwargs):
     '''
@@ -674,7 +680,8 @@ def trans_function(key, lang=None, **kwargs):
         Translated string with formatting applied
     '''
     try:
-        return trans(key, lang=lang, **kwargs)
+        with current_app.app_context():
+            return trans(key, lang=lang, **kwargs)
     except Exception as e:
         logger.error(f"{trans('general_translation_error', default='Translation error for key')} '{key}': {str(e)}", exc_info=True)
         return key
@@ -696,17 +703,40 @@ def is_valid_email(email):
 
 def get_mongo_db():
     '''
-    Get MongoDB database connection.
+    Get MongoDB database instance from the application extensions.
     
     Returns:
         Database object
     '''
     try:
-        if not hasattr(current_app._get_current_object(), 'mongo_client'):
-            raise RuntimeError('MongoDB client not initialized in application context')
-        return current_app._get_current_object().mongo_client[current_app.config.get('SESSION_MONGODB_DB', 'ficodb')]
+        with current_app.app_context():
+            if 'mongo' not in current_app.extensions:
+                mongo_uri = os.getenv('MONGO_URI')
+                if not mongo_uri:
+                    logger.error("MONGO_URI environment variable not set",
+                                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
+                    raise RuntimeError("MONGO_URI environment variable not set")
+                
+                client = MongoClient(
+                    mongo_uri,
+                    serverSelectionTimeoutMS=5000,
+                    tls=True,
+                    tlsCAFile=certifi.where() if os.getenv('MONGO_CA_FILE') is None else os.getenv('MONGO_CA_FILE'),
+                    maxPoolSize=50,
+                    minPoolSize=5
+                )
+                client.admin.command('ping')
+                current_app.extensions['mongo'] = client
+                logger.info("MongoDB client initialized successfully in utils.get_mongo_db",
+                           extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
+            
+            db = current_app.extensions['mongo']['ficodb']
+            # Verify connection
+            db.command('ping')
+            return db
     except Exception as e:
-        logger.error(f"{trans('general_mongo_connection_error', default='Error getting MongoDB connection')}: {str(e)}", exc_info=True)
+        logger.error(f"Failed to connect to MongoDB database: {str(e)}",
+                    exc_info=True, extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
         raise
 
 def close_mongo_db():
@@ -726,9 +756,10 @@ def get_mail(app):
         Mail instance
     '''
     try:
-        mail = Mail(app)
-        logger.info(trans('general_mail_service_initialized', default='Mail service initialized'))
-        return mail
+        with app.app_context():
+            mail = Mail(app)
+            logger.info(trans('general_mail_service_initialized', default='Mail service initialized'))
+            return mail
     except Exception as e:
         logger.error(f"{trans('general_mail_service_error', default='Error initializing mail service')}: {str(e)}", exc_info=True)
         return None
@@ -750,16 +781,17 @@ def requires_role(role):
         
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if not current_user.is_authenticated:
-                flash(trans('general_login_required', default='Please log in to access this page.'), 'warning')
-                return redirect(url_for('users.login'))
-            if is_admin():
+            with current_app.app_context():
+                if not current_user.is_authenticated:
+                    flash(trans('general_login_required', default='Please log in to access this page.'), 'warning')
+                    return redirect(url_for('users.login'))
+                if is_admin():
+                    return f(*args, **kwargs)
+                allowed_roles = role if isinstance(role, list) else [role]
+                if current_user.role not in allowed_roles:
+                    flash(trans('general_access_denied', default='You do not have permission to access this page.'), 'danger')
+                    return redirect(url_for('dashboard.index'))
                 return f(*args, **kwargs)
-            allowed_roles = role if isinstance(role, list) else [role]
-            if current_user.role not in allowed_roles:
-                flash(trans('general_access_denied', default='You do not have permission to access this page.'), 'danger')
-                return redirect(url_for('dashboard.index'))
-            return f(*args, **kwargs)
         return decorated_function
     return decorator
 
@@ -775,20 +807,21 @@ def check_coin_balance(required_amount=1, user_id=None):
         bool: True if user has sufficient balance, False otherwise
     '''
     try:
-        from flask_login import current_user
-        if user_id is None and current_user.is_authenticated:
-            user_id = current_user.id
-        if not user_id:
-            return False
-        db = get_mongo_db()
-        if db is None:
-            return False
-        user_query = get_user_query(user_id)
-        user = db.users.find_one(user_query)
-        if not user:
-            return False
-        coin_balance = user.get('coin_balance', 0)
-        return coin_balance >= required_amount
+        with current_app.app_context():
+            from flask_login import current_user
+            if user_id is None and current_user.is_authenticated:
+                user_id = current_user.id
+            if not user_id:
+                return False
+            db = get_mongo_db()
+            if db is None:
+                return False
+            user_query = get_user_query(user_id)
+            user = db.users.find_one(user_query)
+            if not user:
+                return False
+            coin_balance = user.get('coin_balance', 0)
+            return coin_balance >= required_amount
     except Exception as e:
         logger.error(f"{trans('general_coin_balance_check_error', default='Error checking coin balance for user')} {user_id}: {str(e)}", exc_info=True)
         return False
@@ -813,8 +846,9 @@ def is_admin():
         bool: True if current user is admin, False otherwise
     '''
     try:
-        from flask_login import current_user
-        return current_user.is_authenticated and (current_user.role == 'admin' or getattr(current_user, 'is_admin', False))
+        with current_app.app_context():
+            from flask_login import current_user
+            return current_user.is_authenticated and (current_user.role == 'admin' or getattr(current_user, 'is_admin', False))
     except Exception:
         return False
 
@@ -831,12 +865,13 @@ def format_currency(amount, currency='₦', lang=None):
         Formatted currency string
     '''
     try:
-        if lang is None:
-            lang = session.get('lang', 'en') if has_request_context() else 'en'
-        amount = float(amount) if amount is not None else 0
-        if amount.is_integer():
-            return f"{currency}{int(amount):,}"
-        return f"{currency}{amount:,.2f}"
+        with current_app.app_context():
+            if lang is None:
+                lang = session.get('lang', 'en') if has_request_context() else 'en'
+            amount = float(amount) if amount is not None else 0
+            if amount.is_integer():
+                return f"{currency}{int(amount):,}"
+            return f"{currency}{amount:,.2f}"
     except (TypeError, ValueError) as e:
         logger.warning(f"{trans('general_currency_format_error', default='Error formatting currency')} {amount}: {str(e)}")
         return f"{currency}0"
@@ -854,30 +889,31 @@ def format_date(date_obj, lang=None, format_type='short'):
         Formatted date string
     '''
     try:
-        if lang is None:
-            lang = session.get('lang', 'en') if has_request_context() else 'en'
-        if not date_obj:
-            return ''
-        if isinstance(date_obj, str):
-            try:
-                date_obj = datetime.strptime(date_obj, '%Y-%m-%d')
-            except ValueError:
+        with current_app.app_context():
+            if lang is None:
+                lang = session.get('lang', 'en') if has_request_context() else 'en'
+            if not date_obj:
+                return ''
+            if isinstance(date_obj, str):
                 try:
-                    date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+                    date_obj = datetime.strptime(date_obj, '%Y-%m-%d')
                 except ValueError:
-                    return date_obj
-        if format_type == 'iso':
-            return date_obj.strftime('%Y-%m-%d')
-        elif format_type == 'long':
-            if lang == 'ha':
-                return date_obj.strftime('%d %B %Y')
+                    try:
+                        date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+                    except ValueError:
+                        return date_obj
+            if format_type == 'iso':
+                return date_obj.strftime('%Y-%m-%d')
+            elif format_type == 'long':
+                if lang == 'ha':
+                    return date_obj.strftime('%d %B %Y')
+                else:
+                    return date_obj.strftime('%B %d, %Y')
             else:
-                return date_obj.strftime('%B %d, %Y')
-        else:
-            if lang == 'ha':
-                return date_obj.strftime('%d/%m/%Y')
-            else:
-                return date_obj.strftime('%m/%d/%Y')
+                if lang == 'ha':
+                    return date_obj.strftime('%d/%m/%Y')
+                else:
+                    return date_obj.strftime('%m/%d/%Y')
     except Exception as e:
         logger.warning(f"{trans('general_date_format_error', default='Error formatting date')} {date_obj}: {str(e)}")
         return str(date_obj) if date_obj else ''
@@ -941,9 +977,8 @@ def get_user_language():
         Language code ('en' or 'ha')
     '''
     try:
-        if has_request_context():
-            return session.get('lang', 'en')
-        return 'en'
+        with current_app.app_context():
+            return session.get('lang', 'en') if has_request_context() else 'en'
     except Exception:
         return 'en'
 
@@ -957,27 +992,25 @@ def log_user_action(action, details=None, user_id=None):
         user_id: User ID (optional, will use current_user if not provided)
     '''
     try:
-        from flask_login import current_user
-        if user_id is None and current_user.is_authenticated:
-            user_id = current_user.id
-        session_id = session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'
-        log_entry = {
-            'user_id': user_id,
-            'session_id': session_id,
-            'action': action,
-            'details': details or {},
-            'timestamp': datetime.utcnow(),
-            'ip_address': None,
-            'user_agent': None
-        }
-        if has_request_context():
+        with current_app.app_context():
+            from flask_login import current_user
             from flask import request
-            log_entry['ip_address'] = request.remote_addr
-            log_entry['user_agent'] = request.headers.get('User-Agent')
-        db = get_mongo_db()
-        if db:
-            db.audit_logs.insert_one(log_entry)
-        logger.info(f"{trans('general_user_action_logged', default='User action logged')}: {action} by user {user_id}")
+            if user_id is None and current_user.is_authenticated:
+                user_id = current_user.id
+            session_id = session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'
+            log_entry = {
+                'user_id': user_id,
+                'session_id': session_id,
+                'action': action,
+                'details': details or {},
+                'timestamp': datetime.utcnow(),
+                'ip_address': request.remote_addr if has_request_context() else None,
+                'user_agent': request.headers.get('User-Agent') if has_request_context() else None
+            }
+            db = get_mongo_db()
+            if db:
+                db.audit_logs.insert_one(log_entry)
+            logger.info(f"{trans('general_user_action_logged', default='User action logged')}: {action} by user {user_id}")
     except Exception as e:
         logger.error(f"{trans('general_user_action_log_error', default='Error logging user action')}: {str(e)}", exc_info=True)
 
@@ -993,26 +1026,30 @@ def send_sms_reminder(recipient, message):
         tuple: (success, api_response)
     '''
     try:
-        recipient = re.sub(r'\D', '', recipient)
-        if recipient.startswith('0'):
-            recipient = '234' + recipient[1:]
-        elif not recipient.startswith('+'):
-            recipient = '234' + recipient
-        sms_api_url = current_app.config.get('SMS_API_URL', 'https://api.smsprovider.com/send')
-        sms_api_key = current_app.config.get('SMS_API_KEY', '')
-        payload = {
-            'to': f'+{recipient}',
-            'message': message,
-            'api_key': sms_api_key
-        }
-        response = requests.post(sms_api_url, json=payload, timeout=10)
-        response_data = response.json()
-        if response.status_code == 200 and response_data.get('success', False):
-            logger.info(f"SMS sent to {recipient}")
-            return True, response_data
-        else:
-            logger.error(f"Failed to send SMS to {recipient}: {response_data}")
-            return False, response_data
+        with current_app.app_context():
+            recipient = re.sub(r'\D', '', recipient)
+            if recipient.startswith('0'):
+                recipient = '234' + recipient[1:]
+            elif not recipient.startswith('+'):
+                recipient = '234' + recipient
+            sms_api_url = current_app.config.get('SMS_API_URL', 'https://api.smsprovider.com/send')
+            sms_api_key = current_app.config.get('SMS_API_KEY', '')
+            if not sms_api_key:
+                logger.warning('SMS_API_KEY not set, cannot send SMS')
+                return False, {'error': 'SMS_API_KEY not configured'}
+            payload = {
+                'to': f'+{recipient}',
+                'message': message,
+                'api_key': sms_api_key
+            }
+            response = requests.post(sms_api_url, json=payload, timeout=10)
+            response_data = response.json()
+            if response.status_code == 200 and response_data.get('success', False):
+                logger.info(f"SMS sent to {recipient}")
+                return True, response_data
+            else:
+                logger.error(f"Failed to send SMS to {recipient}: {response_data}")
+                return False, response_data
     except Exception as e:
         logger.error(f"Error sending SMS to {recipient}: {str(e)}", exc_info=True)
         return False, {'error': str(e)}
@@ -1029,26 +1066,30 @@ def send_whatsapp_reminder(recipient, message):
         tuple: (success, api_response)
     '''
     try:
-        recipient = re.sub(r'\D', '', recipient)
-        if recipient.startswith('0'):
-            recipient = '234' + recipient[1:]
-        elif not recipient.startswith('+'):
-            recipient = '234' + recipient
-        whatsapp_api_url = current_app.config.get('WHATSAPP_API_URL', 'https://api.whatsapp.com/send')
-        whatsapp_api_key = current_app.config.get('WHATSAPP_API_KEY', '')
-        payload = {
-            'phone': f'+{recipient}',
-            'text': message,
-            'api_key': whatsapp_api_key
-        }
-        response = requests.post(whatsapp_api_url, json=payload, timeout=10)
-        response_data = response.json()
-        if response.status_code == 200 and response_data.get('success', False):
-            logger.info(f"WhatsApp message sent to {recipient}")
-            return True, response_data
-        else:
-            logger.error(f"Failed to send WhatsApp message to {recipient}: {response_data}")
-            return False, response_data
+        with current_app.app_context():
+            recipient = re.sub(r'\D', '', recipient)
+            if recipient.startswith('0'):
+                recipient = '234' + recipient[1:]
+            elif not recipient.startswith('+'):
+                recipient = '234' + recipient
+            whatsapp_api_url = current_app.config.get('WHATSAPP_API_URL', 'https://api.whatsapp.com/send')
+            whatsapp_api_key = current_app.config.get('WHATSAPP_API_KEY', '')
+            if not whatsapp_api_key:
+                logger.warning('WHATSAPP_API_KEY not set, cannot send WhatsApp message')
+                return False, {'error': 'WHATSAPP_API_KEY not configured'}
+            payload = {
+                'phone': f'+{recipient}',
+                'text': message,
+                'api_key': whatsapp_api_key
+            }
+            response = requests.post(whatsapp_api_url, json=payload, timeout=10)
+            response_data = response.json()
+            if response.status_code == 200 and response_data.get('success', False):
+                logger.info(f"WhatsApp message sent to {recipient}")
+                return True, response_data
+            else:
+                logger.error(f"Failed to send WhatsApp message to {recipient}: {response_data}")
+                return False, response_data
     except Exception as e:
         logger.error(f"Error sending WhatsApp message to {recipient}: {str(e)}", exc_info=True)
         return False, {'error': str(e)}

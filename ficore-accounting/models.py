@@ -8,11 +8,9 @@ import logging
 import uuid
 import time
 from translations import trans
-from utils import get_mongo_db  # Import get_mongo_db from utils.py
+from utils import get_mongo_db, logger  # Use SessionAdapter logger from utils
 from functools import lru_cache
 import traceback
-
-logger = logging.getLogger('ficore_app')
 
 # Sample courses data
 SAMPLE_COURSES = [
@@ -55,7 +53,7 @@ SAMPLE_AGENTS = [
     }
 ]
 
-def get_db(mongo_uri=None):
+def get_db():
     """
     Get MongoDB database connection using the global client from utils.py.
     
@@ -64,13 +62,19 @@ def get_db(mongo_uri=None):
     """
     try:
         db = get_mongo_db()
-        logger.info(f"Successfully connected to MongoDB database: {db.name}")
+        logger.info(f"Successfully connected to MongoDB database: {db.name}", extra={'session_id': 'no-session-id'})
         return db
     except Exception as e:
-        logger.error(f"Error connecting to database: {str(e)}")
+        logger.error(f"Error connecting to database: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def initialize_database(app):
+    """
+    Initialize MongoDB collections and indexes.
+    
+    Args:
+        app: Flask application instance
+    """
     max_retries = 3
     retry_delay = 1
     
@@ -78,17 +82,19 @@ def initialize_database(app):
         try:
             db = get_db()
             db.command('ping')
-            logger.info(f"Attempt {attempt + 1}/{max_retries} - {trans('general_database_connection_established', default='MongoDB connection established')}")
+            logger.info(f"Attempt {attempt + 1}/{max_retries} - {trans('general_database_connection_established', default='MongoDB connection established')}", 
+                       extra={'session_id': 'no-session-id'})
             break
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.error(f"Failed to initialize database (attempt {attempt + 1}/{max_retries}): {e}")
+            logger.error(f"Failed to initialize database (attempt {attempt + 1}/{max_retries}): {str(e)}", 
+                        exc_info=True, extra={'session_id': 'no-session-id'})
             if attempt == max_retries - 1:
                 raise RuntimeError(trans('general_database_connection_failed', default='MongoDB connection failed after max retries'))
             time.sleep(retry_delay)
     
     try:
         db_instance = get_db()
-        logger.info(f"MongoDB database: {db_instance.name}")
+        logger.info(f"MongoDB database: {db_instance.name}", extra={'session_id': 'no-session-id'})
         collections = db_instance.list_collection_names()
         
         collection_schemas = {
@@ -96,11 +102,11 @@ def initialize_database(app):
                 'validator': {
                     '$jsonSchema': {
                         'bsonType': 'object',
-                        'required': ['_id', 'email', 'password', 'role'],
+                        'required': ['_id', 'email', 'password_hash', 'role'],
                         'properties': {
                             '_id': {'bsonType': 'string'},
                             'email': {'bsonType': 'string', 'pattern': r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'},
-                            'password': {'bsonType': 'string'},
+                            'password_hash': {'bsonType': 'string'},
                             'role': {'enum': ['personal', 'trader', 'agent', 'admin']},
                             'coin_balance': {'bsonType': 'int', 'minimum': 0},
                             'language': {'enum': ['en', 'ha']},
@@ -444,9 +450,8 @@ def initialize_database(app):
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('created_at', DESCENDING)]}
+                    {'key': [('user_id', ASCENDING), ('created_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('created_at', DESCENDING)]}
                 ]
             },
             'budgets': {
@@ -473,9 +478,8 @@ def initialize_database(app):
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('created_at', DESCENDING)]}
+                    {'key': [('user_id', ASCENDING), ('created_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('created_at', DESCENDING)]}
                 ]
             },
             'bills': {
@@ -492,17 +496,20 @@ def initialize_database(app):
                             'frequency': {'bsonType': ['string', 'null']},
                             'category': {'bsonType': ['string', 'null']},
                             'status': {'enum': ['pending', 'paid', 'overdue']},
+                            'send_notifications': {'bsonType': 'bool'},
                             'send_email': {'bsonType': 'bool'},
+                            'send_sms': {'bsonType': 'bool'},
+                            'send_whatsapp': {'bsonType': 'bool'},
                             'reminder_days': {'bsonType': ['int', 'null']},
                             'user_email': {'bsonType': ['string', 'null']},
+                            'user_phone': {'bsonType': ['string', 'null']},
                             'first_name': {'bsonType': ['string', 'null']}
                         }
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('due_date', ASCENDING)]},
+                    {'key': [('user_id', ASCENDING), ('due_date', ASCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('due_date', ASCENDING)]},
                     {'key': [('status', ASCENDING)]}
                 ]
             },
@@ -527,9 +534,8 @@ def initialize_database(app):
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('created_at', DESCENDING)]}
+                    {'key': [('user_id', ASCENDING), ('created_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('created_at', DESCENDING)]}
                 ]
             },
             'emergency_funds': {
@@ -557,9 +563,8 @@ def initialize_database(app):
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('created_at', DESCENDING)]}
+                    {'key': [('user_id', ASCENDING), ('created_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('created_at', DESCENDING)]}
                 ]
             },
             'learning_materials': {
@@ -600,17 +605,59 @@ def initialize_database(app):
                     }
                 },
                 'indexes': [
-                    {'key': [('user_id', ASCENDING)]},
-                    {'key': [('session_id', ASCENDING)]},
-                    {'key': [('created_at', DESCENDING)]}
+                    {'key': [('user_id', ASCENDING), ('created_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('created_at', DESCENDING)]}
+                ]
+            },
+            'bill_reminders': {
+                'validator': {
+                    '$jsonSchema': {
+                        'bsonType': 'object',
+                        'required': ['user_id', 'notification_id', 'type', 'message', 'sent_at'],
+                        'properties': {
+                            'user_id': {'bsonType': 'string'},
+                            'session_id': {'bsonType': ['string', 'null']},
+                            'notification_id': {'bsonType': 'string'},
+                            'type': {'enum': ['email', 'sms', 'whatsapp']},
+                            'message': {'bsonType': 'string'},
+                            'sent_at': {'bsonType': 'date'},
+                            'read_status': {'bsonType': 'bool'}
+                        }
+                    }
+                },
+                'indexes': [
+                    {'key': [('user_id', ASCENDING), ('sent_at', DESCENDING)]},
+                    {'key': [('session_id', ASCENDING), ('sent_at', DESCENDING)]}
+                ]
+            },
+            'sessions': {
+                'validator': {
+                    '$jsonSchema': {
+                        'bsonType': 'object',
+                        'required': ['_id', 'data', 'expiration'],
+                        'properties': {
+                            '_id': {'bsonType': 'string'},
+                            'data': {'bsonType': 'object'},
+                            'expiration': {'bsonType': 'date'}
+                        }
+                    }
+                },
+                'indexes': [
+                    {'key': [('expiration', ASCENDING)], 'expireAfterSeconds': 0}
                 ]
             }
         }
         
         for collection_name, config in collection_schemas.items():
             if collection_name not in collections:
-                db_instance.create_collection(collection_name, validator=config.get('validator', {}))
-                logger.info(f"{trans('general_collection_created', default='Created collection')}: {collection_name}")
+                try:
+                    db_instance.create_collection(collection_name, validator=config.get('validator', {}))
+                    logger.info(f"{trans('general_collection_created', default='Created collection')}: {collection_name}", 
+                               extra={'session_id': 'no-session-id'})
+                except OperationFailure as e:
+                    logger.error(f"Failed to create collection {collection_name}: {str(e)}", 
+                                exc_info=True, extra={'session_id': 'no-session-id'})
+                    raise
             
             existing_indexes = db_instance[collection_name].index_information()
             for index in config.get('indexes', []):
@@ -623,46 +670,61 @@ def initialize_database(app):
                     if tuple(existing_index_info['key']) == index_key_tuple:
                         existing_options = {k: v for k, v in existing_index_info.items() if k not in ['key', 'v', 'ns']}
                         if existing_options == options:
-                            logger.info(f"{trans('general_index_exists', default='Index already exists on')} {collection_name}: {keys} with options {options}")
+                            logger.info(f"{trans('general_index_exists', default='Index already exists on')} {collection_name}: {keys} with options {options}", 
+                                       extra={'session_id': 'no-session-id'})
                             index_exists = True
                         else:
-                            # Drop conflicting index
                             try:
                                 db_instance[collection_name].drop_index(existing_index_name)
-                                logger.info(f"Dropped conflicting index {existing_index_name} on {collection_name}")
+                                logger.info(f"Dropped conflicting index {existing_index_name} on {collection_name}", 
+                                           extra={'session_id': 'no-session-id'})
                             except OperationFailure as e:
-                                logger.error(f"Failed to drop index {existing_index_name} on {collection_name}: {str(e)}")
+                                logger.error(f"Failed to drop index {existing_index_name} on {collection_name}: {str(e)}", 
+                                            exc_info=True, extra={'session_id': 'no-session-id'})
                                 raise
                         break
                 if not index_exists:
                     try:
                         db_instance[collection_name].create_index(keys, name=index_name, **options)
-                        logger.info(f"{trans('general_index_created', default='Created index on')} {collection_name}: {keys} with options {options}")
+                        logger.info(f"{trans('general_index_created', default='Created index on')} {collection_name}: {keys} with options {options}", 
+                                   extra={'session_id': 'no-session-id'})
                     except OperationFailure as e:
                         if 'IndexKeySpecsConflict' in str(e):
-                            logger.info(f"Attempting to resolve index conflict for {collection_name}: {index_name}")
+                            logger.info(f"Attempting to resolve index conflict for {collection_name}: {index_name}", 
+                                       extra={'session_id': 'no-session-id'})
                             db_instance[collection_name].drop_index(index_name)
                             db_instance[collection_name].create_index(keys, name=index_name, **options)
-                            logger.info(f"Recreated index on {collection_name}: {keys} with options {options}")
+                            logger.info(f"Recreated index on {collection_name}: {keys} with options {options}", 
+                                       extra={'session_id': 'no-session-id'})
                         else:
-                            logger.error(f"Failed to create index on {collection_name}: {str(e)}")
+                            logger.error(f"Failed to create index on {collection_name}: {str(e)}", 
+                                        exc_info=True, extra={'session_id': 'no-session-id'})
                             raise
         
         courses_collection = db_instance.courses
         if courses_collection.count_documents({}) == 0:
-            for course in SAMPLE_COURSES:
-                courses_collection.insert_one(course)
-            logger.info(trans('general_courses_initialized', default='Initialized courses in MongoDB'))
+            try:
+                courses_collection.insert_many(SAMPLE_COURSES)
+                logger.info(trans('general_courses_initialized', default='Initialized courses in MongoDB'), 
+                           extra={'session_id': 'no-session-id'})
+            except OperationFailure as e:
+                logger.error(f"Failed to insert sample courses: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
+                raise
         app.config['COURSES'] = list(courses_collection.find({}, {'_id': 0}))
         
         agents_collection = db_instance.agents
         if agents_collection.count_documents({}) == 0:
-            for agent in SAMPLE_AGENTS:
-                agents_collection.insert_one(agent)
-            logger.info(trans('general_agents_initialized', default='Initialized agents in MongoDB'))
+            try:
+                agents_collection.insert_many(SAMPLE_AGENTS)
+                logger.info(trans('general_agents_initialized', default='Initialized agents in MongoDB'), 
+                           extra={'session_id': 'no-session-id'})
+            except OperationFailure as e:
+                logger.error(f"Failed to insert sample agents: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
+                raise
     
     except Exception as e:
-        logger.error(f"{trans('general_database_initialization_failed', default='Failed to initialize database')}: {str(e)}", exc_info=True)
+        logger.error(f"{trans('general_database_initialization_failed', default='Failed to initialize database')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 class User:
@@ -697,6 +759,16 @@ class User:
         return getattr(self, key, default)
 
 def create_user(db, user_data):
+    """
+    Create a new user in the users collection.
+    
+    Args:
+        db: MongoDB database instance
+        user_data: Dictionary containing user information
+    
+    Returns:
+        User: Created user object
+    """
     try:
         user_id = user_data.get('username', user_data['email'].split('@')[0]).lower()
         if 'password' in user_data:
@@ -705,7 +777,7 @@ def create_user(db, user_data):
         user_doc = {
             '_id': user_id,
             'email': user_data['email'].lower(),
-            'password': user_data['password_hash'],
+            'password_hash': user_data.get('password_hash'),
             'role': user_data.get('role', 'personal'),
             'display_name': user_data.get('display_name', user_id),
             'is_admin': user_data.get('is_admin', False),
@@ -720,8 +792,10 @@ def create_user(db, user_data):
         }
         
         db.users.insert_one(user_doc)
-        logger.info(f"{trans('general_user_created', default='Created user with ID')}: {user_id}")
-        get_user.cache_clear()  # Clear cache after user creation
+        logger.info(f"{trans('general_user_created', default='Created user with ID')}: {user_id}", 
+                   extra={'session_id': 'no-session-id'})
+        get_user.cache_clear()
+        get_user_by_email.cache_clear()
         return User(
             id=user_id,
             email=user_doc['email'],
@@ -735,16 +809,29 @@ def create_user(db, user_data):
             dark_mode=user_doc['dark_mode']
         )
     except DuplicateKeyError as e:
-        logger.error(f"{trans('general_user_creation_error', default='Error creating user')}: {trans('general_duplicate_key_error', default='Duplicate key error')} - {str(e)}")
+        logger.error(f"{trans('general_user_creation_error', default='Error creating user')}: {trans('general_duplicate_key_error', default='Duplicate key error')} - {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise ValueError(trans('general_user_exists', default='User with this email or username already exists'))
     except Exception as e:
-        logger.error(f"{trans('general_user_creation_error', default='Error creating user')}: {str(e)}")
+        logger.error(f"{trans('general_user_creation_error', default='Error creating user')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 @lru_cache(maxsize=128)
 def get_user_by_email(db, email):
+    """
+    Retrieve a user by email from the users collection.
+    
+    Args:
+        db: MongoDB database instance
+        email: Email address of the user
+    
+    Returns:
+        User: User object or None if not found
+    """
     try:
-        logger.debug(f"Calling get_user_by_email for email: {email}, stack: {''.join(traceback.format_stack()[-5:])}")
+        logger.debug(f"Calling get_user_by_email for email: {email}, stack: {''.join(traceback.format_stack()[-5:])}", 
+                    extra={'session_id': 'no-session-id'})
         user_doc = db.users.find_one({'email': email.lower()})
         if user_doc:
             return User(
@@ -761,13 +848,25 @@ def get_user_by_email(db, email):
             )
         return None
     except Exception as e:
-        logger.error(f"{trans('general_user_fetch_error', default='Error getting user by email')} {email}: {str(e)}", exc_info=True)
+        logger.error(f"{trans('general_user_fetch_error', default='Error getting user by email')} {email}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 @lru_cache(maxsize=128)
 def get_user(db, user_id):
+    """
+    Retrieve a user by ID from the users collection.
+    
+    Args:
+        db: MongoDB database instance
+        user_id: ID of the user
+    
+    Returns:
+        User: User object or None if not found
+    """
     try:
-        logger.debug(f"Calling get_user for user_id: {user_id}, stack: {''.join(traceback.format_stack()[-5:])}")
+        logger.debug(f"Calling get_user for user_id: {user_id}, stack: {''.join(traceback.format_stack()[-5:])}", 
+                    extra={'session_id': 'no-session-id'})
         user_doc = db.users.find_one({'_id': user_id})
         if user_doc:
             return User(
@@ -784,7 +883,8 @@ def get_user(db, user_id):
             )
         return None
     except Exception as e:
-        logger.error(f"{trans('general_user_fetch_error', default='Error getting user by ID')} {user_id}: {str(e)}", exc_info=True)
+        logger.error(f"{trans('general_user_fetch_error', default='Error getting user by ID')} {user_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_agent(db, agent_id):
@@ -809,7 +909,8 @@ def get_agent(db, agent_id):
             }
         return None
     except Exception as e:
-        logger.error(f"{trans('agents_fetch_error', default='Error getting agent by ID')} {agent_id}: {str(e)}")
+        logger.error(f"{trans('agents_fetch_error', default='Error getting agent by ID')} {agent_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def update_agent(db, agent_id, status):
@@ -830,102 +931,244 @@ def update_agent(db, agent_id, status):
             {'$set': {'status': status, 'updated_at': datetime.utcnow()}}
         )
         if result.modified_count > 0:
-            logger.info(f"{trans('agents_status_updated', default='Updated agent status for ID')}: {agent_id} to {status}")
+            logger.info(f"{trans('agents_status_updated', default='Updated agent status for ID')}: {agent_id} to {status}", 
+                       extra={'session_id': 'no-session-id'})
             return True
         return False
     except Exception as e:
-        logger.error(f"{trans('agents_update_error', default='Error updating agent status for ID')} {agent_id}: {str(e)}")
+        logger.error(f"{trans('agents_update_error', default='Error updating agent status for ID')} {agent_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_financial_health(db, filter_kwargs):
+    """
+    Retrieve financial health records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of financial health records
+    """
     try:
         return list(db.financial_health_scores.find(filter_kwargs).sort('created_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_financial_health_fetch_error', default='Error getting financial health')}: {str(e)}")
+        logger.error(f"{trans('general_financial_health_fetch_error', default='Error getting financial health')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_budgets(db, filter_kwargs):
+    """
+    Retrieve budget records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of budget records
+    """
     try:
         return list(db.budgets.find(filter_kwargs).sort('created_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_budgets_fetch_error', default='Error getting budgets')}: {str(e)}")
+        logger.error(f"{trans('general_budgets_fetch_error', default='Error getting budgets')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_bills(db, filter_kwargs):
+    """
+    Retrieve bill records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of bill records
+    """
     try:
         return list(db.bills.find(filter_kwargs).sort('due_date', ASCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_bills_fetch_error', default='Error getting bills')}: {str(e)}")
+        logger.error(f"{trans('general_bills_fetch_error', default='Error getting bills')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_net_worth(db, filter_kwargs):
+    """
+    Retrieve net worth records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of net worth records
+    """
     try:
         return list(db.net_worth_data.find(filter_kwargs).sort('created_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_net_worth_fetch_error', default='Error getting net worth')}: {str(e)}")
+        logger.error(f"{trans('general_net_worth_fetch_error', default='Error getting net worth')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_emergency_funds(db, filter_kwargs):
+    """
+    Retrieve emergency fund records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of emergency fund records
+    """
     try:
         return list(db.emergency_funds.find(filter_kwargs).sort('created_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_emergency_funds_fetch_error', default='Error getting emergency funds')}: {str(e)}")
+        logger.error(f"{trans('general_emergency_funds_fetch_error', default='Error getting emergency funds')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_learning_progress(db, filter_kwargs):
+    """
+    Retrieve learning progress records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of learning progress records
+    """
     try:
         return list(db.learning_materials.find(filter_kwargs))
     except Exception as e:
-        logger.error(f"{trans('general_learning_progress_fetch_error', default='Error getting learning progress')}: {str(e)}")
+        logger.error(f"{trans('general_learning_progress_fetch_error', default='Error getting learning progress')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_quiz_results(db, filter_kwargs):
+    """
+    Retrieve quiz result records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of quiz result records
+    """
     try:
         return list(db.quiz_responses.find(filter_kwargs).sort('created_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_quiz_results_fetch_error', default='Error getting quiz results')}: {str(e)}")
+        logger.error(f"{trans('general_quiz_results_fetch_error', default='Error getting quiz results')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_news_articles(db, filter_kwargs):
+    """
+    Retrieve news article records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of news article records
+    """
     try:
         return list(db.news_articles.find(filter_kwargs).sort('published_at', DESCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_news_articles_fetch_error', default='Error getting news articles')}: {str(e)}")
+        logger.error(f"{trans('general_news_articles_fetch_error', default='Error getting news articles')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_tax_rates(db, filter_kwargs):
+    """
+    Retrieve tax rate records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of tax rate records
+    """
     try:
         return list(db.tax_rates.find(filter_kwargs).sort('min_income', ASCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_tax_rates_fetch_error', default='Error getting tax rates')}: {str(e)}")
+        logger.error(f"{trans('general_tax_rates_fetch_error', default='Error getting tax rates')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_payment_locations(db, filter_kwargs):
+    """
+    Retrieve payment location records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of payment location records
+    """
     try:
         return list(db.payment_locations.find(filter_kwargs).sort('name', ASCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_payment_locations_fetch_error', default='Error getting payment locations')}: {str(e)}")
+        logger.error(f"{trans('general_payment_locations_fetch_error', default='Error getting payment locations')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def get_tax_reminders(db, filter_kwargs):
+    """
+    Retrieve tax reminder records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of tax reminder records
+    """
     try:
         return list(db.tax_reminders.find(filter_kwargs).sort('due_date', ASCENDING))
     except Exception as e:
-        logger.error(f"{trans('general_tax_reminders_fetch_error', default='Error getting tax reminders')}: {str(e)}")
+        logger.error(f"{trans('general_tax_reminders_fetch_error', default='Error getting tax reminders')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def create_feedback(db, feedback_data):
+    """
+    Create a new feedback record in the feedback collection.
+    
+    Args:
+        db: MongoDB database instance
+        feedback_data: Dictionary containing feedback information
+    """
     try:
         required_fields = ['user_id', 'tool_name', 'rating', 'timestamp']
         if not all(field in feedback_data for field in required_fields):
             raise ValueError(trans('general_missing_feedback_fields', default='Missing required feedback fields'))
         db.feedback.insert_one(feedback_data)
-        logger.info(f"{trans('general_feedback_created', default='Created feedback record for tool')}: {feedback_data.get('tool_name')}")
+        logger.info(f"{trans('general_feedback_created', default='Created feedback record for tool')}: {feedback_data.get('tool_name')}", 
+                   extra={'session_id': feedback_data.get('session_id', 'no-session-id')})
     except Exception as e:
-        logger.error(f"{trans('general_feedback_creation_error', default='Error creating feedback')}: {str(e)}")
+        logger.error(f"{trans('general_feedback_creation_error', default='Error creating feedback')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': feedback_data.get('session_id', 'no-session-id')})
         raise
 
 def log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
+    """
+    Log tool usage in the tool_usage collection.
+    
+    Args:
+        db: MongoDB database instance
+        tool_name: Name of the tool used
+        user_id: ID of the user (optional)
+        session_id: Session ID (optional)
+        action: Action performed (optional)
+    """
     try:
         usage_data = {
             'tool_name': tool_name,
@@ -935,12 +1178,24 @@ def log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
             'timestamp': datetime.utcnow()
         }
         db.tool_usage.insert_one(usage_data)
-        logger.info(f"{trans('general_tool_usage_logged', default='Logged tool usage')}: {tool_name} - {action}")
+        logger.info(f"{trans('general_tool_usage_logged', default='Logged tool usage')}: {tool_name} - {action}", 
+                   extra={'session_id': session_id or 'no-session-id'})
     except Exception as e:
-        logger.error(f"{trans('general_tool_usage_log_error', default='Error logging tool usage')}: {str(e)}")
+        logger.error(f"{trans('general_tool_usage_log_error', default='Error logging tool usage')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': session_id or 'no-session-id'})
         raise
 
 def create_news_article(db, article_data):
+    """
+    Create a new news article in the news_articles collection.
+    
+    Args:
+        db: MongoDB database instance
+        article_data: Dictionary containing news article information
+    
+    Returns:
+        str: ID of the created article
+    """
     try:
         required_fields = ['title', 'content', 'source_type', 'published_at']
         if not all(field in article_data for field in required_fields):
@@ -948,46 +1203,84 @@ def create_news_article(db, article_data):
         article_data.setdefault('is_verified', False)
         article_data.setdefault('is_active', True)
         result = db.news_articles.insert_one(article_data)
-        logger.info(f"{trans('general_news_article_created', default='Created news article with ID')}: {result.inserted_id}")
+        logger.info(f"{trans('general_news_article_created', default='Created news article with ID')}: {result.inserted_id}", 
+                   extra={'session_id': article_data.get('session_id', 'no-session-id')})
         return str(result.inserted_id)
     except Exception as e:
-        logger.error(f"{trans('general_news_article_creation_error', default='Error creating news article')}: {str(e)}")
+        logger.error(f"{trans('general_news_article_creation_error', default='Error creating news article')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': article_data.get('session_id', 'no-session-id')})
         raise
 
 def create_tax_rate(db, tax_rate_data):
+    """
+    Create a new tax rate in the tax_rates collection.
+    
+    Args:
+        db: MongoDB database instance
+        tax_rate_data: Dictionary containing tax rate information
+    
+    Returns:
+        str: ID of the created tax rate
+    """
     try:
         required_fields = ['role', 'min_income', 'max_income', 'rate', 'description']
         if not all(field in tax_rate_data for field in required_fields):
             raise ValueError(trans('general_missing_tax_rate_fields', default='Missing required tax rate fields'))
         result = db.tax_rates.insert_one(tax_rate_data)
-        logger.info(f"{trans('general_tax_rate_created', default='Created tax rate with ID')}: {result.inserted_id}")
+        logger.info(f"{trans('general_tax_rate_created', default='Created tax rate with ID')}: {result.inserted_id}", 
+                   extra={'session_id': tax_rate_data.get('session_id', 'no-session-id')})
         return str(result.inserted_id)
     except Exception as e:
-        logger.error(f"{trans('general_tax_rate_creation_error', default='Error creating tax rate')}: {str(e)}")
+        logger.error(f"{trans('general_tax_rate_creation_error', default='Error creating tax rate')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': tax_rate_data.get('session_id', 'no-session-id')})
         raise
 
 def create_payment_location(db, location_data):
+    """
+    Create a new payment location in the payment_locations collection.
+    
+    Args:
+        db: MongoDB database instance
+        location_data: Dictionary containing payment location information
+    
+    Returns:
+        str: ID of the created payment location
+    """
     try:
         required_fields = ['name', 'address', 'contact']
         if not all(field in location_data for field in required_fields):
             raise ValueError(trans('general_missing_location_fields', default='Missing required payment location fields'))
         result = db.payment_locations.insert_one(location_data)
-        logger.info(f"{trans('general_payment_location_created', default='Created payment location with ID')}: {result.inserted_id}")
+        logger.info(f"{trans('general_payment_location_created', default='Created payment location with ID')}: {result.inserted_id}", 
+                   extra={'session_id': 'no-session-id'})
         return str(result.inserted_id)
     except Exception as e:
-        logger.error(f"{trans('general_payment_location_creation_error', default='Error creating payment location')}: {str(e)}")
+        logger.error(f"{trans('general_payment_location_creation_error', default='Error creating payment location')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 def create_tax_reminder(db, reminder_data):
+    """
+    Create a new tax reminder in the tax_reminders collection.
+    
+    Args:
+        db: MongoDB database instance
+        reminder_data: Dictionary containing tax reminder information
+    
+    Returns:
+        str: ID of the created tax reminder
+    """
     try:
         required_fields = ['user_id', 'tax_type', 'due_date', 'amount', 'status', 'created_at']
         if not all(field in reminder_data for field in required_fields):
             raise ValueError(trans('general_missing_reminder_fields', default='Missing required tax reminder fields'))
         result = db.tax_reminders.insert_one(reminder_data)
-        logger.info(f"{trans('general_tax_reminder_created', default='Created tax reminder with ID')}: {result.inserted_id}")
+        logger.info(f"{trans('general_tax_reminder_created', default='Created tax reminder with ID')}: {result.inserted_id}", 
+                   extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
         return str(result.inserted_id)
     except Exception as e:
-        logger.error(f"{trans('general_tax_reminder_creation_error', default='Error creating tax reminder')}: {str(e)}")
+        logger.error(f"{trans('general_tax_reminder_creation_error', default='Error creating tax reminder')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
         raise
 
 def update_tax_reminder(db, reminder_id, update_data):
@@ -1009,12 +1302,15 @@ def update_tax_reminder(db, reminder_id, update_data):
             {'$set': update_data}
         )
         if result.modified_count > 0:
-            logger.info(f"{trans('general_tax_reminder_updated', default='Updated tax reminder with ID')}: {reminder_id}")
+            logger.info(f"{trans('general_tax_reminder_updated', default='Updated tax reminder with ID')}: {reminder_id}", 
+                       extra={'session_id': 'no-session-id'})
             return True
-        logger.info(f"{trans('general_tax_reminder_no_change', default='No changes made to tax reminder with ID')}: {reminder_id}")
+        logger.info(f"{trans('general_tax_reminder_no_change', default='No changes made to tax reminder with ID')}: {reminder_id}", 
+                   extra={'session_id': 'no-session-id'})
         return False
     except Exception as e:
-        logger.error(f"{trans('general_tax_reminder_update_error', default='Error updating tax reminder with ID')} {reminder_id}: {str(e)}")
+        logger.error(f"{trans('general_tax_reminder_update_error', default='Error updating tax reminder with ID')} {reminder_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
 # Data conversion functions for backward compatibility
@@ -1023,6 +1319,7 @@ def to_dict_financial_health(record):
     if not record:
         return {'score': None, 'status': None}
     return {
+        'id': str(record.get('_id', '')),
         'score': record.get('score'),
         'status': record.get('status'),
         'debt_to_income': record.get('debt_to_income'),
@@ -1037,6 +1334,7 @@ def to_dict_budget(record):
     if not record:
         return {'surplus_deficit': None, 'savings_goal': None}
     return {
+        'id': str(record.get('_id', '')),
         'income': record.get('income', 0),
         'fixed_expenses': record.get('fixed_expenses', 0),
         'variable_expenses': record.get('variable_expenses', 0),
@@ -1059,13 +1357,17 @@ def to_dict_bill(record):
         'id': str(record.get('_id', '')),
         'bill_name': record.get('bill_name', ''),
         'amount': record.get('amount', 0),
-        'due_date': record.get('due_date', ''),
+        'due_date': record.get('due_date'),
         'frequency': record.get('frequency', ''),
         'category': record.get('category', ''),
         'status': record.get('status', ''),
+        'send_notifications': record.get('send_notifications', False),
         'send_email': record.get('send_email', False),
+        'send_sms': record.get('send_sms', False),
+        'send_whatsapp': record.get('send_whatsapp', False),
         'reminder_days': record.get('reminder_days'),
         'user_email': record.get('user_email', ''),
+        'user_phone': record.get('user_phone', ''),
         'first_name': record.get('first_name', '')
     }
 
@@ -1074,6 +1376,7 @@ def to_dict_net_worth(record):
     if not record:
         return {'net_worth': None, 'total_assets': None}
     return {
+        'id': str(record.get('_id', '')),
         'cash_savings': record.get('cash_savings', 0),
         'investments': record.get('investments', 0),
         'property': record.get('property', 0),
@@ -1090,6 +1393,7 @@ def to_dict_emergency_fund(record):
     if not record:
         return {'target_amount': None, 'savings_gap': None}
     return {
+        'id': str(record.get('_id', '')),
         'monthly_expenses': record.get('monthly_expenses', 0),
         'monthly_income': record.get('monthly_income', 0),
         'current_savings': record.get('current_savings', 0),
@@ -1110,6 +1414,7 @@ def to_dict_learning_progress(record):
     if not record:
         return {'lessons_completed': [], 'quiz_scores': {}}
     return {
+        'id': str(record.get('_id', '')),
         'course_id': record.get('course_id', ''),
         'lessons_completed': record.get('lessons_completed', []),
         'quiz_scores': record.get('quiz_scores', {}),
@@ -1121,6 +1426,7 @@ def to_dict_quiz_result(record):
     if not record:
         return {'personality': None, 'score': None}
     return {
+        'id': str(record.get('_id', '')),
         'personality': record.get('personality', ''),
         'score': record.get('score', 0),
         'badges': record.get('badges', []),
@@ -1154,6 +1460,18 @@ def to_dict_tax_rate(record):
         'max_income': record.get('max_income', 0),
         'rate': record.get('rate', 0),
         'description': record.get('description', '')
+    }
+
+def to_dict_payment_location(record):
+    """Convert payment location record to dictionary."""
+    if not record:
+        return {'name': None, 'address': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'name': record.get('name', ''),
+        'address': record.get('address', ''),
+        'contact': record.get('contact', ''),
+        'coordinates': record.get('coordinates')
     }
 
 def to_dict_tax_reminder(record):
