@@ -334,6 +334,8 @@ def login():
                         user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
                         login_user(user_obj, remember=True)
                         session['lang'] = user.get('language', 'en')
+                        session.pop('is_anonymous', None)
+                        session['is_anonymous'] = False
                         log_audit_action('login_without_2fa', {'user_id': username, 'reason': 'email_failure_test_mode'})
                         logger.info(f"User {username} logged in without 2FA due to email failure (test mode). Session: {session}")
                         if not user.get('setup_complete', False):
@@ -348,6 +350,8 @@ def login():
             user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
             login_user(user_obj, remember=True)
             session['lang'] = user.get('language', 'en')
+            session.pop('is_anonymous', None)
+            session['is_anonymous'] = False
             log_audit_action('login', {'user_id': username})
             logger.info(f"User {username} logged in successfully. Session: {session}")
             if not user.get('setup_complete', False):
@@ -388,6 +392,8 @@ def verify_2fa():
                 from app import User
                 user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
                 login_user(user_obj, remember=True)
+                session['is_anonymous'] = False
+                session.pop('is_anonymous', None)
                 session['lang'] = user.get('language', 'en')
                 db.users.update_one(
                     {'_id': username},
@@ -485,6 +491,8 @@ def signup():
             user_obj = User(username, email, username, role)
             login_user(user_obj, remember=True)
             session['lang'] = language
+            session.pop('is_anonymous', None)
+            session['is_anonymous'] = False
             logger.info(f"New user created and logged in: {username} (role: {role}). Session: {session}")
             setup_route = get_setup_wizard_route(role)
             return redirect(url_for(setup_route))
