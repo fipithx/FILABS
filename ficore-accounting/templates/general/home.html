@@ -83,9 +83,9 @@
             </div>
         </div>
         <!-- Quick Actions -->
-        <div class="section-card quick-actions">
-            <h3 class="section-title">{{ t('general_quick_actions', default='Quick Actions') | e }}</h3>
-            <div class="quick-actions">
+        <section class="quick-actions-section"> {# Change this outer div to a section and apply the new class #}
+            <h3 class="quick-actions-heading">{{ t('general_quick_actions', default='Quick Actions') | e }}</h3> {# Apply the new heading class #}
+            <div class="quick-actions"> {# This div correctly remains your grid container #}
                 {% for tool in tools_for_template %}
                 <a href="{{ tool.url | default('#') | e }}" class="quick-action-card {{ tool.class | default('') }} text-decoration-none" aria-label="{{ t(tool.label_key, default=tool.label) | e }}">
                     {% if tool.badge %}
@@ -96,6 +96,7 @@
                 </a>
                 {% endfor %}
             </div>
+        </section>
         </div>
         <!-- Explore Features -->
         <div class="section-card explore-section">

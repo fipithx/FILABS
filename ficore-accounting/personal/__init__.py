@@ -42,21 +42,25 @@ def init_app(app):
         raise
 
 @personal_bp.route('/')
-@login_required
-@requires_role(['personal', 'admin'])
 def index():
     """Render the personal finance dashboard."""
     try:
+        if not current_user.is_authenticated:
+            current_app.logger.debug("Redirecting anonymous user to login", extra={'session_id': session.get('sid', 'unknown')})
+            return redirect(url_for('users.login'))
+
+        notifications = []  # Provide empty list to avoid template errors
         return render_template(
             'personal/GENERAL/index.html',
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
+            notifications=notifications,
             is_admin=utils.is_admin
         )
     except Exception as e:
         current_app.logger.error(f"Error rendering personal index: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_error', default='An error occurred'), 'danger')
         return render_template(
-            'error.html',
+            'personal/GENERAL/error.html',
             error_message="Unable to load the personal finance dashboard due to an internal error.",
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
             is_admin=utils.is_admin
@@ -69,10 +73,10 @@ def notification_count():
     """Return the count of unread notifications for the current user."""
     try:
         db = get_mongo_db()
-        query = {'read_status': False} if is_admin() else {'user_id': current_user.id, 'read_status': False}
+        query = {'read_status': False} if is_admin() else {'user_id': str(current_user.id), 'read_status': False}
         count = db.reminder_logs.count_documents(query)
-        current_app.logger.info(f"Fetched notification count {count} for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'count': count})
+        current_app.logger.debug(f"Fetched notification count {count} for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'count': count}), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching notification count: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_something_went_wrong', default='Failed to fetch notification count'), 'warning')
@@ -85,23 +89,37 @@ def notifications():
     """Return the list of recent notifications for the current user."""
     try:
         db = get_mongo_db()
-        query = {} if is_admin() else {'user_id': current_user.id}
+        query = {} if is_admin() else {'user_id': str(current_user.id)}
         notifications = list(db.reminder_logs.find(query).sort('sent_at', -1).limit(10))
-        notification_ids = [n['notification_id'] for n in notifications if not n.get('read_status', False)]
+        
+        # Handle cases where notification_id or sent_at might be missing
+        notification_ids = []
+        for n in notifications:
+            if 'notification_id' in n and not n.get('read_status', False):
+                notification_ids.append(n['notification_id'])
+        
         if notification_ids:
             db.reminder_logs.update_many(
                 {'notification_id': {'$in': notification_ids}},
                 {'$set': {'read_status': True}}
             )
-        result = [{
-            'id': str(n['notification_id']),
-            'message': n['message'],
-            'type': n['type'],
-            'timestamp': n['sent_at'].isoformat(),
-            'read': n.get('read_status', False)
-        } for n in notifications]
-        current_app.logger.info(f"Fetched {len(result)} notifications for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify(result)
+        
+        result = []
+        for n in notifications:
+            try:
+                result.append({
+                    'id': str(n.get('notification_id', ObjectId())),
+                    'message': n.get('message', 'No message'),
+                    'type': n.get('type', 'info'),
+                    'timestamp': n.get('sent_at', datetime.utcnow()).isoformat(),
+                    'read': n.get('read_status', False)
+                })
+            except Exception as e:
+                current_app.logger.warning(f"Skipping invalid notification: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                continue
+        
+        current_app.logger.debug(f"Fetched {len(result)} notifications for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify(result), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching notifications: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_something_went_wrong', default='Failed to fetch notifications'), 'warning')
@@ -114,7 +132,7 @@ def recent_activity():
     """Return recent activity across all personal finance tools for the current user."""
     try:
         db = get_mongo_db()
-        query = {} if is_admin() else {'user_id': current_user.id}
+        query = {} if is_admin() else {'user_id': str(current_user.id)}
         activities = []
 
         # Fetch recent bills
@@ -123,7 +141,7 @@ def recent_activity():
             activities.append({
                 'type': 'bill',
                 'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
-                'timestamp': bill['created_at'].isoformat(),
+                'timestamp': bill.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'amount': bill.get('amount', 0),
                     'due_date': bill.get('due_date', 'N/A'),
@@ -137,7 +155,7 @@ def recent_activity():
             activities.append({
                 'type': 'budget',
                 'description': trans('recent_activity_budget_created', default='Created budget with income: {amount}', amount=budget.get('income', 0)),
-                'timestamp': budget['created_at'].isoformat(),
+                'timestamp': budget.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'income': budget.get('income', 0),
                     'surplus_deficit': budget.get('surplus_deficit', 0)
@@ -150,7 +168,7 @@ def recent_activity():
             activities.append({
                 'type': 'net_worth',
                 'description': trans('recent_activity_net_worth_calculated', default='Calculated net worth: {amount}', amount=nw.get('net_worth', 0)),
-                'timestamp': nw['created_at'].isoformat(),
+                'timestamp': nw.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'net_worth': nw.get('net_worth', 0),
                     'total_assets': nw.get('total_assets', 0),
@@ -164,7 +182,7 @@ def recent_activity():
             activities.append({
                 'type': 'financial_health',
                 'description': trans('recent_activity_health_score', default='Calculated financial health score: {score}', score=hs.get('score', 0)),
-                'timestamp': hs['created_at'].isoformat(),
+                'timestamp': hs.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'score': hs.get('score', 0),
                     'status': hs.get('status', 'Unknown')
@@ -177,7 +195,7 @@ def recent_activity():
             activities.append({
                 'type': 'emergency_fund',
                 'description': trans('recent_activity_emergency_fund_created', default='Created emergency fund plan with target: {amount}', amount=ef.get('target_amount', 0)),
-                'timestamp': ef['created_at'].isoformat(),
+                'timestamp': ef.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'target_amount': ef.get('target_amount', 0),
                     'savings_gap': ef.get('savings_gap', 0),
@@ -191,7 +209,7 @@ def recent_activity():
             activities.append({
                 'type': 'quiz',
                 'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get('score', 0)),
-                'timestamp': quiz['created_at'].isoformat(),
+                'timestamp': quiz.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
                     'score': quiz.get('score', 0),
                     'personality': quiz.get('personality', 'N/A')
@@ -205,7 +223,7 @@ def recent_activity():
                 activities.append({
                     'type': 'learning_hub',
                     'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
-                    'timestamp': progress['updated_at'].isoformat(),
+                    'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
                     'details': {
                         'course_id': progress.get('course_id', 'N/A'),
                         'lessons_completed': len(progress.get('lessons_completed', [])),
@@ -215,8 +233,8 @@ def recent_activity():
 
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
         activities = activities[:10]
-        current_app.logger.info(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify(activities)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify(activities), 200
     except Exception as e:
         current_app.logger.error(f"Error in personal.recent_activity: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_something_went_wrong', default='Failed to fetch recent activity'), 'warning')

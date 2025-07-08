@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+{% block title %}{{ t('general_business_home', default='Business & Agent Home') | e }}{% endblock %}
+
+{% block content %}
+{# Note: Ensure base.html includes .bottom-navigation with position: fixed; bottom: 0; as defined in styles.css.
+   Example structure for base.html:
+   <nav class="bottom-navigation">
+       <div class="nav-container">
+           <a href="{{ url_for('dashboard.index') | e }}" class="nav-item">
+               <i class="bi bi-house"></i>
+               <span>{{ t('general_home', default='Home') | e }}</span>
+           </a>
+           <a href="{{ url_for('dashboard.transactions') | e }}" class="nav-item">
+               <i class="bi bi-arrow-left-right"></i>
+               <span>{{ t('general_transactions', default='Transactions') | e }}</span>
+           </a>
+           <!-- Add more nav items as needed -->
+       </div>
+   </nav>
+#}
+<div class="container-fluid px-0 main-content">
+    {% if current_user.is_authenticated %}
+        <!-- Financial Summary -->
+        <div class="financial-summary mb-3 mx-2 rounded shadow-sm">
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-4">
+                    <div class="summary-card cta-debtor-card d-flex flex-column align-items-center justify-content-center m-1">
+                        <div class="card-header d-flex align-items-center gap-3">
+                            <i class="bi bi-arrow-up-circle text-danger"></i>
+                            <span class="card-title">{{ t('general_i_owe', default='I Owe') | e }}</span>
+                        </div>
+                        <div class="card-amount text-danger mt-3" id="totalIOwe">
+                            <span class="currency-symbol">₦</span>
+                            <span class="amount-value" data-amount="0">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="summary-card cta-creditor-card d-flex flex-column align-items-center justify-content-center m-1">
+                        <div class="card-header d-flex align-items-center gap-3">
+                            <i class="bi bi-arrow-down-circle text-success"></i>
+                            <span class="card-title">{{ t('general_i_am_owed', default='I Am Owed') | e }}</span>
+                        </div>
+                        <div class="card-amount text-success mt-3" id="totalIAmOwed">
+                            <span class="currency-symbol">₦</span>
+                            <span class="amount-value" data-amount="0">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="net-position-card d-flex flex-column align-items-center justify-content-center m-1">
+                <div class="net-position-info d-flex align-items-center flex-wrap gap-3">
+                    <span class="net-label">{{ t('general_net_position', default='Net Position') | e }}:</span>
+                    <span class="net-amount" id="netPosition">₦0</span>
+                    <span class="net-status" id="netStatus"></span>
+                    <button class="visibility-toggle btn btn-link p-2" onclick="toggleAmountVisibility()" aria-label="{{ t('general_toggle_visibility', default='Toggle amount visibility') | e }}">
+                        <i class="bi bi-eye" id="visibilityIcon"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('dashboard.index') | e }}" class="btn btn-primary btn-sm w-100">
+                    {{ t('general_view_detailed_summary', default='View Detailed Summary') | e }}
+                    <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Financial Snapshots -->
+        <div class="financial-snapshots mb-3 mx-2 rounded shadow-sm">
+            <h3 class="section-title mb-3">{{ t('general_snapshots', default='Financial Snapshots') | e }}</h3>
+            <div class="stat-cards-container">
+                <div class="stat-card d-flex align-items-center gap-3 m-1">
+                    <div class="snapshot-icon">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="snapshot-info">
+                        <div class="snapshot-label">{{ t('general_wallet_balance', default='Wallet') | e }}</div>
+                        <div class="stat-card-value" id="walletBalance">₦0</div>
+                    </div>
+                </div>
+                <div class="stat-card d-flex align-items-center gap-3 m-1">
+                    <div class="snapshot-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="snapshot-info">
+                        <div class="snapshot-label">{{ t('general_net_cashflow_mtd', default='Net Flow') | e }}</div>
+                        <div class="stat-card-value" id="netCashflow">₦0</div>
+                    </div>
+                </div>
+                <div class="stat-card d-flex align-items-center gap-3 m-1">
+                    <div class="snapshot-icon">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div class="snapshot-info">
+                        <div class="snapshot-label">{{ t('general_inventory_value', default='Inventory') | e }}</div>
+                        <div class="stat-card-value" id="inventoryValue">₦0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions mb-3 mx-2 rounded shadow-sm">
+            <h3 class="section-title mb-3">{{ t('general_quick_actions', default='Quick Actions') | e }}</h3>
+            <div class="actions-container">
+                {% for tool in tools %}
+                <a href="{{ tool.url | default('#') | e }}" class="action-card d-flex flex-column align-items-center justify-content-center position-relative m-1" aria-label="{{ t(tool.label_key, default=tool.label) | e }}">
+                    {% if tool.badge %}
+                    <span class="badge bg-danger position-absolute top-0 end-0 translate-middle rounded-pill">{{ tool.badge }}</span>
+                    {% endif %}
+                    <i class="bi {{ tool.icon | default('bi-circle') | e }} action-icon"></i>
+                    <span class="action-label">{{ t(tool.label_key, default=tool.label) | e }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity mb-3 mx-2 rounded shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="section-title mb-0">{{ t('general_recent_activity', default='Recent Activity') | e }}</h3>
+                <a href="{{ url_for('dashboard.index') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
+                    {{ t('general_view_all', default='View All') | e }}
+                </a>
+            </div>
+            <div class="activity-list" id="recentActivityList">
+                <div class="activity-item d-flex align-items-center gap-3 m-1">
+                    <div class="activity-icon">
+                        <i class="bi bi-plus-circle text-success"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-description">{{ t('general_loading_activities', default='Loading recent activities...') | e }}</div>
+                        <div class="activity-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Cards -->
+        <div class="navigation-cards mb-3 mx-2 rounded shadow-sm">
+            <h3 class="section-title mb-3">{{ t('general_explore_features', default='Explore Features') | e }}</h3>
+            <div class="row g-3">
+                {% for item in nav_items %}
+                <div class="col-6 col-md-4">
+                    <a href="{{ item.url | default('#') | e }}" class="nav-card d-flex flex-column align-items-center justify-content-center m-1" aria-label="{{ t(item.label_key, default=item.label) | e }}">
+                        <div class="nav-card-icon">
+                            <i class="bi {{ item.icon | default('bi-circle') | e }}"></i>
+                        </div>
+                        <div class="nav-card-content">
+                            <h4>{{ t(item.label_key, default=item.label) | e }}</h4>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <!-- Unauthenticated User Section -->
+        <div class="text-center px-2 py-5">
+            <div class="page-title mb-3">
+                <h1>{{ t('general_business_home', default='Welcome to Ficore Business & Agent Tools') | e }}</h1>
+                <p class="subtext text-muted">{{ t('general_business_welcome_desc', default='Explore tools designed for business owners and agents to streamline financial management, track debtors, manage inventory, and more.') | e }}</p>
+            </div>
+        </div>
+
+        <!-- Tools Section -->
+        <section class="tools-section mb-3 mx-2 rounded shadow-sm">
+            <h2 class="text-center mb-3"><i class="bi bi-tools me-2"></i>{{ t('general_our_tools', default='Our Business & Agent Tools') | e }}</h2>
+            <p class="text-center mb-3 text-muted">{{ t('general_business_tools_desc', default='Discover powerful tools to manage your business or support traders as an agent.') | e }}</p>
+            <div class="row g-3">
+                {% set explore_tools = [
+                    {'endpoint': 'users.signup', 'role': 'trader', 'icon': 'bi-person-dash', 'label': t('general_debtors_creditors', default='Debtors & Creditors')},
+                    {'endpoint': 'users.signup', 'role': 'trader', 'icon': 'bi-box-seam', 'label': t('inventory_management', default='Inventory Management')},
+                    {'endpoint': 'users.signup', 'role': 'trader', 'icon': 'bi-arrow-down-circle', 'label': t('general_money_in_out', default='Money In & Out')},
+                    {'endpoint': 'users.signup', 'role': 'agent', 'icon': 'bi-person-plus', 'label': t('agents_register_trader', default='Register Traders')},
+                    {'endpoint': 'users.signup', 'role': 'trader', 'icon': 'bi-coin', 'label': t('coins_your_wallet', default='Your Wallet')},
+                    {'endpoint': 'users.signup', 'role': 'trader', 'icon': 'bi-calculator', 'label': t('general_taxation', default='Taxation')}
+                ] %}
+                {% for tool in explore_tools %}
+                <div class="col-6 col-md-4">
+                    <a href="{{ url_for(tool.endpoint, role=tool.role) | e }}" class="toolcard d-flex flex-column align-items-center justify-content-center m-1" aria-label="{{ tool.label | e }}">
+                        <i class="bi {{ tool.icon | default('bi-circle') | e }} action-icon"></i>
+                        <span class="action-label">{{ tool.label | e }}</span>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section mb-3 mx-2 rounded shadow-sm text-center">
+            <h3>{{ t('general_ready_to_start', default='Ready to Take Control of Your Finances?') | e }}</h3>
+            <p class="text-muted">{{ t('general_business_signup_prompt', default='Sign up as a business owner or agent to access powerful financial management tools.') | e }}</p>
+            <div class="responsive-btn-group">
+                <a href="{{ url_for('users.signup', role='trader') | e }}" class="btn btn-primary btn-sm">{{ t('general_signup_business', default='Business Sign Up') | e }}</a>
+                <a href="{{ url_for('users.signup', role='agent') | e }}" class="btn btn-primary btn-sm">{{ t('general_signup_agent', default='Agent Sign Up') | e }}</a>
+            </div>
+        </section>
+    {% endif %}
+</div>
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(tooltipTriggerEl => {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Debug icons
+    document.querySelectorAll('.bi').forEach(icon => {
+        if (!icon.className.includes('bi-')) {
+            console.warn('Invalid or missing Bootstrap Icon class:', icon.className);
+        }
+    });
+
+    // Debug navigation duplication
+    const topNav = document.querySelector('.top-header');
+    const bottomNav = document.querySelector('.bottom-navigation');
+    if (topNav && bottomNav) {
+        const topNavItems = topNav.querySelectorAll('.nav-item');
+        if (topNavItems.length > 0) {
+            console.warn('Unexpected navigation items in top-header:', topNavItems);
+        }
+    }
+
+    // Navigation highlighting
+    const currentPath = window.location.pathname;
+    const navItems = document.querySelectorAll('.bottom-navigation .nav-item');
+    navItems.forEach(item => {
+        const itemHref = item.getAttribute('href');
+        if (currentPath === itemHref || currentPath.startsWith(itemHref + '/')) {
+            item.classList.add('active');
+        }
+    });
+
+    if (!{{ current_user.is_authenticated | tojson }}) return;
+
+    let amountsVisible = true;
+
+    // Translation strings
+    const translations = {
+        just_now: '{{ t("general_just_now", default="Just now") | e }}',
+        minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
+        hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
+        days_ago: '{{ t("general_days_ago", default="d ago") | e }}',
+        owed_to_you: '{{ t("general_owed_to_you", default="Owed to you") | e }}',
+        you_owe: '{{ t("general_you_owe", default="You owe") | e }}',
+        balanced: '{{ t("general_balanced", default="Balanced") | e }}',
+        no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
+        start_by_adding_debt: '{{ t("general_start_by_adding_debt", default="Start by adding a debt or transaction") | e }}',
+        no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
+        check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
+    };
+
+    // Load financial data, notifications, and recent activity
+    loadFinancialSummary();
+    loadNotifications();
+    loadRecentActivity();
+
+    function loadFinancialSummary() {
+        Promise.all([
+            fetch('{{ url_for("debt_summary") | e }}').then(r => r.json()).catch(() => ({totalIOwe: 0, totalIAmOwed: 0})),
+            fetch('{{ url_for("coins.get_balance") | e }}').then(r => r.json()).catch(() => ({coin_balance: 0})),
+            fetch('{{ url_for("cashflow_summary") | e }}').then(r => r.json()).catch(() => ({netCashflow: 0})),
+            fetch('{{ url_for("inventory_summary") | e }}').then(r => r.json()).catch(() => ({totalValue: 0}))
+        ]).then(([debtData, walletData, cashflowData, inventoryData]) => {
+            updateDebtSummary(debtData);
+            updateSnapshots(walletData, cashflowData, inventoryData);
+        }).catch(error => {
+            console.error('Error loading financial data:', error);
+        });
+    }
+
+    function updateDebtSummary(data) {
+        const totalIOwe = data.totalIOwe || 0;
+        const totalIAmOwed = data.totalIAmOwed || 0;
+        const netPosition = totalIAmOwed - totalIOwe;
+
+        document.querySelector('#totalIOwe .amount-value').textContent = formatCurrency(totalIOwe);
+        document.querySelector('#totalIOwe .amount-value').dataset.amount = totalIOwe;
+
+        document.querySelector('#totalIAmOwed .amount-value').textContent = formatCurrency(totalIAmOwed);
+        document.querySelector('#totalIAmOwed .amount-value').dataset.amount = totalIAmOwed;
+
+        const netPositionEl = document.getElementById('netPosition');
+        const netStatusEl = document.getElementById('netStatus');
+
+        netPositionEl.textContent = '₦' + formatCurrency(Math.abs(netPosition));
+        netPositionEl.dataset.amount = netPosition;
+
+        if (netPosition > 0) {
+            netPositionEl.className = 'net-amount text-success';
+            netStatusEl.textContent = `(${translations.owed_to_you})`;
+            netStatusEl.className = 'net-status text-success';
+        } else if (netPosition < 0) {
+            netPositionEl.className = 'net-amount text-danger';
+            netStatusEl.textContent = `(${translations.you_owe})`;
+            netStatusEl.className = 'net-status text-danger';
+        } else {
+            netPositionEl.className = 'net-amount text-muted';
+            netStatusEl.textContent = `(${translations.balanced})`;
+            netStatusEl.className = 'net-status text-muted';
+        }
+    }
+
+    function updateSnapshots(walletData, cashflowData, inventoryData) {
+        document.getElementById('walletBalance').textContent = '₦' + formatCurrency(walletData.coin_balance || 0);
+        document.getElementById('walletBalance').dataset.originalText = '₦' + formatCurrency(walletData.coin_balance || 0);
+        document.getElementById('netCashflow').textContent = '₦' + formatCurrency(cashflowData.netCashflow || 0);
+        document.getElementById('netCashflow').dataset.originalText = '₦' + formatCurrency(cashflowData.netCashflow || 0);
+        document.getElementById('inventoryValue').textContent = '₦' + formatCurrency(inventoryData.totalValue || 0);
+        document.getElementById('inventoryValue').dataset.originalText = '₦' + formatCurrency(inventoryData.totalValue || 0);
+    }
+
+    function loadNotifications() {
+        fetch('{{ url_for("notification_count") | e }}')
+            .then(response => response.json())
+            .then(data => {
+                const count = data.count || 0;
+                const badge = document.getElementById('notificationBadge');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading notification count:', error);
+            });
+
+        fetch('{{ url_for("notifications") | e }}')
+            .then(response => response.json())
+            .then(notifications => {
+                const notificationList = document.getElementById('notificationList');
+                if (notificationList) {
+                    if (notifications && notifications.length > 0) {
+                        notificationList.innerHTML = notifications.map(notification => `
+                            <div class="notification-item d-flex align-items-center gap-3 m-1">
+                                <div class="notification-icon">
+                                    <i class="bi bi-bell ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                                </div>
+                                <div class="notification-content flex-grow-1">
+                                    <div class="notification-description">${notification.message}</div>
+                                    <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        notificationList.innerHTML = `
+                            <div class="notification-item d-flex align-items-center gap-3 m-1">
+                                <div class="notification-icon">
+                                    <i class="bi bi-bell text-muted"></i>
+                                </div>
+                                <div class="notification-content flex-grow-1">
+                                    <div class="notification-description">${translations.no_notifications}</div>
+                                    <div class="notification-time text-muted">${translations.check_back_later}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading notifications:', error);
+            });
+    }
+
+    function loadRecentActivity() {
+        fetch('{{ url_for("recent_activity") | e }}')
+            .then(response => response.json())
+            .then(activities => {
+                const activityList = document.getElementById('recentActivityList');
+                if (activities && activities.length > 0) {
+                    activityList.innerHTML = activities.map(activity => `
+                        <div class="activity-item d-flex align-items-center gap-3 m-1">
+                            <div class="activity-icon">
+                                <i class="bi ${getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description">${activity.description}</div>
+                                <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
+                            </div>
+                            ${activity.amount ? `<div class="activity-amount text-nowrap">${formatCurrency(activity.amount)}</div>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    activityList.innerHTML = `
+                        <div class="activity-item d-flex align-items-center gap-3 m-1">
+                            <div class="activity-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description">${translations.no_recent_activity}</div>
+                                <div class="activity-time text-muted">${translations.start_by_adding_debt}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading recent activity:', error);
+            });
+    }
+
+    function getActivityIcon(type) {
+        const icons = {
+            'debt_added': 'bi-plus-circle',
+            'debt_settled': 'bi-check-circle',
+            'money_in': 'bi-arrow-down-circle',
+            'money_out': 'bi-arrow-up-circle',
+            'inventory_added': 'bi-box',
+            'reminder_sent': 'bi-bell',
+            'trader_registered': 'bi-person-plus'
+        };
+        return icons[type] || 'bi-circle';
+    }
+
+    function getActivityColor(type) {
+        const colors = {
+            'debt_added': 'text-primary',
+            'debt_settled': 'text-success',
+            'money_in': 'text-success',
+            'money_out': 'text-danger',
+            'inventory_added': 'text-info',
+            'reminder_sent': 'text-warning',
+            'trader_registered': 'text-primary'
+        };
+        return colors[type] || 'text-muted';
+    }
+
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('en-NG', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+
+    function formatTimeAgo(timestamp) {
+        const now = new Date();
+        const time = new Date(timestamp);
+        const diffInSeconds = Math.floor((now - time) / 1000);
+
+        if (diffInSeconds < 60) return translations.just_now;
+        if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' ' + translations.minutes_ago;
+        if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ' + translations.hours_ago;
+        return Math.floor(diffInSeconds / 86400) + ' ' + translations.days_ago;
+    }
+
+    window.toggleAmountVisibility = function() {
+        amountsVisible = !amountsVisible;
+        const icon = document.getElementById('visibilityIcon');
+        const amounts = document.querySelectorAll('.amount-value, .net-amount, .stat-card-value');
+
+        amounts.forEach(el => {
+            if (amountsVisible) {
+                if (el.classList.contains('amount-value')) {
+                    el.textContent = formatCurrency(el.dataset.amount);
+                } else if (el.classList.contains('net-amount')) {
+                    el.textContent = '₦' + formatCurrency(Math.abs(el.dataset.amount));
+                } else if (el.classList.contains('stat-card-value')) {
+                    el.textContent = el.dataset.originalText || el.textContent;
+                }
+            } else {
+                if (!el.dataset.originalText) {
+                    el.dataset.originalText = el.textContent;
+                }
+                el.textContent = '****';
+            }
+        });
+
+        icon.className = amountsVisible ? 'bi bi-eye' : 'bi bi-eye-slash';
+    };
+
+    window.toggleDarkMode = function() {
+        document.body.classList.toggle('dark-mode');
+        const icon = document.getElementById('darkModeToggle').querySelector('i');
+        icon.className = document.body.classList.contains('dark-mode') ? 'bi bi-sun' : 'bi bi-moon-stars';
+        const tooltip = bootstrap.Tooltip.getInstance(document.getElementById('darkModeToggle'));
+        if (tooltip) tooltip.dispose();
+        new bootstrap.Tooltip(document.getElementById('darkModeToggle'));
+    };
+});
+</script>
+{% endblock extra_scripts %}
+{% endblock %}
