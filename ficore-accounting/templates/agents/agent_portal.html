@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {% if request.endpoint == 'agents.dashboard' %}
+    {% if request.endpoint == 'agents_bp.agent_portal' %}
         {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
     {% elif request.endpoint == 'agents.assist_trader_records' %}
         {{ t('agents_assist_trader_records', default='Assist Trader Records') }} - FiCore
@@ -23,7 +23,7 @@
     <h1 class="h2">{{ t(title, default=title|replace('_', ' ')|title) }}</h1>
     {% if show_back_button %}
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{{ url_for('agents.dashboard') }}" class="btn btn-outline-secondary">
+        <a href="{{ url_for('agents_bp.agent_portal') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i>{{ t('general_back_to_dashboard', default='Back to Dashboard') }}
         </a>
     </div>
@@ -134,7 +134,7 @@
                 
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'agents.dashboard' %}active{% endif %}" href="{{ url_for('agents.dashboard') }}">
+                        <a class="nav-link {% if request.endpoint == 'agents_bp.agent_portal' %}active{% endif %}" href="{{ url_for('agents_bp.agent_portal') }}">
                             <i class="bi bi-speedometer2 me-2"></i>
                             {{ t('dashboard_title', default='Dashboard') }}
                         </a>
@@ -175,7 +175,7 @@
 
         <!-- Main content -->
         <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            {% if request.endpoint == 'agents.dashboard' %}
+            {% if request.endpoint == 'agents_bp.agent_portal' %}
                 {{ page_header('agents_dashboard') }}
 
                 <!-- Performance Metrics -->
@@ -644,7 +644,7 @@
                                     </div>
                                     
                                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                        <a href="{{ url_for('agents.dashboard') }}" class="btn btn-outline-secondary me-md-2">
+                                        <a href="{{ url_for('agents_bp.agent_portal') }}" class="btn btn-outline-secondary me-md-2">
                                             {{ t('general_cancel', default='Cancel') }}
                                         </a>
                                         {{ form.submit(class="btn btn-primary") }}
@@ -884,7 +884,7 @@
                                     </div>
                                     
                                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                        <a href="{{ url_for('agents.dashboard') }}" class="btn btn-outline-secondary me-md-2">
+                                        <a href="{{ url_for('agents_bp.agent_portal') }}" class="btn btn-outline-secondary me-md-2">
                                             {{ t('general_cancel', default='Cancel') }}
                                         </a>
                                         {{ form.submit(class="btn btn-primary") }}
