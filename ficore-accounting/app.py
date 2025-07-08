@@ -846,7 +846,7 @@ def create_app():
             logger.error(f'Template not found: {str(e)}')
             flash(utils.trans('template_not_found'), 'danger')
             return render_template(
-                'general/error.html',
+                'personal/GENERAL/error.html',
                 error=str(e),
                 title=utils.trans('error')
             ), 404
@@ -862,7 +862,7 @@ def create_app():
             except TemplateNotFound as e:
                 logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'general/error.html',
+                    'personal/GENERAL/error.html',
                     error=str(e),
                     title=utils.trans('error')
                 ), 500
@@ -891,7 +891,7 @@ def create_app():
                 except TemplateNotFound as e:
                     logger.error(f'Template not found: {str(e)}')
                     return render_template(
-                        'general/error.html',
+                        'personal/GENERAL/error.html',
                         error=str(e),
                         title=utils.trans('business_home', lang=lang)
                     ), 404
@@ -908,7 +908,7 @@ def create_app():
         except TemplateNotFound as e:
             logger.error(f'Template not found: {str(e)}')
             return render_template(
-                'general/error.html',
+                'personal/GENERAL/error.html',
                 error=str(e),
                 title=utils.trans('business_home', lang=lang)
             ), 404
@@ -1174,7 +1174,7 @@ def create_app():
             except TemplateNotFound as e:
                 logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'general/error.html',
+                    'personal/GENERAL/error.html',
                     content=utils.trans('access_denied'),
                     title=utils.trans('access_denied', lang=lang)
                 ), 403
@@ -1196,7 +1196,7 @@ def create_app():
             except TemplateNotFound as e:
                 logger.error(f'Template not found: {str(e)}')
                 return render_template(
-                    'general/error.html',
+                    'personal/GENERAL/error.html',
                     content=utils.trans('server_error'),
                     title=utils.trans('error', lang=lang)
                 ), 500
@@ -1296,7 +1296,7 @@ def create_app():
             ), 400
         except TemplateNotFound:
             return render_template(
-                'general/error.html', 
+                'personal/GENERAL/error.html', 
                 error=utils.trans('csrf_error'), 
                 title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
             ), 400
@@ -1312,7 +1312,7 @@ def create_app():
             ), 404
         except TemplateNotFound:
             return render_template(
-                'general/error.html', 
+                'personal/GENERAL/error.html', 
                 error=str(e), 
                 title=utils.trans('not_found', lang=session.get('lang', 'en'))
             ), 404
@@ -1328,7 +1328,7 @@ def create_app():
             ), 500
         except TemplateNotFound:
             return render_template(
-                'general/error.html', 
+                'personal/GENERAL/error.html', 
                 error=str(e), 
                 title=utils.trans('server_error', lang=session.get('lang', 'en'))
             ), 500
