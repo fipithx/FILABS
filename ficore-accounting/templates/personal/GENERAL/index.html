@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadNotifications() {
-        fetch('{{ url_for("personal.actions") | e }}')
+        fetch('{{ url_for("personal.notifications") | e }}')
             .then(response => response.json())
             .then(notifications => {
                 const notificationList = document.getElementById('notificationList');
