@@ -10,7 +10,7 @@ AGENTS_TRANSLATIONS = {
         'general_business_name': 'Business Name',
         'general_phone_number': 'Phone Number',
         'general_industry': 'Industry',
-        'agents_dashboard_desc':'Overview of your agents and their activities.',
+        'agents_dashboard_desc':'Overview of Tools for FICORE Agents.',
         'general_notes': 'Notes',
         'general_payment_method': 'Payment Method',
         'general_username_required': 'Username is required',
