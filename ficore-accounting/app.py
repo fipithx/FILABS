@@ -1020,9 +1020,9 @@ def create_app():
         try:
             with app.app_context():
                 db = app.extensions.get['mongo']['ficodb']
-                user_id = current_user.user_id
+                user_id = current_user.id
                 now = datetime.now()
-                month_start = datetime.now.year, month_start.month, 1)
+                month_start = datetime.datetime(now.year, now.month, 1)
                 next_month_end = month_start.month + 1 if month_start.month < 12 else datetime(month_start.year + 1, 1, 1)
                 receipts_pipeline = [
                     {'$match': [{'user_id': user_id}, {'type': 'receipt'}, {'created_at': {'$gte': month_start, '$lte': next_month_end}}]},
