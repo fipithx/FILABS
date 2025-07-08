@@ -282,14 +282,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "icon": "bi-person-lines"
     },
     {
-        "endpoint": "taxation_bp.calculate_tax",
-        "label": "Taxation",
-        "label_key": "taxation_calculator",
-        "description_key": "taxation_calculator_desc",
-        "tooltip_key": "taxation_tooltip",
-        "icon": "bi-calculator"
-    },
-    {
         "endpoint": "news_bp.news_list",
         "label": "News",
         "label_key": "news_list",
@@ -311,7 +303,7 @@ _BUSINESS_EXPLORE_FEATURES = [
         "label_key": "payments_dashboard",
         "description_key": "payments_dashboard",
         "tooltip_key": "payments_tooltip",
-        "icon": "bi-person-minus"
+        "icon": "bi-calculator"
     },
 ]
 
