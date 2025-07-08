@@ -4,7 +4,7 @@ Payment processing translations for accounting tools
 
 PAYMENTS_TRANSLATIONS = {
     'en': {
-        'payments_dashboard': 'Payments Dashboard',
+        'payments_dashboard': 'Payments',
         'payments_list': 'Payments List',
         'payments_add_payment': 'Add Payment',
         # Payments
@@ -25,7 +25,7 @@ PAYMENTS_TRANSLATIONS = {
         'payments_amount': 'Amount',
         'payments_date': 'Payment Date',
         'payments_reference': 'Reference',
-        'payments_description': 'Description',
+        'payments_description': 'Track money you pay out',
         'payments_status': 'Status',
         'payments_pending': 'Pending',
         'payments_completed': 'Completed',
