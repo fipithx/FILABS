@@ -249,7 +249,7 @@ def seed_tax_data():
 
     if db.tax_reminders.count_documents({}) == 0:
         reminders = [
-            {'user_id': 'admin', 'message': trans('tax_reminder_quarterly', default='File quarterly tax return with NRS'), 'reminder_date': datetime.datetime(2026, 3, 31), 'created_at': datetime.datetime.utcnow()}
+            {'user_id': 'admin', 'message': trans('tax_reminder_quarterly', default='File quarterly tax return with NRS'), 'reminder_date': datetime(2026, 3, 31), 'created_at': datetime.utcnow()}
         ]
         db.tax_reminders.insert_many(reminders)
         logger.info("Seeded reminders")
@@ -414,7 +414,7 @@ def reminders():
             'user_id': current_user.id,
             'message': form.message.data,
             'reminder_date': form.reminder_date.data,
-            'created_at': datetime.datetime.utcnow()
+            'created_at': datetime.utcnow()
         }
         result = db.tax_reminders.insert_one(reminder)
         logger.info(f"Reminder added: user={current_user.id}, message={form.message.data}, reminder_id={result.inserted_id}")
@@ -544,7 +544,7 @@ def manage_tax_deadlines():
         description = request.form.get('description')
         if deadline_date and description:
             try:
-                deadline_date = datetime.datetime.strptime(deadline_date, '%Y-%m-%d')
+                deadline_date = datetime.strptime(deadline_date, '%Y-%m-%d')
                 result = db.tax_reminders.insert_one({
                     'deadline_date': deadline_date,
                     'description': description
