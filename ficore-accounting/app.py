@@ -693,7 +693,7 @@ def create_app():
                             "description_key": "news_list_desc",
                             "tooltip_key": "news_tooltip",
                             "icon": "bi-newspaper",
-                            "category": "News'
+                            "category": "News"
                         }
                     ])
 
