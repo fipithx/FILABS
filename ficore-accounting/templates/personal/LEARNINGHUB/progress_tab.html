@@ -1,0 +1,166 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><div class="tab-pane fade" id="progress" role="tabpanel" aria-labelledby="progress-tab">
+    {% if current_user.is_authenticated or session.get('is_anonymous', False) %}
+        {% if progress %}
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h6>{{ t('learning_hub_courses_started', default='Courses Started') }}</h6>
+                            <h3>{{ progress | length }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h6>{{ t('learning_hub_lessons_completed', default='Lessons Completed') }}</h6>
+                            <h3>{{ total_completed }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h6>{{ t('learning_hub_certificates_earned', default='Certificates Earned') }}</h6>
+                            <h3>{{ certificates_earned }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h6>{{ t('learning_hub_coins_earned', default='Coins Earned') }}</h6>
+                            <h3 class="coins-display">{{ total_coins_earned }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges Earned -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-award me-1"></i> {{ t('learning_hub_badges_earned', default='Badges Earned') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if badges_earned %}
+                        {% for badge in badges_earned %}
+                            <span class="badge bg-success badge-earned">
+                                <i class="fas fa-award me-1"></i> {{ t(badge.title_key, default=badge.title_en, lang=lang) }}
+                            </span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">{{ t('learning_hub_no_badges', default='No badges earned yet. Complete courses to earn badges!') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Progress Chart -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar me-1"></i> {{ t('learning_hub_learning_progress', default='Learning Progress') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if progress_summary %}
+                        <canvas id="progressChart" style="max-height: 400px;"></canvas>
+                    {% else %}
+                        <p class="text-muted">{{ t('learning_hub_no_progress_data', default='No progress data available') }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Course Progress Details -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list me-1"></i> {{ t('learning_hub_course_progress', default='Course Progress') }}</h5>
+                </div>
+                <div class="card-body">
+                    {% for summary in progress_summary %}
+                        {% set course = summary.course %}
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">{{ t(course.title_key, default=course.title_en, lang=lang) }}</h6>
+                                <small class="text-muted">
+                                    {{ summary.completed }} / {{ summary.total }} {{ t('learning_hub_lessons', default='lessons') }}
+                                    {% if summary.coins_earned %}
+                                        | <span class="coins-display"><i class="fas fa-coins me-1"></i>{{ summary.coins_earned }} {{ t('learning_hub_coins', default='coins') }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ summary.percent }}%" aria-valuenow="{{ summary.percent }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ summary.percent }}%
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary load-course" data-course-id="{{ course.id }}">
+                                    <i class="fas fa-play me-1"></i> {{ t('learning_hub_continue', default='Continue') }}
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x mb-3 text-muted"></i>
+                    <h5>{{ t('learning_hub_no_progress', default='No learning progress yet') }}</h5>
+                    <p>{{ t('learning_hub_start_course_to_track', default='Start a course to track your progress!') }}</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('courses-tab').click()">
+                        <i class="fas fa-book me-1"></i> {{ t('learning_hub_browse_courses', default='Browse Courses') }}
+                    </button>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-user-lock fa-3x mb-3 text-muted"></i>
+                <h5>{{ t('learning_hub_login_required', default='Login Required') }}</h5>
+                <p>{{ t('learning_hub_login_to_track_progress', default='Please log in to track your learning progress.') }}</p>
+                <a href="{{ url_for('users.login') }}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-1"></i> {{ t('general_login', default='Login') }}
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>

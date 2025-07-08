@@ -1,0 +1,396 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Client-side form validation
+    document.querySelectorAll('.validate-form').forEach(form => {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+
+    // Role filter
+    document.getElementById('roleFilter')?.addEventListener('change', function() {
+        const role = this.value;
+        fetch('{{ url_for("personal.learning_hub.set_role_filter") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `role=${role}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+
+    // Progress Chart
+    const ctx = document.getElementById('progressChart')?.getContext('2d');
+    if (ctx) {
+        const courseNames = [];
+        const progressData = [];
+        
+        {% for summary in progress_summary %}
+            courseNames.push('{{ t(summary.course.title_key, default=summary.course.title_en, lang=lang) | escape }}');
+            progressData.push({{ summary.percent }});
+        {% endfor %}
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: courseNames,
+                datasets: [{
+                    label: '{{ t('learning_hub_progress_percentage', default='Progress %') | escape }}',
+                    data: progressData,
+                    backgroundColor: '#2E7D32',
+                    borderColor: '#1B5E20',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `{{ t('learning_hub_progress', default='Progress') | escape }}: ${context.parsed.y}%`;
+                            }
+                        }
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Copy referral link
+    window.copyReferralLink = function() {
+        const referralLink = document.getElementById('referralLink');
+        referralLink.select();
+        navigator.clipboard.writeText(referralLink.value)
+            .then(() => {
+                alert('{{ t('general_profile_link_copied', default='Referral link copied to clipboard!') | escape }}');
+            })
+            .catch(() => {
+                alert('{{ t('general_copy_failed', default='Failed to copy link') | escape }}');
+            });
+    };
+
+    // Reality Check Quiz
+    document.querySelector('.submit-reality-check')?.addEventListener('click', function() {
+        const form = document.getElementById('realityCheckForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        const formData = new FormData(form);
+        formData.append('action', 'submit_reality_check');
+        fetch('{{ url_for("personal.learning_hub.quiz_action") }}', {
+            method: 'POST',
+            body: new URLSearchParams(formData),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const modalBody = document.getElementById('realityCheckModalBody');
+            modalBody.innerHTML = `
+                <h5>{{ t('learning_hub_quiz_results', default='Your Results') }}</h5>
+                <p>{{ t('learning_hub_quiz_score', default='Score') }}: ${data.score}/2</p>
+                <p>${data.message}</p>
+                <p>{{ t('learning_hub_quiz_recommendation', default='We recommend starting with the Digital Foundations course to build your ICT skills!') }}</p>
+                <button class="btn btn-primary" onclick="document.querySelector('.load-course[data-course-id=\\'digital_foundations\\']').click()">
+                    {{ t('learning_hub_start_digital_foundations', default='Start Digital Foundations') }}
+                </button>
+            `;
+            document.querySelector('.submit-reality-check').style.display = 'none';
+        });
+    });
+
+    // Load course details
+    document.querySelectorAll('.load-course, .load-course-details').forEach(button => {
+        button.addEventListener('click', function() {
+            const courseId = this.getAttribute('data-course-id');
+            fetch('{{ url_for("personal.learning_hub.get_course_data") }}/' + courseId, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message);
+                    return;
+                }
+                const course = data.course;
+                const progress = data.progress;
+                const modal = new bootstrap.Modal(document.getElementById('courseModal'));
+                const modalBody = document.getElementById('courseModalBody');
+                const modalTitle = document.getElementById('courseModalLabel');
+                
+                modalTitle.textContent = '{{ t("learning_hub_course", default="Course") | escape }}: ' + course.title_en;
+                let html = `
+                    <p>${course.description_en}</p>
+                    <h6>{{ t('learning_hub_modules', default='Modules') | escape }}</h6>
+                    <ul class="list-group">
+                `;
+                course.modules.forEach(module => {
+                    html += `
+                        <li class="list-group-item">
+                            <h6>${module.title_en}</h6>
+                            <ul>
+                    `;
+                    module.lessons.forEach(lesson => {
+                        const isCompleted = progress.lessons_completed.includes(lesson.id);
+                        html += `
+                            <li class="d-flex justify-content-between align-items-center">
+                                <span>
+                                    <i class="fas ${isCompleted ? 'fa-check-circle text-success' : 'fa-circle'} me-2"></i>
+                                    ${lesson.title_en}
+                                </span>
+                                <button class="btn btn-sm btn-primary load-lesson" data-course-id="${course.id}" data-lesson-id="${lesson.id}">
+                                    <i class="fas fa-eye me-1"></i> {{ t('learning_hub_view', default='View') | escape }}
+                                </button>
+                            </li>
+                        `;
+                    });
+                    html += `</ul></li>`;
+                });
+                html += `</ul>`;
+                modalBody.innerHTML = html;
+                modal.show();
+
+                // Load lesson content
+                document.querySelectorAll('.load-lesson').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const courseId = this.getAttribute('data-course-id');
+                        const lessonId = this.getAttribute('data-lesson-id');
+                        fetch('{{ url_for("personal.learning_hub.get_lesson_data") }}?course_id=' + courseId + '&lesson_id=' + lessonId, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(res => res.json())
+                        .then(lessonData => {
+                            if (!lessonData.success) {
+                                alert(lessonData.message);
+                                return;
+                            }
+                            const lesson = lessonData.lesson;
+                            const lessonModal = new bootstrap.Modal(document.getElementById('lessonModal'));
+                            const lessonModalBody = document.getElementById('lessonModalBody');
+                            const lessonModalTitle = document.getElementById('lessonModalLabel');
+                            const markCompleteBtn = document.querySelector('#lessonModal .mark-complete');
+                            
+                            lessonModalTitle.textContent = lesson.title_en;
+                            let contentHtml = '';
+                            if (lesson.content_type === 'video') {
+                                contentHtml = `
+                                    <video controls class="w-100 mb-3">
+                                        <source src="{{ url_for('personal.learning_hub.serve_uploaded_file', filename='') }}${lesson.content_path}" type="video/mp4">
+                                        {{ t('learning_hub_video_not_supported', default='Your browser does not support the video tag.') | escape }}
+                                    </video>
+                                `;
+                            } else if (lesson.content_type === 'pdf') {
+                                contentHtml = `
+                                    <embed src="{{ url_for('personal.learning_hub.serve_uploaded_file', filename='') }}${lesson.content_path}" type="application/pdf" width="100%" height="600px" />
+                                `;
+                            } else {
+                                contentHtml = `<div class="lesson-content">${lesson.content_en}</div>`;
+                            }
+                            
+                            if (lesson.quiz_id) {
+                                contentHtml += `
+                                    <button class="btn btn-primary mt-3 load-quiz" data-course-id="${courseId}" data-quiz-id="${lesson.quiz_id}">
+                                        <i class="fas fa-question-circle me-1"></i> {{ t('learning_hub_take_quiz', default='Take Quiz') | escape }}
+                                    </button>
+                                `;
+                            }
+                            
+                            lessonModalBody.innerHTML = contentHtml;
+                            markCompleteBtn.style.display = lessonData.progress.lessons_completed.includes(lesson.id) ? 'none' : 'inline-block';
+                            markCompleteBtn.setAttribute('data-course-id', courseId);
+                            markCompleteBtn.setAttribute('data-lesson-id', lessonId);
+                            markCompleteBtn.onclick = function() {
+                                const courseId = this.getAttribute('data-course-id');
+                                const lessonId = this.getAttribute('data-lesson-id');
+                                fetch('{{ url_for("personal.learning_hub.lesson_action") }}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: `course_id=${courseId}&lesson_id=${lessonId}&action=mark_complete`
+                                })
+                                .then(res => res.json())
+                                .then(actionData => {
+                                    alert(`${actionData.message}\n${actionData.coins_earned ? `{{ t('learning_hub_coins_earned', default='Coins Earned') | escape }}: ${actionData.coins_earned}` : ''}${actionData.badge_earned ? `\n{{ t('learning_hub_badge_earned', default='Badge Earned') | escape }}: ${actionData.badge_earned}` : ''}`);
+                                    if (actionData.success) {
+                                        lessonModal.hide();
+                                        modal.hide();
+                                        window.location.reload();
+                                    }
+                                });
+                            };
+                            lessonModal.show();
+
+                            // Load quiz content
+                            document.querySelectorAll('.load-quiz').forEach(quizBtn => {
+                                quizBtn.addEventListener('click', function() {
+                                    const quizId = this.getAttribute('data-quiz-id');
+                                    const courseId = this.getAttribute('data-course-id');
+                                    fetch('{{ url_for("personal.learning_hub.get_quiz_data") }}?course_id=' + courseId + '&quiz_id=' + quizId, {
+                                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                    })
+                                    .then(res => res.json())
+                                    .then(quizData => {
+                                        if (!quizData.success) {
+                                            alert(quizData.message);
+                                            return;
+                                        }
+                                        const quiz = quizData.quiz;
+                                        const quizModal = new bootstrap.Modal(document.getElementById('quizModal'));
+                                        const quizModalBody = document.getElementById('quizModalBody');
+                                        const quizModalTitle = document.getElementById('quizModalLabel');
+                                        const submitQuizBtn = document.querySelector('#quizModal .submit-quiz');
+                                        
+                                        quizModalTitle.textContent = '{{ t('learning_hub_quiz', default='Quiz') | escape }}';
+                                        let quizHtml = '<form id="quizForm">';
+                                        quiz.questions.forEach((q, index) => {
+                                            quizHtml += `
+                                                <div class="mb-3">
+                                                    <p><strong>${index + 1}. ${q.question_en}</strong></p>
+                                                    ${q.options_en.map((opt, i) => `
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="q${index}" value="${opt}" id="q${index}_${i}" required>
+                                                            <label class="form-check-label" for="q${index}_${i}">${opt}</label>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            `;
+                                        });
+                                        quizHtml += '</form>';
+                                        quizModalBody.innerHTML = quizHtml;
+                                        submitQuizBtn.style.display = quizData.progress.quiz_scores[quiz.id] ? 'none' : 'inline-block';
+                                        submitQuizBtn.setAttribute('data-course-id', courseId);
+                                        submitQuizBtn.setAttribute('data-quiz-id', quizId);
+                                        submitQuizBtn.onclick = function() {
+                                            const form = document.getElementById('quizForm');
+                                            if (!form.checkValidity()) {
+                                                form.reportValidity();
+                                                return;
+                                            }
+                                            const formData = new FormData(form);
+                                            formData.append('course_id', courseId);
+                                            formData.append('quiz_id', quizId);
+                                            formData.append('action', 'submit_quiz');
+                                            fetch('{{ url_for("personal.learning_hub.quiz_action") }}', {
+                                                method: 'POST',
+                                                body: new URLSearchParams(formData),
+                                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                            })
+                                            .then(res => res.json())
+                                            .then(quizActionData => {
+                                                alert(`${quizActionData.message}\n{{ t('learning_hub_score', default='Score') | escape }}: ${quizActionData.score}/${quizActionData.total}${quizActionData.coins_earned ? `\n{{ t('learning_hub_coins_earned', default='Coins Earned') | escape }}: ${quizActionData.coins_earned}` : ''}${quizActionData.badge_earned ? `\n{{ t('learning_hub_badge_earned', default='Badge Earned') | escape }}: ${quizActionData.badge_earned}` : ''}`);
+                                                if (quizActionData.success) {
+                                                    quizModal.hide();
+                                                    lessonModal.hide();
+                                                    modal.hide();
+                                                    window.location.reload();
+                                                }
+                                            });
+                                        };
+                                        quizModal.show();
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+    // Handle hash-based navigation
+    if (window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        if (hash.startsWith('course-')) {
+            const courseId = hash.replace('course-', '');
+            document.querySelector(`.load-course[data-course-id="${courseId}"]`)?.click();
+        } else if (hash.startsWith('lesson-')) {
+            const [_, courseId, lessonId] = hash.split('-');
+            document.querySelector(`.load-course-details[data-course-id="${courseId}"]`)?.click();
+            setTimeout(() => {
+                document.querySelector(`.load-lesson[data-course-id="${courseId}"][data-lesson-id="${courseId}-module-${lessonId.split('-')[1]}-lesson-${lessonId.split('-')[2]}"]`)?.click();
+            }, 1000);
+        } else if (hash.startsWith('quiz-')) {
+            const [_, courseId, quizId] = hash.split('-');
+            document.querySelector(`.load-course-details[data-course-id="${courseId}"]`)?.click();
+            setTimeout(() => {
+                const lessonBtn = document.querySelector(`.load-lesson[data-course-id="${courseId}"]`);
+                if (lessonBtn) {
+                    lessonBtn.click();
+                    setTimeout(() => {
+                        document.querySelector(`.load-quiz[data-course-id="${courseId}"][data-quiz-id="quiz-${quizId.split('-')[1]}-${quizId.split('-')[2]}"]`)?.click();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+    }
+});
+</script>

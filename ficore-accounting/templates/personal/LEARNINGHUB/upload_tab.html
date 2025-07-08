@@ -1,0 +1,102 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-upload me-1"></i> {{ t('learning_hub_upload_content', default='Upload Learning Content') }}</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('personal.learning_hub.main') }}" enctype="multipart/form-data" class="validate-form needs-validation" novalidate>
+                {{ upload_form.csrf_token }}
+                <input type="hidden" name="action" value="upload">
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ upload_form.title.id }}" class="form-label">{{ t('learning_hub_course_title', default='Course Title') }}</label>
+                            {{ upload_form.title(class="form-control", placeholder=t('learning_hub_course_title_placeholder', default='e.g., Budgeting Basics'), required=True) }}
+                            <div class="invalid-feedback">{{ t('learning_hub_course_title_required', default='Course title is required') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ upload_form.course_id.id }}" class="form-label">{{ t('learning_hub_course_id', default='Course ID') }}</label>
+                            {{ upload_form.course_id(class="form-control", placeholder=t('learning_hub_course_id_placeholder', default='e.g., budgeting_101'), required=True) }}
+                            <div class="invalid-feedback">{{ t('learning_hub_course_id_required', default='Course ID is required') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ upload_form.description.id }}" class="form-label">{{ t('learning_hub_description', default='Description') }}</label>
+                    {{ upload_form.description(class="form-control", rows="3", placeholder=t('learning_hub_description_placeholder', default='Brief description of the course'), required=True) }}
+                    <div class="invalid-feedback">{{ t('learning_hub_description_required', default='Description is required') }}</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ upload_form.content_type.id }}" class="form-label">{{ t('learning_hub_content_type', default='Content Type') }}</label>
+                            {{ upload_form.content_type(class="form-select", required=True) }}
+                            <div class="invalid-feedback">{{ t('learning_hub_content_type_required', default='Content type is required') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3 form-check mt-4">
+                            {{ upload_form.is_premium(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ upload_form.is_premium.id }}">{{ t('learning_hub_is_premium', default='Premium Content') }}</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ upload_form.file.id }}" class="form-label">{{ t('learning_hub_upload_file', default='Upload File') }}</label>
+                    {{ upload_form.file(class="form-control", accept=".pdf,.mp4,.txt,.md", required=True) }}
+                    <div class="form-text">{{ t('learning_hub_supported_formats', default='Supported formats: PDF, MP4, TXT, MD') }}</div>
+                    <div class="invalid-feedback">{{ t('learning_hub_file_required', default='File is required') }}</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i> {{ t('learning_hub_upload', default='Upload') }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

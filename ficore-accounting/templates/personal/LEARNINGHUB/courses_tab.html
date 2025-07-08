@@ -1,0 +1,172 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><div class="tab-pane fade show active" id="courses" role="tabpanel" aria-labelledby="courses-tab">
+    <div id="course-content">
+        <!-- Role Filter -->
+        <div class="mb-3">
+            <label for="roleFilter" class="form-label">{{ t('learning_hub_role_filter', default='Filter by Role') }}</label>
+            <select id="roleFilter" class="form-select">
+                <option value="all">{{ t('learning_hub_all_roles', default='All Roles') }}</option>
+                <option value="civil_servant">{{ t('learning_hub_civil_servant', default='Civil Servant') }}</option>
+                <option value="nysc">{{ t('learning_hub_nysc', default='NYSC Member') }}</option>
+                <option value="agent">{{ t('learning_hub_agent', default='Agent') }}</option>
+            </select>
+        </div>
+
+        <!-- Reality Check Quiz Button -->
+        <div class="mb-4">
+            <button class="btn btn-info load-reality-check" data-bs-toggle="modal" data-bs-target="#realityCheckModal">
+                <i class="fas fa-question-circle me-1"></i> {{ t('learning_hub_reality_check_quiz', default='Take the Reality Check Quiz') }}
+            </button>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="card mb-4 testimonial-card">
+            <div class="card-body">
+                <h5>{{ t('learning_hub_testimonials', default='Learner Stories') }}</h5>
+                <p><em>{{ t('learning_hub_testimonial_1', default='“I thought I knew tech, but I couldn’t attach a file. The Digital Foundations course helped me start from scratch!”') }} — Anonymous Learner</em></p>
+            </div>
+        </div>
+
+        <!-- Webinar Signup -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5>{{ t('learning_hub_webinar', default='Join Our ICT Literacy Webinar') }}</h5>
+                <form method="POST" action="{{ url_for('news_bp.register_webinar') }}" class="validate-form needs-validation" novalidate>
+                    {{ webinar_form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="webinar_email" class="form-label">{{ t('general_email', default='Email') }}</label>
+                        <input type="email" class="form-control" id="webinar_email" name="email" placeholder="{{ t('general_email_placeholder', default='Enter your email') }}" required>
+                        <div class="invalid-feedback">{{ t('general_email_invalid', default='Invalid email address') }}</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-calendar me-1"></i> {{ t('learning_hub_signup_webinar', default='Sign Up') }}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Course List -->
+        {% if courses %}
+            <div class="row" id="course-list">
+                {% for course in courses.values() %}
+                    {% if not role_filter or course.roles | intersect(role_filter) %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 course-card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-book-open me-2"></i>
+                                        {{ t(course.title_key, default=course.title_en, lang=lang) }}
+                                    </h5>
+                                    {% if course.is_premium %}
+                                        <span class="badge bg-warning">{{ t('learning_hub_premium', default='Premium') }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ t('learning_hub_free', default='Free') }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        {{ t(course.desc_key, default=course.description_en, lang=lang) }}
+                                        {% if course.id == 'digital_foundations' %}
+                                            <br><small>{{ t('learning_hub_no_prior_knowledge', default='No prior knowledge needed!') }}</small>
+                                        {% endif %}
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ t('learning_hub_estimated_time', default='Estimated Time: ') }}
+                                        {% if course.id == 'tax_reforms_2025' %}
+                                            4–6 {{ t('learning_hub_minutes', default='minutes') }}
+                                        {% elif course.id == 'digital_foundations' %}
+                                            6–8 {{ t('learning_hub_hours', default='hours') }}
+                                        {% else %}
+                                            {{ t('learning_hub_variable_time', default='Variable') }}
+                                        {% endif %}
+                                    </small>
+                                    {% set lessons_total = course.modules | sum(attribute='lessons | length') %}
+                                    {% if lessons_total %}
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-list me-1"></i>
+                                                {{ lessons_total }} {{ t('learning_hub_lessons', default='lessons') }}
+                                            </small>
+                                        </div>
+                                        {% set user_progress = progress.get(course.id, {}) %}
+                                        {% if user_progress.get('lessons_completed') %}
+                                            {% set progress_percent = (user_progress.lessons_completed | length / lessons_total * 100) | round %}
+                                            <div class="progress mb-3">
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percent }}%" aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                                                    {{ progress_percent }}%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ user_progress.lessons_completed | length }} / {{ lessons_total }} {{ t('learning_hub_completed', default='completed') }}
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                <div class="card-footer d-flex justify-content-between">
+                                    <button class="btn btn-primary load-course" data-course-id="{{ course.id }}">
+                                        <i class="fas fa-play me-1"></i>
+                                        {% if user_progress.get('lessons_completed') %}
+                                            {{ t('learning_hub_continue', default='Continue') }}
+                                        {% else %}
+                                            {{ t('learning_hub_start', default='Start') }}
+                                        {% endif %}
+                                    </button>
+                                    <button class="btn btn-outline-secondary load-course-details" data-course-id="{{ course.id }}">
+                                        <i class="fas fa-info-circle me-1"></i> {{ t('learning_hub_details', default='Details') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-book fa-3x mb-3 text-muted"></i>
+                    <h5>{{ t('learning_hub_no_courses', default='No courses available') }}</h5>
+                    <p>{{ t('learning_hub_check_back_later', default='Check back later for new courses!') }}</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>

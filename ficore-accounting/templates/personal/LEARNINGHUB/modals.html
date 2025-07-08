@@ -1,0 +1,144 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!-- Course Modal -->
+<div class="modal fade" id="courseModal" tabindex="-1" aria-labelledby="courseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="courseModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body" id="courseModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> {{ t('general_close', default='Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lesson Modal -->
+<div class="modal fade" id="lessonModal" tabindex="-1" aria-labelledby="lessonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lessonModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body" id="lessonModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary mark-complete" style="display: none;" data-course-id="" data-lesson-id="">
+                    <i class="fas fa-check me-1"></i> {{ t('learning_hub_mark_complete', default='Mark as Complete') }}
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> {{ t('general_close', default='Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Modal -->
+<div class="modal fade" id="quizModal" tabindex="-1" aria-labelledby="quizModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quizModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body" id="quizModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary submit-quiz" style="display: none;" data-course-id="" data-quiz-id="">
+                    <i class="fas fa-check me-1"></i> {{ t('learning_hub_submit_quiz', default='Submit Quiz') }}
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> {{ t('general_close', default='Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reality Check Quiz Modal -->
+<div class="modal fade" id="realityCheckModal" tabindex="-1" aria-labelledby="realityCheckModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="realityCheckModalLabel">{{ t('learning_hub_reality_check_quiz', default='Reality Check Quiz') }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body" id="realityCheckModalBody">
+                <form id="realityCheckForm">
+                    <div class="mb-3">
+                        <p><strong>1. {{ t('learning_hub_quiz_q1', default='What is a web browser?') }}</strong></p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q1" value="a" id="q1_a" required>
+                            <label class="form-check-label" for="q1_a">{{ t('learning_hub_quiz_q1_a', default='A program to browse the internet') }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q1" value="b" id="q1_b">
+                            <label class="form-check-label" for="q1_b">{{ t('learning_hub_quiz_q1_b', default='A type of computer hardware') }}</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <p><strong>2. {{ t('learning_hub_quiz_q2', default='How do you save a file?') }}</strong></p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q2" value="a" id="q2_a" required>
+                            <label class="form-check-label" for="q2_a">{{ t('learning_hub_quiz_q2_a', default='Click File > Save in an application') }}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q2" value="b" id="q2_b">
+                            <label class="form-check-label" for="q2_b">{{ t('learning_hub_quiz_q2_b', default='Send it to an email') }}</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary submit-reality-check">
+                    <i class="fas fa-check me-1"></i> {{ t('learning_hub_submit_quiz', default='Submit Quiz') }}
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> {{ t('general_close', default='Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
