@@ -391,9 +391,9 @@ def verify_2fa():
             if user.get('otp') == form.otp.data and user.get('otp_expiry') > datetime.utcnow():
                 from app import User
                 user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
-                login_user(user_obj, remember=True)
-                session['is_anonymous'] = False
+                login_user(user_obj, remember=True)                
                 session.pop('is_anonymous', None)
+                session['is_anonymous'] = False
                 session['lang'] = user.get('language', 'en')
                 db.users.update_one(
                     {'_id': username},
