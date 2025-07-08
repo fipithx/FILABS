@@ -152,7 +152,7 @@ def news_management():
                 'source_link': source_link if source_link else None,
                 'category': category if category else None,
                 'is_active': is_active,
-                'published_at': datetime.datetime.utcnow(),
+                'published_at': datetime.utcnow(),
                 'created_by': current_user.id
             }
             db.news.insert_one(article)
@@ -225,7 +225,7 @@ def edit_news(article_id):
                     'source_link': source_link if source_link else None,
                     'category': category if category else None,
                     'is_active': is_active,
-                    'updated_at': datetime.datetime.utcnow()
+                    'updated_at': datetime.utcnow()
                 }}
             )
             logger.info(f"News article updated: id={article_id}, title={title}, user={current_user.id}")
@@ -290,7 +290,7 @@ def seed_news():
                 'source_link': 'https://programs.startup.gov.ng/ihatch',
                 'category': 'Startups',
                 'is_active': True,
-                'published_at': datetime.datetime(2025, 6, 2),
+                'published_at': datetime(2025, 6, 2),
                 'created_by': 'admin'
             },
             {
@@ -302,7 +302,7 @@ def seed_news():
                 'source_link': None,
                 'category': 'Fintech',
                 'is_active': True,
-                'published_at': datetime.datetime(2025, 6, 1),
+                'published_at': datetime(2025, 6, 1),
                 'created_by': 'admin'
             },
             {
@@ -314,7 +314,7 @@ def seed_news():
                 'source_link': None,
                 'category': 'Agritech',
                 'is_active': True,
-                'published_at': datetime.datetime(2025, 5, 30),
+                'published_at': datetime(2025, 5, 30),
                 'created_by': 'admin'
             },
             {
@@ -326,7 +326,7 @@ def seed_news():
                 'source_link': None,
                 'category': 'Startups',
                 'is_active': True,
-                'published_at': datetime.datetime(2025, 6, 3),
+                'published_at': datetime(2025, 6, 3),
                 'created_by': 'admin'
             }
         ]
