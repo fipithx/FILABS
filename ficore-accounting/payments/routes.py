@@ -161,7 +161,7 @@ def add():
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
-            # Convert datetime.date to datetime.datetime
+            # Convert datetime.date to datetime
             payment_date = datetime(form.date.data.year, form.date.data.month, form.date.data.day)
             cashflow = {
                 'user_id': str(current_user.id),
@@ -216,14 +216,14 @@ def edit(id):
             return redirect(url_for('payments.index'))
         form = PaymentForm(data={
             'party_name': payment['party_name'],
-            'date': payment['created_at'],  # This is already a datetime.datetime object from MongoDB
+            'date': payment['created_at'],  # This is already a datetime object from MongoDB
             'amount': payment['amount'],
             'method': payment.get('method'),
             'category': payment.get('category')
         })
         if form.validate_on_submit():
             try:
-                # Convert datetime.date to datetime.datetime
+                # Convert datetime.date to datetime
                 payment_date = datetime(form.date.data.year, form.date.data.month, form.date.data.day)
                 updated_cashflow = {
                     'party_name': form.party_name.data,
