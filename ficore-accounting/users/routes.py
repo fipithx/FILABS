@@ -262,7 +262,7 @@ def get_post_login_redirect(user_role):
     elif user_role == 'trader':
         return url_for('general_bp.home')  # Traders go to business tools home
     elif user_role == 'agent':
-        return url_for('agents.dashboard')
+        return url_for('agents_bp.agent_portal')
     elif user_role == 'admin':
         return url_for('admin.dashboard')
     else:
@@ -275,7 +275,7 @@ def get_explore_tools_redirect(user_role):
     elif user_role == 'trader':
         return url_for('general_bp.home')  # Traders go to business tools
     elif user_role == 'agent':
-        return url_for('agents.dashboard')  # Agents go to agent dashboard
+        return url_for('agents_bp.agent_portal')  # Agents go to agent dashboard
     elif user_role == 'admin':
         return url_for('admin.dashboard')  # Admins go to admin dashboard
     else:
