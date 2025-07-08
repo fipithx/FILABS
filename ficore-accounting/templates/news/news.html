@@ -1,0 +1,241 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if section == 'list' %}
+        <h1>{{ t('news_ficore_news', default='Ficore News') }}</h1>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" id="searchInput" class="form-control" placeholder="{{ t('news_search_articles', default='Search articles...') }}">
+            </div>
+            <div class="col-md-6">
+                <select id="categoryFilter" class="form-select">
+                    <option value="">{{ t('news_all_categories', default='All Categories') }}</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {% if category == request.args.get('category') %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div id="newsList" class="list-group">
+            {% for article in articles %}
+                <a href="{{ url_for('news_bp.news_detail', article_id=article._id) }}" class="list-group-item list-group-item-action">
+                    <h5 class="mb-1">{{ article.title }}</h5>
+                    <p class="mb-1">{{ article.content | safe | truncate(100) }}</p>
+                    <small class="text-muted">{{ t('news_published_on', default='Published on') }} {{ article.published_at.strftime('%Y-%m-%d') }}</small>
+                    {% if article.category %}
+                        <span class="badge bg-secondary">{{ article.category }}</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+            {% if not articles %}
+                <p>{{ t('news_no_articles_found', default='No articles found.') }}</p>
+            {% endif %}
+        </div>
+
+    {% elif section == 'detail' %}
+        <h1>{{ article.title }}</h1>
+        <p><small class="text-muted">{{ t('news_published_on', default='Published on') }} {{ article.published_at.strftime('%Y-%m-%d') }}</small></p>
+        {% if article.source_link %}
+            <p><a href="{{ article.source_link }}" target="_blank">{{ t('news_source', default='Source') }}</a></p>
+        {% endif %}
+        <div>{{ article.content | safe }}</div>
+        <a href="{{ url_for('news_bp.news_list') }}" class="btn btn-primary mt-3">{{ t('news_back_to_news', default='Back to News') }}</a>
+
+    {% elif section == 'admin' %}
+        <h1>{{ t('news_management', default='News Management') }}</h1>
+        <h2>{{ t('news_add_new_article', default='Add New Article') }}</h2>
+        <form method="POST" action="{{ url_for('news_bp.news_management') }}">
+            {{ form.hidden_tag() if form else '' }}
+            <div class="mb-3">
+                <label for="title" class="form-label">{{ t('news_title', default='Title') }}</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">{{ t('news_content', default='Content') }}</label>
+                <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="source_link" class="form-label">{{ t('news_source_link_optional', default='Source Link (Optional)') }}</label>
+                <input type="url" class="form-control" id="source_link" name="source_link">
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">{{ t('news_category', default='Category') }}</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">{{ t('news_none', default='None') }}</option>
+                    <option value="Market">{{ t('news_market', default='Market') }}</option>
+                    <option value="Policy">{{ t('news_policy', default='Policy') }}</option>
+                    <option value="Tips">{{ t('news_tips', default='Tips') }}</option>
+                    <option value="Startups">{{ t('news_startups', default='Startups') }}</option>
+                    <option value="Fintech">{{ t('news_fintech', default='Fintech') }}</option>
+                    <option value="Agritech">{{ t('news_agritech', default='Agritech') }}</option>
+                </select>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                <label for="is_active" class="form-check-label">{{ t('news_active', default='Active') }}</label>
+            </div>
+            <button type="submit" class="btn btn-primary">{{ t('news_add_article', default='Add Article') }}</button>
+        </form>
+        <h2 class="mt-5">{{ t('news_all_articles', default='All News Articles') }}</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>{{ t('news_title', default='Title') }}</th>
+                    <th>{{ t('news_category', default='Category') }}</th>
+                    <th>{{ t('news_published', default='Published') }}</th>
+                    <th>{{ t('news_active', default='Active') }}</th>
+                    <th>{{ t('news_actions', default='Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                    <tr>
+                        <td>{{ article.title }}</td>
+                        <td>{{ article.category or t('news_none', default='None') }}</td>
+                        <td>{{ article.published_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ t('news_yes', default='Yes') if article.is_active else t('news_no', default='No') }}</td>
+                        <td>
+                            <a href="{{ url_for('news_bp.edit_news', article_id=article._id) }}" class="btn btn-sm btn-warning">{{ t('news_edit', default='Edit') }}</a>
+                            <form action="{{ url_for('news_bp.delete_news', article_id=article._id) }}" method="POST" style="display:inline;">
+                                {{ form.hidden_tag() if form else '' }}
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('{{ t('news_are_you_sure', default='Are you sure?') }}')">{{ t('news_delete', default='Delete') }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% elif section == 'edit' %}
+        <h1>{{ t('news_management', default='News Management') }}</h1>
+        <h2>{{ t('news_edit_article', default='Edit News Article') }}</h2>
+        <form method="POST" action="{{ url_for('news_bp.edit_news', article_id=article._id) }}">
+            {{ form.hidden_tag() if form else '' }}
+            <div class="mb-3">
+                <label for="title" class="form-label">{{ t('news_title', default='Title') }}</label>
+                <input type="text" class="form-control" id="title" name="title" value="{{ article.title }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">{{ t('news_content', default='Content') }}</label>
+                <textarea class="form-control" id="content" name="content" rows="5" required>{{ article.content }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="source_link" class="form-label">{{ t('news_source_link_optional', default='Source Link (Optional)') }}</label>
+                <input type="url" class="form-control" id="source_link" name="source_link" value="{{ article.source_link or '' }}">
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">{{ t('news_category', default='Category') }}</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="" {% if not article.category %}selected{% endif %}>{{ t('news_none', default='None') }}</option>
+                    <option value="Market" {% if article.category == 'Market' %}selected{% endif %}>{{ t('news_market', default='Market') }}</option>
+                    <option value="Policy" {% if article.category == 'Policy' %}selected{% endif %}>{{ t('news_policy', default='Policy') }}</option>
+                    <option value="Tips" {% if article.category == 'Tips' %}selected{% endif %}>{{ t('news_tips', default='Tips') }}</option>
+                    <option value="Startups" {% if article.category == 'Startups' %}selected{% endif %}>{{ t('news_startups', default='Startups') }}</option>
+                    <option value="Fintech" {% if article.category == 'Fintech' %}selected{% endif %}>{{ t('news_fintech', default='Fintech') }}</option>
+                    <option value="Agritech" {% if article.category == 'Agritech' %}selected{% endif %}>{{ t('news_agritech', default='Agritech') }}</option>
+                </select>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if article.is_active %}checked{% endif %}>
+                <label for="is_active" class="form-check-label">{{ t('news_active', default='Active') }}</label>
+            </div>
+            <button type="submit" class="btn btn-primary">{{ t('news_update_article', default='Update Article') }}</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {% if section == 'list' %}
+        <script>
+            async function fetchNews() {
+                const search = document.getElementById('searchInput').value;
+                const category = document.getElementById('categoryFilter').value;
+                const response = await fetch(`{{ url_for('news_bp.news_list') }}?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const articles = await response.json();
+                const newsList = document.getElementById('newsList');
+                newsList.innerHTML = articles.map(article => `
+                    <a href="{{ url_for('news_bp.news_detail', article_id='') }}${article.id}" class="list-group-item list-group-item-action">
+                        <h5 class="mb-1">${article.title}</h5>
+                        <p class="mb-1">${article.content}</p>
+                        <small class="text-muted">{{ t('news_published_on', default='Published on') }} ${article.published_at}</small>
+                        ${article.category ? `<span class="badge bg-secondary">${article.category}</span>` : ''}
+                    </a>
+                `).join('');
+                if (!articles.length) {
+                    newsList.innerHTML = `<p>{{ t('news_no_articles_found', default='No articles found.') }}</p>`;
+                }
+            }
+
+            document.getElementById('searchInput').addEventListener('input', debounce(fetchNews, 300));
+            document.getElementById('categoryFilter').addEventListener('change', fetchNews);
+
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            // Initial load
+            fetchNews();
+        </script>
+    {% endif %}
+{% endblock %}

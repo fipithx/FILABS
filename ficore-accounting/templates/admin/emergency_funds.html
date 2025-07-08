@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}
+{{ t('admin_manage_emergency_funds', default='Manage Emergency Funds') | escape }} - FiCore
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h1>{{ t('admin_manage_emergency_funds', default='Manage Emergency Funds') | escape }}</h1>
+    {% if funds %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ t('general_user', default='User') | escape }}</th>
+                        <th>{{ t('emergency_funds_amount', default='Amount') | escape }}</th>
+                        <th>{{ t('emergency_funds_goal', default='Goal') | escape }}</th>
+                        <th>{{ t('general_created_at', default='Created At') | escape }}</th>
+                        <th>{{ t('general_actions', default='Actions') | escape }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fund in funds %}
+                        <tr>
+                            <td>{{ fund.user_id | escape }}</td>
+                            <td>{{ fund.amount | format_currency | escape }}</td>
+                            <td>{{ fund.goal | format_currency | escape }}</td>
+                            <td>{{ fund.created_at | format_date | escape }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.admin_delete_emergency_fund', fund_id=fund._id) }}" method="post" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm" onclick="return confirm('{{ t('admin_confirm_delete', default='Are you sure you want to delete this emergency fund?') | escape }}')">
+                                        {{ t('general_delete', default='Delete') | escape }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">{{ t('admin_no_emergency_funds', default='No emergency funds found') | escape }}</p>
+    {% endif %}
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary mt-3">{{ t('general_back_to_dashboard', default='Back to Dashboard') | escape }}</a>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ t('coins_upload_receipt', default='Upload Receipt') }} - FiCore{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="page-title">
+        <h1>{{ t('coins_upload_receipt', default='Upload Receipt') }}</h1>
+        <small class="subtext">{{ t('coins_wallet_subtext', default='Tsabobin Cikin App') }}</small>
+    </div>
+    <form action="{{ url_for('coins.receipt_upload') }}" method="POST" enctype="multipart/form-data" class="row g-3">
+        {{ form.hidden_tag() }}
+        <div class="col-12">
+            <label for="receipt" class="form-label">{{ t('coins_receipt', default='Receipt') }}</label>
+            {{ form.receipt(class="form-control") }}
+            {% if form.receipt.errors %}
+                <p class="text-danger mt-1">{{ form.receipt.errors[0] }}</p>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary w-100">{{ t('coins_upload_receipt', default='Upload Receipt') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

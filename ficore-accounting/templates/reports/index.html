@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ t('reports_title', default='Reports') }} - FiCore{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="page-title">
+        <h1>{{ t('reports_title', default='Reports') }}</h1>
+        <small class="subtext">{{ t('reports_subtitle', default='Rahoton Kasuwanci') }}</small>
+    </div>
+    <div class="d-grid gap-2">
+        <a href="{{ url_for('reports.profit_loss') }}" class="btn btn-primary">{{ t('reports_profit_loss', default='Profit/Loss Report') }}</a>
+        <a href="{{ url_for('reports.inventory') }}" class="btn btn-primary">{{ t('reports_inventory', default='Inventory Report') }}</a>
+    </div>
+</div>
+{% endblock %}

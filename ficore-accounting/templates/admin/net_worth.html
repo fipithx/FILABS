@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}
+{{ t('admin_manage_net_worth', default='Manage Net Worth') | escape }} - FiCore
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h1>{{ t('admin_manage_net_worth', default='Manage Net Worth') | escape }}</h1>
+    {% if net_worths %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ t('general_user', default='User') | escape }}</th>
+                        <th>{{ t('net_worth_assets', default='Assets') | escape }}</th>
+                        <th>{{ t('net_worth_liabilities', default='Liabilities') | escape }}</th>
+                        <th>{{ t('net_worth_total', default='Net Worth') | escape }}</th>
+                        <th>{{ t('general_created_at', default='Created At') | escape }}</th>
+                        <th>{{ t('general_actions', default='Actions') | escape }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for nw in net_worths %}
+                        <tr>
+                            <td>{{ nw.user_id | escape }}</td>
+                            <td>{{ nw.assets | format_currency | escape }}</td>
+                            <td>{{ nw.liabilities | format_currency | escape }}</td>
+                            <td>{{ nw.net_worth | format_currency | escape }}</td>
+                            <td>{{ nw.created_at | format_date | escape }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.admin_delete_net_worth', nw_id=nw._id) }}" method="post" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm" onclick="return confirm('{{ t('admin_confirm_delete', default='Are you sure you want to delete this net worth record?') | escape }}')">
+                                        {{ t('general_delete', default='Delete') | escape }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">{{ t('admin_no_net_worth', default='No net worth records found') | escape }}</p>
+    {% endif %}
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary mt-3">{{ t('general_back_to_dashboard', default='Back to Dashboard') | escape }}</a>
+</div>
+{% endblock %}
