@@ -237,7 +237,7 @@ def create_app():
         logger.error('SECRET_KEY environment variable is not set')
         raise ValueError('SECRET_KEY must be set in environment variables')
 
-    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', 'financial-health-score-8jvu.onrender.com')
+    app.config['SERVER_NAME'] = os.getenv('SERVER_NAME', 'ficorelabs.onrender.com')
     app.config['APPLICATION_ROOT'] = os.getenv('APPLICATION_ROOT', '/')
     app.config['PREFERRED_URL_SCHEME'] = os.getenv('PREFERRED_URL_SCHEME', 'https')
     
