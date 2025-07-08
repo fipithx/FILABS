@@ -316,27 +316,34 @@ def login():
                         {'$set': {'otp': otp, 'otp_expiry': datetime.utcnow() + timedelta(minutes=5)}}
                     )
                     mail = utils.get_mail(current_app)
-                    msg = EmailMessage(
-                        subject=trans('general_otp_subject', default='Your One-Time Password'),
-                        body=trans('general_otp_body', default=f'Your OTP is {otp}. It expires in 5 minutes.'),
-                        to=[user['email']]
-                    )
-                    msg.send()
-                    session['pending_user_id'] = username
-                    logger.info(f"OTP sent to {user['email']} for username: {username}")
-                    return redirect(url_for('users.verify_2fa'))
-                except Exception as e:
-                    logger.warning(f"Email delivery failed for OTP: {str(e)}. Allowing login without 2FA.")
-                    from app import User
-                    user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
-                    login_user(user_obj, remember=True)
-                    session['lang'] = user.get('language', 'en')
-                    log_audit_action('login_without_2fa', {'user_id': username, 'reason': 'email_failure'})
-                    logger.info(f"User {username} logged in without 2FA due to email failure. Session: {session}")
-                    if not user.get('setup_complete', False):
-                        setup_route = get_setup_wizard_route(user.get('role', 'personal'))
-                        return redirect(url_for(setup_route))
-                    return redirect(get_post_login_redirect(user.get('role', 'personal')))
+                    lang = user.get('language', session.get('lang', 'en'))
+                    translation_key = 'general_otp_body_ha' if lang == 'ha' else 'general_otp_body'
+                    try:
+                        msg = EmailMessage(
+                            subject=trans('general_otp_subject', default='Your One-Time Password', lang=lang),
+                            body=trans(translation_key, default='Your OTP is {otp}. It expires in 5 minutes.', lang=lang, otp=otp),
+                            to=[user['email']]
+                        )
+                        msg.send()
+                        session['pending_user_id'] = username
+                        logger.info(f"OTP sent to {user['email']} for username: {username}")
+                        return redirect(url_for('users.verify_2fa'))
+                    except Exception as e:
+                        logger.warning(f"Email delivery or formatting failed for OTP for {username}: {str(e)}. Allowing login without 2FA for testing.")
+                        from app import User
+                        user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
+                        login_user(user_obj, remember=True)
+                        session['lang'] = user.get('language', 'en')
+                        log_audit_action('login_without_2fa', {'user_id': username, 'reason': 'email_failure_test_mode'})
+                        logger.info(f"User {username} logged in without 2FA due to email failure (test mode). Session: {session}")
+                        if not user.get('setup_complete', False):
+                            setup_route = get_setup_wizard_route(user.get('role', 'personal'))
+                            return redirect(url_for(setup_route))
+                        return redirect(get_post_login_redirect(user.get('role', 'personal')))
+                except errors.PyMongoError as e:
+                    logger.error(f"MongoDB error during OTP setup for {username}: {str(e)}")
+                    flash(trans('general_database_error', default='An error occurred while accessing the database. Please try again later.'), 'danger')
+                    return render_template('users/login.html', form=form, title=trans('general_login', lang=session.get('lang', 'en'))), 500
             from app import User
             user_obj = User(user['_id'], user['email'], user.get('display_name'), user.get('role', 'personal'))
             login_user(user_obj, remember=True)
