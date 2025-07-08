@@ -269,12 +269,13 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 
 /* Top Header */
 .top-header {
-    position: fixed;
+    /* position: fixed; → remove or change */
+    position: relative;
     top: 0;
     left: 0;
     width: 100%;
     height: var(--navbar-height);
-    background-color: var(--navbar-bg);
+    background-color: transparent;
     border-bottom: 1px solid var(--card-border);
     z-index: 1000;
     display: flex;
@@ -284,7 +285,6 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     box-sizing: border-box;
     flex-wrap: wrap;
 }
-
 .welcome-text {
     font-size: clamp(0.75rem, 1.8vw, 0.875rem);
     font-weight: 600;
