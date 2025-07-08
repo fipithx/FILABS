@@ -6,6 +6,8 @@ AGENTS_TRANSLATIONS = {
     'en': {
         # General
         'general_username': 'Username',
+        'lang_en': 'English',
+        'lang_ha': 'Hausa',
         'general_email': 'Email',
         'general_business_name': 'Business Name',
         'general_phone_number': 'Phone Number',
@@ -384,6 +386,8 @@ AGENTS_TRANSLATIONS = {
         'reports_generate_reports': 'Ƙirƙiri Rahotanni',
         'reports_comprehensive_report': 'Rahoto Mai Zurfi',
         'reports_print_report': 'Buga Rahoto',
+        'lang_en': 'Turanci',
+        'lang_ha': 'Hausa',
         'reports_export_csv': 'Fitarwa zuwa CSV',
         'reports_report_generations': 'Ƙirƙirar Rahotanni',
         'reports_generated_trader_report': 'An ƙirƙiri Rahoton Mai Kasuwanci',
