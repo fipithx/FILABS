@@ -273,6 +273,14 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "debtors_tooltip",
         "icon": "bi-person-plus"
     },
+        {
+        "endpoint": "creditors.index",
+        "label": "I Owe",
+        "label_key": "creditors_dashboard",
+        "description_key": "creditors_dashboard_desc",
+        "tooltip_key": "creditors_tooltip",
+        "icon": "bi-person-lines"
+    },
     {
         "endpoint": "taxation_bp.calculate_tax",
         "label": "Taxation",
