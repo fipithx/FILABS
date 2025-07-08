@@ -220,7 +220,7 @@ _BUSINESS_TOOLS = [
         "label_key": "creditors_dashboard",
         "description_key": "creditors_dashboard_desc",
         "tooltip_key": "creditors_tooltip",
-        "icon": "bi-person-lines"
+        "icon": "bi-journal-minus"
     },
     {
         "endpoint": "taxation_bp.calculate_tax",
