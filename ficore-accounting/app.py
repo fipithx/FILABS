@@ -48,7 +48,7 @@ load_dotenv()
 
 # Set up logging
 root_logger = logging.getLogger('ficore_app')
-root_logger.setLevel(logging.INFO)
+root_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO to reduce noise
 
 class SessionFormatter(logging.Formatter):
     def format(self, record):
@@ -130,7 +130,7 @@ def ensure_session_id(f):
 
 def setup_logging(app):
     handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logging.INFO)  # Changed from DEBUG to INFO
     handler.setFormatter(SessionFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s [session: %(session_id)s, role: %(user_role)s, ip: %(ip_address)s]'))
     root_logger.handlers = []
     root_logger.addHandler(handler)
@@ -144,9 +144,9 @@ def setup_logging(app):
     flask_logger.addHandler(handler)
     werkzeug_logger.addHandler(handler)
     pymongo_logger.addHandler(handler)
-    flask_logger.setLevel(logging.DEBUG)
-    werkzeug_logger.setLevel(logging.DEBUG)
-    pymongo_logger.setLevel(logging.DEBUG)
+    flask_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
+    werkzeug_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
+    pymongo_logger.setLevel(logging.INFO)  # Changed from DEBUG to INFO
     
     logger.info('Logging setup complete with StreamHandler for ficore_app, flask, werkzeug, and pymongo')
 
@@ -284,10 +284,10 @@ def create_app():
         
         def shutdown_mongo_client():
             try:
-                with app.app_context():
-                    if hasattr(app, 'extensions') and 'mongo' in app.extensions:
-                        app.extensions['mongo'].close()
-                        logger.info('MongoDB client closed successfully')
+                mongo = app.extensions.get('mongo')
+                if mongo:
+                    mongo.close()
+                    logger.info('MongoDB client closed successfully')
             except Exception as e:
                 logger.error(f'Error closing MongoDB client: {str(e)}', exc_info=True)
         
@@ -342,10 +342,10 @@ def create_app():
             
             def shutdown_scheduler():
                 try:
-                    with app.app_context():
-                        if 'SCHEDULER' in app.config and app.config['SCHEDULER'].running:
-                            app.config['SCHEDULER'].shutdown(wait=True)
-                            logger.info('Scheduler shutdown successfully')
+                    scheduler = app.config.get('SCHEDULER')
+                    if scheduler and getattr(scheduler, 'running', False):
+                        scheduler.shutdown(wait=True)
+                        logger.info('Scheduler shutdown successfully')
                 except Exception as e:
                     logger.error(f'Error shutting down scheduler: {str(e)}', exc_info=True)
             atexit.register(shutdown_scheduler)
@@ -706,9 +706,8 @@ def create_app():
                             logger.warning(f'Invalid or missing icon in navigation item: {item}')
                             item['icon'] = 'bi-question-circle'
 
-                current_app.logger.debug(f"DEBUGGING ICONS (context_processor): tools_for_template (first 2 items): {tools_for_template[:2]}")
-                current_app.logger.debug(f"DEBUGGING ICONS (context_processor): explore_features_for_template (first 2 items): {explore_features_for_template[:2]}")
-                current_app.logger.debug(f"DEBUGGING ICONS (context_processor): bottom_nav_items (first 2 items): {bottom_nav_items[:2]}")
+                # Removed excessive debug logging to reduce noise
+                logger.info('Navigation data injected for template rendering')
         except Exception as e:
             logger.error(f'Error in inject_role_nav: {str(e)}', exc_info=True)
 
@@ -904,8 +903,7 @@ def create_app():
                 flash(utils.trans('general_no_permission', default='You do not have permission to access this page.'), 'danger')
                 return redirect(url_for('index'))
         try:
-            logger.debug('Rendering public business-agent-home page with empty navigation', 
-                         extra={'ip_address': request.remote_addr})
+            logger.info('Rendering public business-agent-home page')  # Changed from debug to info
             return render_template(
                 'general/home.html',
                 is_public=True,
@@ -922,7 +920,7 @@ def create_app():
     @app.route('/health')
     @utils.limiter.limit('10 per minute')
     def health():
-        logger.debug('Health check', extra={'ip_address': request.remote_addr})
+        logger.info('Health check')  # Changed from debug to info
         status = {'status': 'healthy'}
         try:
             with app.app_context():
@@ -1040,7 +1038,7 @@ def create_app():
                     {'$match': {'user_id': user_id, 'type': 'payment', 'created_at': {'$gte': month_start, '$lt': next_month}}},
                     {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
                 ]
-                payments_result = list(db.cashflows.aggregate(payments_pipeline))
+                payments_pipeline = list(db.cashflows.aggregate(payments_pipeline))
                 total_payments = payments_result[0]['total'] if payments_result else 0
                 net_cashflow = total_receipts - total_payments
                 return jsonify({
@@ -1152,7 +1150,7 @@ def create_app():
                 notifications = list(db.reminder_logs.find({
                     'user_id': user_id
                 }).sort('sent_at', -1).limit(10))
-                logger.debug(f"Fetched {len(notifications)} notifications for user {user_id}")
+                logger.info(f"Fetched {len(notifications)} notifications for user {user_id}")
                 result = [{
                     'id': str(n['notification_id']),
                     'message': utils.trans(n['message'], lang=lang, default=n['message']),
@@ -1166,7 +1164,7 @@ def create_app():
                         {'notification_id': {'$in': notification_ids}, 'user_id': user_id},
                         {'$set': {'read_status': True}}
                     )
-                    logger.debug(f"Marked {len(notification_ids)} notifications as read for user {user_id}")
+                    logger.info(f"Marked {len(notification_ids)} notifications as read for user {user_id}")
                     return jsonify({'notifications': result}), 200
         except Exception as e:
             logger.error(f'Error fetching notifications: {str(e)}', exc_info=True, extra={'ip_address': request.remote_addr})
