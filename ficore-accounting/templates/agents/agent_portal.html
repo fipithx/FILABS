@@ -9,7 +9,7 @@
         {{ t('reports_generate_trader_report', default='Generate Trader Report') }} - FiCore
     {% elif request.endpoint == 'agents_bp.manage_tokens' %}
         {{ t('agents_manage_tokens', default='Manage Tokens') }} - FiCore
-    {% elif request.endpoint == 'agents.my_activity' %}
+    {% elif request.endpoint == 'recent_activity' %}
         {{ t('agents_my_activity', default='My Activity') }} - FiCore
     {% elif request.endpoint == 'agents_bp.register_trader' %}
         {{ t('agents_register_trader', default='Register Trader') }} - FiCore
@@ -103,7 +103,7 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-2">
-                        <a href="{{ url_for('agents.my_activity') }}" class="btn btn-info w-100">
+                        <a href="{{ url_for('recent_activity') }}" class="btn btn-info w-100">
                             <i class="bi bi-activity me-2"></i>{{ t('agents_view_my_activity', default='View My Activity') }}
                         </a>
                     </div>
@@ -152,7 +152,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'agents.my_activity' %}active{% endif %}" href="{{ url_for('agents.my_activity') }}">
+                        <a class="nav-link {% if request.endpoint == 'recent_activity' %}active{% endif %}" href="{{ url_for('recent_activity') }}">
                             <i class="bi bi-activity me-2"></i>
                             {{ t('agents_my_activity', default='My Activity') }}
                         </a>
@@ -655,7 +655,7 @@
                     </div>
                 </div>
 
-            {% elif request.endpoint == 'agents.my_activity' %}
+            {% elif request.endpoint == 'recent_activity' %}
                 {{ page_header('agents_my_activity') }}
 
                 <!-- Performance Metrics -->
