@@ -152,7 +152,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'recent_activity' %}active{% endif %}" href="{{ url_for('recent_activity') }}">
+                        <a class="nav-link {% if request.endpoint == 'agents_bp.recent_activity' %}active{% endif %}" href="{{ url_for('agents_bp.recent_activity') }}">
                             <i class="bi bi-activity me-2"></i>
                             {{ t('agents_my_activity', default='My Activity') }}
                         </a>
