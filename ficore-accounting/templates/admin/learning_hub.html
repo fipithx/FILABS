@@ -1,17 +1,143 @@
 {% extends "base.html" %}
 {% block title %}
-{{ t('admin_manage_learning_hub', default='Manage Learning Hub Progress') | escape }} - FiCore
+{{ t('admin_manage_learning_hub', default='Manage Learning Hub') | escape }} - FiCore
 {% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <h1>{{ t('admin_manage_learning_hub', default='Manage Learning Hub Progress') | escape }}</h1>
+    <h1>{{ t('admin_manage_learning_hub', default='Manage Learning Hub') | escape }}</h1>
+
+    <!-- Course Upload Form -->
+    <h2>{{ t('learning_hub_upload_course', default='Upload New Course') | escape }}</h2>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('admin.manage_courses') }}">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            <label for="{{ form.title.id }}" class="form-label">{{ t('learning_hub_course_title', default='Course Title') | escape }}</label>
+            {{ form.title(class="form-control") }}
+            {% if form.title.errors %}
+                <div class="text-danger">
+                    {% for error in form.title.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.course_id.id }}" class="form-label">{{ t('learning_hub_course_id', default='Course ID') | escape }}</label>
+            {{ form.course_id(class="form-control") }}
+            {% if form.course_id.errors %}
+                <div class="text-danger">
+                    {% for error in form.course_id.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.description.id }}" class="form-label">{{ t('learning_hub_description', default='Description') | escape }}</label>
+            {{ form.description(class="form-control") }}
+            {% if form.description.errors %}
+                <div class="text-danger">
+                    {% for error in form.description.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.content_type.id }}" class="form-label">{{ t('learning_hub_content_type', default='Content Type') | escape }}</label>
+            {{ form.content_type(class="form-select") }}
+            {% if form.content_type.errors %}
+                <div class="text-danger">
+                    {% for error in form.content_type.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.is_premium.id }}" class="form-label">{{ t('learning_hub_is_premium', default='Premium Content') | escape }}</label>
+            {{ form.is_premium(class="form-check-input") }}
+            {% if form.is_premium.errors %}
+                <div class="text-danger">
+                    {% for error in form.is_premium.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.roles.id }}" class="form-label">{{ t('learning_hub_roles', default='Roles') | escape }}</label>
+            {{ form.roles(class="form-select") }}
+            {% if form.roles.errors %}
+                <div class="text-danger">
+                    {% for error in form.roles.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.file.id }}" class="form-label">{{ t('learning_hub_upload_file', default='Upload File') | escape }}</label>
+            {{ form.file(class="form-control") }}
+            {% if form.file.errors %}
+                <div class="text-danger">
+                    {% for error in form.file.errors %}
+                        {{ error | escape }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">{{ t('learning_hub_upload', default='Upload') | escape }}</button>
+    </form>
+
+    <!-- Courses List -->
+    <h2 class="mt-5">{{ t('admin_manage_courses', default='Manage Courses') | escape }}</h2>
+    {% if courses %}
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ t('learning_hub_course_id', default='Course ID') | escape }}</th>
+                        <th>{{ t('learning_hub_course_title', default='Title') | escape }}</th>
+                        <th>{{ t('learning_hub_description', default='Description') | escape }}</th>
+                        <th>{{ t('learning_hub_roles', default='Roles') | escape }}</th>
+                        <th>{{ t('general_created_at', default='Created At') | escape }}</th>
+                        <th>{{ t('general_actions', default='Actions') | escape }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                        <tr>
+                            <td>{{ course.id | escape }}</td>
+                            <td>{{ course.title_en | escape }}</td>
+                            <td>{{ course.description_en | escape }}</td>
+                            <td>{{ course.roles | join(', ') | escape }}</td>
+                            <td>{{ course.created_at_formatted | escape }}</td>
+                            <td>
+                                <form action="{{ url_for('admin.delete_course', course_id=course.id) }}" method="post" style="display:inline;">
+                                    <button class="btn btn-danger btn-sm" onclick="return confirm('{{ t('admin_confirm_delete', default='Are you sure you want to delete this course?') | escape }}')">
+                                        {{ t('general_delete', default='Delete') | escape }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted">{{ t('admin_no_courses', default='No courses found') | escape }}</p>
+    {% endif %}
+
+    <!-- Learning Progress -->
+    <h2 class="mt-5">{{ t('admin_manage_learning_hub', default='Manage Learning Hub Progress') | escape }}</h2>
     {% if progress %}
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead class="table-light">
                     <tr>
                         <th>{{ t('general_user', default='User') | escape }}</th>
-                        <th>{{ t('learning_hub_module_id', default='Module ID') | escape }}</th>
+                        <th>{{ t('learning_hub_course_id', default='Course ID') | escape }}</th>
                         <th>{{ t('learning_hub_progress', default='Progress') | escape }}</th>
                         <th>{{ t('general_created_at', default='Created At') | escape }}</th>
                         <th>{{ t('general_actions', default='Actions') | escape }}</th>
@@ -20,9 +146,9 @@
                 <tbody>
                     {% for p in progress %}
                         <tr>
-                            <td>{{ p.user_id | escape }}</td>
-                            <td>{{ p.module_id | escape }}</td>
-                            <td>{{ p.progress_percentage | escape }}%</td>
+                            <td>{{ p.user_id | default('Anonymous') | escape }}</td>
+                            <td>{{ p.course_id | escape }}</td>
+                            <td>{{ p.lessons_completed | length }} / {{ p.total_lessons | default(0) }} completed</td>
                             <td>{{ p.created_at | format_date | escape }}</td>
                             <td>
                                 <form action="{{ url_for('admin.admin_delete_learning_progress', progress_id=p._id) }}" method="post" style="display:inline;">
