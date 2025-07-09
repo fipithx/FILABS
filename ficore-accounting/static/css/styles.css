@@ -1008,82 +1008,118 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     text-decoration: none;
 }
 
-/* Roles Section */
+/* Role-Based Value Proposition */
 .roles-section {
-    margin: 2rem 0;
-    padding: 2rem;
-    background: var(--gradient-card);
-    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    background: linear-gradient(135deg, var(--card-bg), rgba(255, 255, 255, 0.9));
+    border-radius: 0.75rem;
     box-shadow: var(--card-shadow);
-    transition: var(--transition-base);
+    margin: 2rem 1rem;
+    animation: fadeIn 0.5s ease-in-out 0.2s both;
 }
 
-.role-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+.dark-mode .roles-section {
+    background: linear-gradient(135deg, #1e293b, #2a3447);
+}
+
+.roles-section h2 {
+    font-size: clamp(1.8rem, 4vw, 2.2rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.roles-section p {
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    color: var(--text-muted);
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+.roles-section .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
 }
 
 .role-card {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 2rem;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 12px;
     border: 1px solid var(--card-border);
     box-shadow: var(--card-shadow);
-    text-align: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    padding: 1.5rem;
+    background: var(--card-bg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 
-/* Subtle border colors for each role */
+.role-card:hover, .role-card:active {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: var(--card-shadow-hover);
+    filter: brightness(1.05);
+}
+
 .role-card.role-personal {
-    border-color: rgba(0, 123, 255, 0.2); /* Soft blue for personal users */
+    border-left: 4px solid var(--accent-blue);
+    background: linear-gradient(135deg, rgba(58, 134, 255, 0.1), var(--card-bg));
 }
 
 .role-card.role-business {
-    border-color: rgba(40, 167, 69, 0.2); /* Soft green for business owners */
+    border-left: 4px solid var(--button-success-bg);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), var(--card-bg));
 }
 
 .role-card.role-agent {
-    border-color: rgba(111, 66, 193, 0.2); /* Soft purple for agents */
+    border-left: 4px solid var(--button-warning-bg);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--card-bg));
 }
 
-/* Hover effects for interactivity */
-.role-card:hover {
-    transform: translateY(-8px);
-    box-shadow: var(--card-shadow-hover);
-    border-color: rgba(0, 0, 0, 0.3); /* Slightly darker border on hover for all cards */
+.role-card .card-body i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
 }
 
-.role-card h3 {
-    font-size: clamp(1.25rem, 3vw, 1.5rem);
-    font-weight: 700;
+.role-card .card-body h3 {
+    font-size: clamp(1.2rem, 2.5vw, 1.4rem);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.role-card .card-body p {
+    font-size: clamp(0.85rem, 2vw, 0.95rem);
+    color: var(--text-muted);
     margin-bottom: 1rem;
 }
 
-.role-card p {
-    font-size: clamp(0.875rem, 2vw, 1rem);
-    color: var(--text-muted);
-    margin-bottom: 1.5rem;
-}
-
 .role-card .btn {
-    padding: 0.75rem 2rem;
-    border-radius: 12px;
-    background-color: var(--primary); /* Assuming --primary matches text-primary */
-    border-color: var(--primary);
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
 }
 
-.role-card .btn:hover {
-    background-color: var(--primary-dark); /* Darker shade for hover, define in your variables */
-    border-color: var(--primary-dark);
+@media (max-width: 576px) {
+    .roles-section { padding: 1.5rem 1rem; margin: 1.5rem 0.5rem; }
+    .roles-section h2 { font-size: clamp(1.5rem, 3.5vw, 1.8rem); }
+    .roles-section p { font-size: clamp(0.9rem, 2vw, 1rem); margin-bottom: 1.5rem; }
+    .roles-section .row { gap: 0.75rem; }
+    .role-card { min-height: 200px; padding: 1rem; }
+    .role-card .card-body i { font-size: 1.8rem; }
+    .role-card .card-body h3 { font-size: clamp(1.1rem, 2vw, 1.2rem); }
+    .role-card .card-body p { font-size: clamp(0.8rem, 1.8vw, 0.9rem); }
+    .role-card .btn { padding: 0.5rem 1rem; font-size: 0.85rem; }
 }
 
-/* Responsive adjustments */
-@media (max-width: 767.98px) {
-    .role-card {
-        margin-bottom: 1rem; /* Ensure spacing on mobile */
-    }
+@media (max-width: 360px) {
+    .roles-section { padding: 1rem 0.5rem; margin: 1rem 0.3rem; }
+    .roles-section .row { gap: 0.5rem; }
+    .role-card { min-height: 180px; }
+    .role-card .card-body i { font-size: 1.5rem; }
+    .role-card .card-body h3 { font-size: clamp(1rem, 1.8vw, 1.1rem); }
+    .role-card .card-body p { font-size: clamp(0.75rem, 1.6vw, 0.85rem); }
 }
 
 /* Tools Section */
