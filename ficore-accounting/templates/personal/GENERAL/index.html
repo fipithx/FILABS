@@ -81,7 +81,7 @@
             <div class="notification-list" id="notificationList">
                 <div class="notification-item">
                     <div class="notification-icon">
-                        <i class="bi bi-bell text-muted"></i>
+                        <i class="bi {{ notifications[0].icon | default('bi-bell') | e }} text-muted"></i>
                     </div>
                     <div class="notification-content">
                         <div class="notification-description">{{ t('general_loading_notifications', default='Loading notifications...') | e }}</div>
@@ -102,7 +102,7 @@
             <div class="recent-activity-card" id="recentActivityList">
                 <div class="activity-item">
                     <div class="activity-icon">
-                        <i class="bi bi-info-circle text-muted"></i>
+                        <i class="bi {{ activities[0].icon | default('bi-info-circle') | e }} text-muted"></i>
                     </div>
                     <div class="activity-content">
                         <div class="activity-description">{{ t('general_loading_activities', default='Loading recent activities...') | e }}</div>
@@ -135,7 +135,7 @@
 
         <!-- Tools Overview (for authenticated users) -->
         <section class="section-card tools-section">
-            <h2 class="section-title text-center"><i class="bi bi-tools me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-tools' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
             <p class="text-center text-muted mb-4">{{ t('general_tools_desc', default='Powerful tools to manage your finances effectively.') | e }}</p>
             {% if explore_features_for_template %}
                 {% set categories = [] %}
@@ -174,10 +174,22 @@
                 <p class="text-muted text-center">{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
             {% endif %}
         </section>
+
+        <!-- Bottom Navigation (Authenticated Users, Mobile) -->
+        <nav class="bottom-nav d-md-none" role="navigation" aria-label="{{ t('general_mobile_navigation', default='Mobile navigation') | e }}">
+            <div class="nav-container">
+                {% for item in bottom_nav_items %}
+                    <a href="{{ item.url | default('#') | e }}" class="nav-item {% if request.endpoint == item.endpoint %}active{% endif %}" aria-label="{{ t(item.label_key, default=item.label) | e }}">
+                        <i class="bi {{ item.icon | default('bi-question-circle') | e }}"></i>
+                        <div class="nav-label">{{ t(item.label_key, default=item.label) | e }}</div>
+                    </a>
+                {% endfor %}
+            </div>
+        </nav>
     {% else %}
         <!-- Hero Section -->
         <section class="section-card hero text-center">
-            <h1 class="section-title display-4 fw-bold"><i class="bi bi-wallet-fill me-2 text-primary"></i>{{ t('general_welcome', default='Manage Your Finances with FiCore Africa') | e }}</h1>
+            <h1 class="section-title display-4 fw-bold"><i class="bi {{ 'bi-wallet-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_welcome', default='Manage Your Finances with FiCore Africa') | e }}</h1>
             <p class="lead text-muted mb-4">{{ t('general_ficore_desc', default='Africa’s leading platform for personal finance, business management, and agent services, tailored for you.') | e }}</p>
             <div class="hero-actions d-flex justify-content-center gap-3">
                 <div class="dropdown">
@@ -198,26 +210,26 @@
 
         <!-- Role-Based Value Proposition -->
         <section class="section-card roles-section">
-            <h2 class="section-title text-center"><i class="bi bi-people-fill me-2 text-primary"></i>{{ t('general_who_we_serve', default='Who We Serve') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-people-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_who_we_serve', default='Who We Serve') | e }}</h2>
             <p class="text-center text-muted mb-4">{{ t('general_who_we_serve_desc', default='FiCore empowers individuals, businesses, and agents with tailored financial tools.') | e }}</p>
             <div class="row row-cols-1 row-cols-md-3 g-4">
                 <div class="col">
                     <div class="role-card role-personal h-100 shadow-sm">
-                        <h3 class="fw-bold"><i class="bi bi-person-fill me-2 text-primary"></i>{{ t('general_personal', default='Personal Users') | e }}</h3>
+                        <h3 class="fw-bold"><i class="bi {{ 'bi-person-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_personal', default='Personal Users') | e }}</h3>
                         <p class="text-muted">{{ t('general_personal_desc', default='Plan budgets, track bills, and boost your financial health.') | e }}</p>
                         <a href="{{ url_for('users.signup', role='personal') | e }}" class="btn btn-primary btn-sm mt-auto">{{ t('general_get_started', default='Get Started') | e }}</a>
                     </div>
                 </div>
                 <div class="col">
                     <div class="role-card role-business h-100 shadow-sm">
-                        <h3 class="fw-bold"><i class="bi bi-briefcase-fill me-2 text-primary"></i>{{ t('general_trader', default='Business Owners') | e }}</h3>
+                        <h3 class="fw-bold"><i class="bi {{ 'bi-briefcase-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_trader', default='Business Owners') | e }}</h3>
                         <p class="text-muted">{{ t('general_trader_desc', default='Streamline debtors, creditors, and inventory management.') | e }}</p>
                         <a href="{{ url_for('users.signup', role='trader') | e }}" class="btn btn-primary btn-sm mt-auto">{{ t('general_get_started', default='Get Started') | e }}</a>
                     </div>
                 </div>
                 <div class="col">
                     <div class="role-card role-agent h-100 shadow-sm">
-                        <h3 class="fw-bold"><i class="bi bi-handshake me-2 text-primary"></i>{{ t('general_agent', default='Agents') | e }}</h3>
+                        <h3 class="fw-bold"><i class="bi {{ 'bi-handshake' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_agent', default='Agents') | e }}</h3>
                         <p class="text-muted">{{ t('general_agent_desc', default='Onboard traders and manage tokens effortlessly.') | e }}</p>
                         <a href="{{ url_for('users.signup', role='agent') | e }}" class="btn btn-primary btn-sm mt-auto">{{ t('general_get_started', default='Get Started') | e }}</a>
                     </div>
@@ -227,7 +239,7 @@
 
         <!-- Tools Overview (for unauthenticated users) -->
         <section class="section-card tools-section">
-            <h2 class="section-title text-center"><i class="bi bi-tools me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-tools' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
             <p class="text-center text-muted mb-4">{{ t('general_tools_desc', default='Powerful tools to manage your finances effectively.') | e }}</p>
             {% if explore_features_for_template %}
                 {% set categories = ['Personal', 'Business', 'Agent'] %}
@@ -243,7 +255,7 @@
                                             <h4 class="fw-bold"><i class="bi {{ tool.get('icon', 'bi-circle') | e }} me-2 text-primary"></i>{{ t(tool.get('label_key', ''), default=tool.get('label', 'Tool')) | e }}</h4>
                                             <p class="text-muted">{{ t(tool.get('description_key', ''), default=tool.get('description', 'Description not available')) | e }}</p>
                                             <div class="position-absolute top-0 end-0 p-2">
-                                                <i class="bi bi-lock-fill text-muted" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_required', default='Log in to access this tool') | e }}"></i>
+                                                <i class="bi {{ 'bi-lock-fill' | default('bi-circle') | e }} text-muted" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_required', default='Log in to access this tool') | e }}"></i>
                                             </div>
                                             <a href="{{ url_for('users.login') | e }}?next={{ url_for(tool.get('endpoint', 'personal.index')) | e }}" class="btn btn-outline-primary btn-sm mt-auto" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_to_access', default='Log in to access this tool') | e }}">{{ t('general_login', default='Log In') | e }}</a>
                                         </div>
@@ -260,30 +272,30 @@
 
         <!-- Why FiCore -->
         <section class="section-card why-section">
-            <h2 class="section-title text-center"><i class="bi bi-info-circle-fill me-2 text-primary"></i>{{ t('general_why_ficore', default='Why FiCore Africa?') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-info-circle-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_why_ficore', default='Why FiCore Africa?') | e }}</h2>
             <p class="text-center text-muted mb-4">{{ t('general_ficore_highlight', default='Africa’s #1 Localized Financial Management Platform') | e }}</p>
             <div class="row row-cols-1 row-cols-md-4 g-4">
                 <div class="col">
                     <div class="why-item text-center">
-                        <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
                         <p class="text-muted">{{ t('general_localized', default='Built for Africa with Naira support and regional insights') | e }}</p>
                     </div>
                 </div>
                 <div class="col">
                     <div class="why-item text-center">
-                        <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
                         <p class="text-muted">{{ t('general_empowers', default='Empowers individuals, businesses, and agents') | e }}</p>
                     </div>
                 </div>
                 <div class="col">
                     <div class="why-item text-center">
-                        <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
                         <p class="text-muted">{{ t('general_actionable', default='Actionable insights for smarter decisions') | e }}</p>
                     </div>
                 </div>
                 <div class="col">
                     <div class="why-item text-center">
-                        <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
                         <p class="text-muted">{{ t('general_secure', default='Advisory-only – we don’t access your funds') | e }}</p>
                     </div>
                 </div>
@@ -296,26 +308,26 @@
 
         <!-- Testimonials -->
         <section class="section-card testimonials-section">
-            <h2 class="section-title text-center"><i class="bi bi-quote me-2 text-primary"></i>{{ t('general_testimonials', default='What Our Users Say') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-quote' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_testimonials', default='What Our Users Say') | e }}</h2>
             <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
                     <div class="carousel-item active">
                         <div class="testimonial text-center">
-                            <div class="avatar-circle gradient-bg mx-auto mb-3" data-initials="MU">MU</div>
+                            <img src="{{ testimonials[0].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="MU">
                             <p class="text-muted">{{ t('general_impressed_features', default='FiCore’s tools are intuitive and perfect for managing my personal finances!') | e }}</p>
                             <p class="name fw-bold">Maisarata Uqubatu, {{ t('general_personal_user', default='Personal User') | e }}</p>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="testimonial text-center">
-                            <div class="avatar-circle gradient-bg mx-auto mb-3" data-initials="AA">AA</div>
+                            <img src="{{ testimonials[1].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="AA">
                             <p class="text-muted">{{ t('general_ficore_praise', default='Managing my business’s debtors and inventory has never been easier!') | e }}</p>
                             <p class="name fw-bold">Abubakar Abdulkadir, {{ t('general_business_owner', default='Business Owner') | e }}</p>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="testimonial text-center">
-                            <div class="avatar-circle gradient-bg mx-auto mb-3" data-initials="ASU">ASU</div>
+                            <img src="{{ testimonials[2].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="ASU">
                             <p class="text-muted">{{ t('general_potential_support', default='As an agent, FiCore makes onboarding traders seamless and efficient.') | e }}</p>
                             <p class="name fw-bold">Aminu Sani Usman, {{ t('general_agent', default='Agent') | e }}</p>
                         </div>
@@ -337,7 +349,7 @@
 
         <!-- FAQ Section -->
         <section class="section-card faq-section">
-            <h2 class="section-title text-center"><i class="bi bi-question-circle-fill me-2 text-primary"></i>{{ t('general_faq', default='Frequently Asked Questions') | e }}</h2>
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-question-circle-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_faq', default='Frequently Asked Questions') | e }}</h2>
             <div class="accordion" id="faqAccordion">
                 <div class="accordion-item">
                     <h3 class="accordion-header" id="faqFundHandling">
@@ -467,11 +479,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function loadFinancialSummary() {
         Promise.all([
-            fetch('{{ url_for('personal.budget.summary') | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
-            fetch('{{ url_for('personal.bill.summary') | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
-            fetch('{{ url_for('personal.net_worth.summary') | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
-            fetch('{{ url_for('personal.financial_health.summary') | e }}').then(r => r.json()).catch(() => ({score: 0})),
-            fetch('{{ url_for('personal.emergency_fund.summary') | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
+            fetch('{{ url_for("personal.budget.summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
+            fetch('{{ url_for("personal.bill.summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
+            fetch('{{ url_for("personal.net_worth.summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
+            fetch('{{ url_for("personal.financial_health.summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
+            fetch('{{ url_for("personal.emergency_fund.summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
         ]).then(([budgetData, billsData, netWorthData, healthData, emergencyFundData]) => {
             updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData);
         }).catch(error => {
@@ -512,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         notificationList.innerHTML = notifications.map(notification => `
                             <div class="notification-item ${notification.read ? '' : 'unread'}">
                                 <div class="notification-icon">
-                                    <i class="bi bi-bell ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                                    <i class="bi {{ notification.icon | default('bi-bell') | e }} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
                                 </div>
                                 <div class="notification-content">
                                     <div class="notification-description">${notification.message}</div>
@@ -562,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         activityList.innerHTML = activities.map(activity => `
                             <div class="activity-item">
                                 <div class="activity-icon">
-                                    <i class="bi ${getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
+                                    <i class="bi {{ activity.icon | default(getActivityIcon(activity.type)) | e }} ${getActivityColor(activity.type)}"></i>
                                 </div>
                                 <div class="activity-content">
                                     <div class="activity-description">${activity.description}</div>
@@ -587,7 +599,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }).catch(error => {
                 console.error('Error loading recent activity:', error);
-            });
+                const activityList = document.getElementById('recentActivityList');
+                if (activityList) {
+                    activityList.innerHTML = `
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description">${translations.no_recent_activity}</div>
+                                <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                            </div>
+                        `;
+                    }
+                });
     }
 
     function getActivityIcon(type) {
