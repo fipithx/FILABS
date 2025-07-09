@@ -7,6 +7,11 @@ ADMIN_TRANSLATIONS = {
         'admin_dashboard': 'Admin Dashboard',
         'user_id': 'User ID',
         'user_id_required': 'User ID is required',
+        # Customer Reports
+        'admin_customer_reports': 'Customer Reports',
+        'admin_download_pdf': 'Download PDF',
+        'admin_download_csv': 'Download CSV',
+        'admin_customers_list': 'Customers',
         'admin_no_learning_progress': 'No Learning Progress Available',
         'admin_no_bills': 'No Bills Available',
         'admin_no_budgets': 'No Budgets Available',
@@ -381,6 +386,10 @@ ADMIN_TRANSLATIONS = {
         'admin_payment_locations_list': 'Wuraren Biya',
         'admin_no_payment_locations': 'Ba a sami wuraren biya ba',
         'admin_manage_payment_locations': 'Gudanar da Wuraren Biya',
+        'admin_customer_reports': 'Rahoton Abokan Ciniki',
+        'admin_download_pdf': 'Zazzage PDF',
+        'admin_download_csv': 'Zazzage CSV',
+        'admin_customers_list': 'Abokan Ciniki',
 
         # Tax Deadlines
         'admin_tax_deadlines': 'Gudanar da Ranar Ƙarshe na Haraji',
