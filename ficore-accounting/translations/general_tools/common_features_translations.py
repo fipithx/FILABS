@@ -6,6 +6,34 @@ COMMON_FEATURES_TRANSLATIONS = {
     'en': {
         # News Management
         'news_article_not_found': 'Article not found',
+                # News Management
+        'news_title': 'Title',
+        'news_content': 'Content',
+        'news_source_link': 'Source Link',
+        'news_category': 'Category',
+        'news_published_at': 'Published At',
+        'news_title_placeholder': 'Enter article title',
+        'news_content_placeholder': 'Enter article content',
+        'news_source_link_placeholder': 'Enter source URL (optional)',
+        'news_category_placeholder': 'Enter category (optional)',
+        'confirm_delete_news': 'Are you sure you want to delete this article?',
+
+        # Tax Rates
+        'tax_role': 'Role',
+        'tax_min_income': 'Minimum Income',
+        'tax_max_income': 'Maximum Income',
+        'tax_rate': 'Rate',
+        'tax_description': 'Description',
+        'tax_min_income_placeholder': 'Enter minimum income',
+        'tax_max_income_placeholder': 'Enter maximum income',
+        'tax_rate_placeholder': 'Enter rate (0 to 1)',
+        'tax_description_placeholder': 'Enter description',
+        'confirm_delete_tax_rate': 'Are you sure you want to delete this tax rate?',
+        'tax_role_personal': 'Personal',
+        'tax_role_trader': 'Trader',
+        'tax_role_agent': 'Agent',
+        'tax_role_company': 'Company',
+        'tax_role_vat': 'VAT',
         # Common Features
         'tax_amount': 'Tax Amount',
         'taxation_calculator_desc': 'Your Taxes',
@@ -473,5 +501,33 @@ COMMON_FEATURES_TRANSLATIONS = {
         'tax_add_rate': 'Ƙara Ƙimar Haraji',
         'tax_message_required': 'Ana buƙatar saƙon haraji',
         'tax_reminder_date_required': 'Ana buƙatar ranar tunatarwa ta haraji',
+                # News Management
+        'news_title': 'Take',
+        'news_content': 'Abun ciki',
+        'news_source_link': 'Hanyar Samu',
+        'news_category': 'Rukuni',
+        'news_published_at': 'Buga A',
+        'news_title_placeholder': 'Shigar da taken labari',
+        'news_content_placeholder': 'Shigar da abun cikin labari',
+        'news_source_link_placeholder': 'Shigar da URL na samu (na zaɓi)',
+        'news_category_placeholder': 'Shigar da rukuni (na zaɓi)',
+        'confirm_delete_news': 'Kuna da tabbacin cewa kuna so ku goge wannan labarin?',
+
+        # Tax Rates
+        'tax_role': 'Matsayi',
+        'tax_min_income': 'Mafi ƙarancin Kuɗin Shiga',
+        'tax_max_income': 'Mafi Girman Kuɗin Shiga',
+        'tax_rate': 'Ƙima',
+        'tax_description': 'Bayani',
+        'tax_min_income_placeholder': 'Shigar da mafi ƙarancin kuɗin shiga',
+        'tax_max_income_placeholder': 'Shigar da mafi girman kuɗin shiga',
+        'tax_rate_placeholder': 'Shigar da ƙima (0 zuwa 1)',
+        'tax_description_placeholder': 'Shigar da bayani',
+        'confirm_delete_tax_rate': 'Kuna da tabbacin cewa kuna so ku goge wannan ƙimar haraji?',
+        'tax_role_personal': 'Na Mutum',
+        'tax_role_trader': 'Dan Kasuwa',
+        'tax_role_agent': 'Wakili',
+        'tax_role_company': 'Kamfani',
+        'tax_role_vat': 'VAT',
     }
 }
