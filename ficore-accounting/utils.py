@@ -93,6 +93,22 @@ _PERSONAL_TOOLS = [
         "tooltip_key": "coins_tooltip",
         "icon": "bi-coin"
     },
+    {
+        "endpoint": "personal.emergency_fund.main",
+        "label": "Emergency Fund",
+        "label_key": "emergency_fund_calculator",
+        "description_key": "emergency_fund_desc",
+        "tooltip_key": "emergency_fund_tooltip",
+        "icon": "bi-shield"
+    },
+    {
+        "endpoint": "personal.quiz.main",
+        "label": "Quiz",
+        "label_key": "quiz_personality_quiz",
+        "description_key": "quiz_personality_desc",
+        "tooltip_key": "quiz_tooltip",
+        "icon": "bi-question-circle"
+    },
 ]
 
 _PERSONAL_NAV = [
