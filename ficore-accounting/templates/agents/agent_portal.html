@@ -185,7 +185,7 @@
                             <div class="card-body">
                                 <h5 class="card-title text-primary">{{ t('agents_traders_registered', default='Traders Registered') }}</h5>
                                 <h2 class="card-text" id="traders-registered">{{ traders_registered }}</h2>
-                                <small class="text-muted">{{ t('agents_total_registered', default='Total Host registered') }}</small>
+                                <small class="text-muted">{{ t('agents_total_registered', default='Total registered') }}</small>
                             </div>
                         </div>
                     </div>
@@ -691,15 +691,7 @@
                         <div class="card text-center">
                             <div class="card-body">
                                 <h5 class="card-title text-warning">{{ t('agents_performance_rating', default='Performance Rating') }}</h5>
-                                <h2 class="card-text">
-                                    {% if total_traders_registered >= 10 %}
-                                        <span class="text-success">★★★★★</span>
-                                    {% elif total_traders_registered >= 5 %}
-                                        <span class="text-warning">★★★★☆</span>
-                                    {% else %}
-                                        <span class="text-info">★★★☆☆</span>
-                                    {% endif %}
-                                </h2>
+                                <h2 class="card-text">{{ performance_rating }}</h2>
                                 <small class="text-muted">{{ t('agents_based_on_performance', default='Based on performance') }}</small>
                             </div>
                         </div>
@@ -874,9 +866,9 @@
                                         {% if form.industry.errors %}
                                             {% for error in form.industry.errors %}
                                                 <div class="invalid-feedback d-block">{{ error }}</div>
-                                                {% endfor %}
-                                            {% endif %}
-                                        </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
                                     
                                     <div class="alert alert-info">
                                         <i class="bi bi-info-circle me-2"></i>
@@ -909,10 +901,10 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
 
     // Dashboard auto-refresh
-    if (window.location.pathname.includes('/agent/dashboard')) {
+    if (window.location.pathname.includes('/agents/')) {
         const refreshDashboard = () => {
             document.querySelectorAll('#traders-registered, #tokens-today').forEach(el => el.classList.add('text-muted'));
-            fetch('/agent/dashboard', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            fetch('/agents/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(response => response.text())
                 .then(html => {
                     const parser = new DOMParser();
@@ -949,7 +941,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             searchBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
             searchTimeout = setTimeout(() => {
-                fetch(`/agent/api/search_traders?q=${encodeURIComponent(query)}`)
+                fetch(`/agents/api/search_traders?q=${encodeURIComponent(query)}`)
                     .then(response => response.json())
                     .then(traders => {
                         suggestionsDiv.innerHTML = '';
