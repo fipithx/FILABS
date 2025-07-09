@@ -54,7 +54,6 @@ def index():
             'personal/GENERAL/index.html',
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
             notifications=notifications,
-            activities=activities,
             is_admin=utils.is_admin
         )
     except Exception as e:
