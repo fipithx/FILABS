@@ -403,6 +403,17 @@ def payment_info():
         title=trans('tax_payment_info_title', default='Tax Payment Information', lang=session.get('lang', 'en'))
     )
 
+@taxation_bp.route('/understand_taxes', methods=['GET'])
+@requires_role(['personal', 'trader', 'agent', 'company'])
+@login_required
+def understand_taxes():
+    return render_template(
+        'taxation/taxation.html',
+        section='understand_taxes',
+        policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+        title=trans('tax_understand_taxes_title', default='Understand Your Taxes', lang=session.get('lang', 'en'))
+    )
+
 @taxation_bp.route('/reminders', methods=['GET', 'POST'])
 @requires_role(['personal', 'trader', 'agent', 'company'])
 @login_required
