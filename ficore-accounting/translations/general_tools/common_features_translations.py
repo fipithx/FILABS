@@ -2,7 +2,7 @@
 Common features translations including news, notifications, and shared functionality
 """
 
-COMMON_FEATURES_EN = {
+COMMON_FEATURES_TRANSLATION = {
     'en': {
         # News Management
         'news_article_not_found': 'Article not found',
