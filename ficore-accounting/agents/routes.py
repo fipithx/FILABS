@@ -95,7 +95,7 @@ def agent_portal():
         
         logger.info(f"Agent {agent_id} accessed dashboard at {datetime.utcnow()}")
         return render_template(
-            'agents/agent_portal.html',
+            'agents/portal.html',
             traders_registered=traders_registered,
             tokens_today=tokens_today,
             recent_activities=recent_activities,
@@ -126,7 +126,7 @@ def register_trader():
             if db.users.find_one({'_id': username}):
                 flash(trans('general_username_exists', default='Username already exists'), 'danger')
                 return render_template(
-                    'agents/register_trader.html',
+                    'agents/portal.html',
                     form=form,
                     title=trans('agents_register_trader_title', default='Register Trader', lang=session.get('lang', 'en'))
                 )
@@ -134,7 +134,7 @@ def register_trader():
             if db.users.find_one({'email': email}):
                 flash(trans('general_email_exists', default='Email already exists'), 'danger')
                 return render_template(
-                    'agents/register_trader.html',
+                    'agents/portal.html',
                     form=form,
                     title=trans('agents_register_trader_title', default='Register Trader', lang=session.get('lang', 'en'))
                 )
@@ -192,13 +192,13 @@ def register_trader():
             logger.error(f"Error registering trader by agent {current_user.id}: {str(e)}")
             flash(trans('agents_registration_error', default='An error occurred during trader registration'), 'danger')
             return render_template(
-                'agents/register_trader.html',
+                'agents/portal.html',
                 form=form,
                 title=trans('agents_register_trader_title', default='Register Trader', lang=session.get('lang', 'en'))
             )
     
     return render_template(
-        'agents/register_trader.html',
+        'agents/portal.html',
         form=form,
         title=trans('agents_register_trader_title', default='Register Trader', lang=session.get('lang', 'en'))
     )
@@ -220,7 +220,7 @@ def manage_tokens():
             if not trader:
                 flash(trans('agents_trader_not_found', default='Trader not found'), 'danger')
                 return render_template(
-                    'agents/manage_tokens.html',
+                    'agents/portal.html',
                     form=form,
                     title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
                 )
@@ -270,13 +270,13 @@ def manage_tokens():
             logger.error(f"Error processing tokens by agent {current_user.id}: {str(e)}")
             flash(trans('agents_token_processing_error', default='An error occurred while processing tokens'), 'danger')
             return render_template(
-                'agents/manage_tokens.html',
+                'agents/portal.html',
                 form=form,
                 title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
             )
     
     return render_template(
-        'agents/manage_tokens.html',
+        'agents/portal.html',
         form=form,
         title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
     )
@@ -323,7 +323,7 @@ def assist_trader_records(trader_id):
         
         logger.info(f"Agent {current_user.id} accessed records for trader {trader_id} at {datetime.utcnow()}")
         return render_template(
-            'agents/assist_trader_records.html',
+            'agents/portal.html',
             trader=trader,
             recent_debtors=recent_debtors,
             recent_creditors=recent_creditors,
@@ -393,7 +393,7 @@ def generate_trader_report(trader_id):
         
         logger.info(f"Agent {current_user.id} generated report for trader {trader_id} at {datetime.utcnow()}")
         return render_template(
-            'agents/generate_trader_report.html',
+            'agents/portal.html',
             trader=trader,
             total_debtors=total_debtors_amount,
             total_creditors=total_creditors_amount,
@@ -451,7 +451,7 @@ def recent_activity():
         
         logger.info(f"Agent {agent_id} accessed recent activity at {datetime.utcnow()}")
         return render_template(
-            'agents/recent_activity.html',
+            'agents/portal.html',
             total_traders_registered=total_traders_registered,
             total_tokens_amount=total_tokens_amount,
             activities=activities,
