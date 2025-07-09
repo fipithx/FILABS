@@ -3,7 +3,7 @@ from bson import ObjectId
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, Response
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField, DateField, validators
+from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField, DateField, validators, FileField
 from wtforms.validators import DataRequired, NumberRange, ValidationError
 from translations import trans
 import utils
@@ -18,6 +18,9 @@ from io import BytesIO
 import csv
 import re
 from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results, get_learning_progress
+from learning_hub import UploadForm  # Import UploadForm from learning_hub.py
+from werkzeug.utils import secure_filename
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,10 @@ admin_bp = Blueprint('admin', __name__, template_folder='templates/admin')
 
 # Regular expression for agent ID validation
 AGENT_ID_REGEX = re.compile(r'^[A-Z0-9]{8}$')  # Agent ID: 8 alphanumeric characters
+
+# Define allowed file extensions and upload folder
+ALLOWED_EXTENSIONS = {'mp4', 'pdf', 'txt', 'md'}
+UPLOAD_FOLDER = 'static/uploads'
 
 # Form Definitions
 class CreditForm(FlaskForm):
@@ -105,7 +112,11 @@ def sanitize_input(text):
     allowed_attributes = {'a': ['href', 'target']}
     return bleach.clean(text, tags=allowed_tags, attributes=allowed_attributes)
 
-# Existing Routes
+def allowed_file(filename):
+    """Check if the file extension is allowed."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Routes
 @admin_bp.route('/dashboard', methods=['GET'])
 @login_required
 @utils.requires_role('admin')
@@ -583,6 +594,99 @@ def admin_delete_quiz_result(result_id):
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return redirect(url_for('admin.admin_quiz_results'))
 
+@admin_bp.route('/manage_courses', methods=['GET', 'POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("50 per hour")
+def manage_courses():
+    """Manage courses: list all courses and upload new ones."""
+    form = UploadForm()
+    lang = session.get('lang', 'en')
+    try:
+        db = utils.get_mongo_db()
+        courses = list(db.learning_materials.find({'type': 'course'}).sort('created_at', -1))
+        for course in courses:
+            course['_id'] = str(course['_id'])
+            course['created_at_formatted'] = format_date(course['created_at'], format='medium', locale=lang)
+        
+        if request.method == 'POST' and form.validate_on_submit():
+            if not allowed_file(form.file.data.filename):
+                flash(trans('learning_hub_invalid_file_type', default='Invalid file type. Allowed: mp4, pdf, txt, md'), 'danger')
+                return render_template('admin/learning_hub.html', form=form, courses=courses, progress=[])
+            
+            filename = secure_filename(form.file.data.filename)
+            file_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', UPLOAD_FOLDER), filename)
+            form.file.data.save(file_path)
+            
+            course_id = form.course_id.data
+            roles = [form.roles.data] if form.roles.data != 'all' else ['civil_servant', 'nysc', 'agent']
+            course_data = {
+                'type': 'course',
+                'id': course_id,
+                '_id': ObjectId(),
+                'title_key': f"learning_hub_course_{course_id}_title",
+                'title_en': form.title.data,
+                'title_ha': form.title.data,  # Placeholder; should support translation
+                'description_en': form.description.data,
+                'description_ha': form.description.data,  # Placeholder
+                'is_premium': form.is_premium.data,
+                'roles': roles,
+                'modules': [{
+                    'id': f"{course_id}-module-1",
+                    'title_key': f"learning_hub_module_{course_id}_title",
+                    'title_en': "Module 1",
+                    'lessons': [{
+                        'id': f"{course_id}-module-1-lesson-1",
+                        'title_key': f"learning_hub_lesson_{course_id}_title",
+                        'title_en': "Lesson 1",
+                        'content_type': form.content_type.data,
+                        'content_path': f"uploads/{filename}",
+                        'content_en': "Uploaded content",
+                        'quiz_id': None
+                    }]
+                }],
+                'created_at': datetime.utcnow()
+            }
+            
+            db.learning_materials.update_one(
+                {'type': 'course', 'id': course_id},
+                {'$set': course_data},
+                upsert=True
+            )
+            
+            flash(trans('learning_hub_upload_success', default='Content uploaded successfully'), 'success')
+            logger.info(f"Admin {current_user.id} uploaded course {course_id}")
+            log_audit_action('upload_course', {'course_id': course_id, 'filename': filename})
+            return redirect(url_for('admin.manage_courses'))
+        
+        return render_template('admin/learning_hub.html', form=form, courses=courses, progress=[])
+    
+    except Exception as e:
+        logger.error(f"Error managing courses for admin {current_user.id}: {str(e)}")
+        flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
+        return render_template('admin/learning_hub.html', form=form, courses=[], progress=[]), 500
+
+@admin_bp.route('/manage_courses/delete/<course_id>', methods=['POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("10 per hour")
+def delete_course(course_id):
+    """Delete a course."""
+    try:
+        db = utils.get_mongo_db()
+        result = db.learning_materials.delete_one({'type': 'course', 'id': course_id})
+        if result.deleted_count == 0:
+            flash(trans('admin_item_not_found', default='Course not found'), 'danger')
+        else:
+            flash(trans('admin_item_deleted', default='Course deleted successfully'), 'success')
+            logger.info(f"Admin {current_user.id} deleted course {course_id}")
+            log_audit_action('delete_course', {'course_id': course_id})
+        return redirect(url_for('admin.manage_courses'))
+    except Exception as e:
+        logger.error(f"Error deleting course {course_id}: {str(e)}")
+        flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
+        return redirect(url_for('admin.manage_courses'))
+
 @admin_bp.route('/learning_hub', methods=['GET'])
 @login_required
 @utils.requires_role('admin')
@@ -594,11 +698,12 @@ def admin_learning_hub():
         progress = list(get_learning_progress(db, {}))
         for p in progress:
             p['_id'] = str(p['_id'])
-        return render_template('admin/learning_hub.html', progress=progress)
+        form = UploadForm()  # For compatibility with template
+        return render_template('admin/learning_hub.html', form=form, progress=progress, courses=[])
     except Exception as e:
         logger.error(f"Error fetching learning progress for admin: {str(e)}")
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
-        return render_template('admin/learning_hub.html', progress=[]), 500
+        return render_template('admin/learning_hub.html', form=UploadForm(), progress=[], courses=[]), 500
 
 @admin_bp.route('/learning_hub/delete/<progress_id>', methods=['POST'])
 @login_required
@@ -621,7 +726,6 @@ def admin_delete_learning_progress(progress_id):
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return redirect(url_for('admin.admin_learning_hub'))
 
-# News Management Routes
 @admin_bp.route('/news', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
@@ -709,7 +813,6 @@ def delete_news(article_id):
         flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
     return redirect(url_for('admin.news_management'))
 
-# Tax Rates Management Routes
 @admin_bp.route('/tax_rates', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
@@ -801,7 +904,6 @@ def delete_tax_rate(rate_id):
         flash(trans('tax_rate_not_found', default='Tax rate not found', lang=lang), 'danger')
     return redirect(url_for('admin.manage_tax_rates'))
 
-# Payment Locations Management Routes
 @admin_bp.route('/payment_locations', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
@@ -819,7 +921,7 @@ def manage_payment_locations():
                 'city': form.city.data,
                 'country': form.country.data,
                 'created_by': current_user.id,
-                'created_at': datetime.datetime.utcnow()
+                'created_at': datetime.utcnow()
             }
             result = db.payment_locations.insert_one(location)
             location_id = str(result.inserted_id)
@@ -891,7 +993,6 @@ def delete_payment_location(location_id):
         flash(trans('payment_location_not_found', default='Payment location not found', lang=lang), 'danger')
     return redirect(url_for('admin.manage_payment_locations'))
 
-# Tax Deadlines Management Routes
 @admin_bp.route('/tax_deadlines', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
@@ -908,7 +1009,7 @@ def manage_tax_deadlines():
                 'deadline_date': form.deadline_date.data,
                 'description': form.description.data,
                 'created_by': current_user.id,
-                'created_at': datetime.datetime.utcnow()
+                'created_at': datetime.utcnow()
             }
             result = db.tax_deadlines.insert_one(deadline)
             deadline_id = str(result.inserted_id)
@@ -980,7 +1081,6 @@ def delete_tax_deadline(deadline_id):
         flash(trans('tax_deadline_not_found', default='Tax deadline not found', lang=lang), 'danger')
     return redirect(url_for('admin.manage_tax_deadlines'))
 
-# Customer Reports Route
 @admin_bp.route('/reports/customers', methods=['GET'])
 @login_required
 @utils.requires_role('admin')
@@ -1038,7 +1138,6 @@ def generate_customer_report_csv(users):
     buffer.seek(0)
     return Response(buffer, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=customer_report.csv'})
 
-# User Roles Management Route
 @admin_bp.route('/users/roles', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
