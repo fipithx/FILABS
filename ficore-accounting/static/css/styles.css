@@ -211,7 +211,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     display: flex;
     flex-direction: column;
     gap: 2rem; /* Increased gap for better separation */
-    padding-top: calc(var(--navbar-height) + 0.3rem);
+    padding-top: 0.3rem;
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
     min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
     position: static !important;
@@ -221,8 +221,9 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 .main-content > .page-container:first-child,
 .main-content > .section-card:first-child {
   margin-top: 0 !important;
-  padding-top: 1rem !important; /* or 0 if needed */
+  padding-top: 0 !important;
 }
+
 /* --- Homepage Specific Styles --- */
 /* Top Header */
 .top-header {
@@ -2175,7 +2176,7 @@ h2.card-title {
 
 @media (max-width: 768px) {
     .page-container {
-        padding: 0.5rem 0.5rem 1.5rem;
+        padding: 0 1rem 2rem;
     }
 
     .navbar-brand {
