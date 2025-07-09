@@ -18,7 +18,7 @@ from io import BytesIO
 import csv
 import re
 from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results, get_learning_progress
-from learning_hub import UploadForm  # Import UploadForm from learning_hub.py
+from personal.learning_hub import UploadForm  # Import UploadForm from learning_hub.py
 from werkzeug.utils import secure_filename
 import os
 
