@@ -41,7 +41,7 @@
             </button>
             <small class="text-muted text-center mt-2">{{ t('settings_explore_business_description', default='Manage debtors, creditors, inventory, payments, and business analytics!') }}</small>
         {% elif user.role == 'agent' %}
-            <button class="btn btn-primary btn-lg explore-tools-btn" onclick="location.href='{{ url_for('agents.dashboard') }}'">
+            <button class="btn btn-primary btn-lg explore-tools-btn" onclick="location.href='{{ url_for('agents_bp.agent_portal') }}'">
                 <i class="bi bi-people me-2"></i> {{ t('settings_explore_agent_tools', default='Explore Your Agent Dashboard') }}
             </button>
             <small class="text-muted text-center mt-2">{{ t('settings_explore_agent_description', default='Access your agent dashboard to help users and manage your activities!') }}</small>
