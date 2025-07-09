@@ -50,6 +50,7 @@ def index():
             return redirect(url_for('users.login'))
 
         notifications = []  # Provide empty list to avoid template errors
+        notification = notifications[0] if notifications else None
         return render_template(
             'personal/GENERAL/index.html',
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
