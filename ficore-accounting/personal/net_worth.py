@@ -10,7 +10,7 @@ from datetime import datetime
 from bson import ObjectId
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter
+from utils import requires_role, is_admin, get_mongo_db, limiter
 
 net_worth_bp = Blueprint(
     'net_worth',
@@ -20,6 +20,18 @@ net_worth_bp = Blueprint(
 )
 
 csrf = CSRFProtect()
+
+def format_currency(value, currency=None):
+    """Format a numeric value as currency with optional currency code."""
+    if currency is None:
+        currency = current_app.config.get('DEFAULT_CURRENCY', 'NGN')
+    try:
+        # Simplified formatting; consider using babel for proper i18n
+        formatted_value = f"{currency} {float(value):,.2f}"
+        return formatted_value
+    except (ValueError, TypeError) as e:
+        current_app.logger.error(f"Error formatting currency for value {value}, currency {currency}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return f"{currency} 0.00"
 
 def custom_login_required(f):
     """Custom login decorator that allows both authenticated users and anonymous sessions."""
@@ -197,13 +209,13 @@ def main():
                             template_name=template,
                             data={
                                 "first_name": net_worth_record['first_name'],
-                                "cash_savings": format_currency(net_worth_record['cash_savings']),
-                                "investments": format_currency(net_worth_record['investments']),
-                                "property": format_currency(net_worth_record['property']),
-                                "loans": format_currency(net_worth_record['loans']),
-                                "total_assets": format_currency(net_worth_record['total_assets']),
-                                "total_liabilities": format_currency(net_worth_record['total_liabilities']),
-                                "net_worth": format_currency(net_worth_record['net_worth']),
+                                "cash_savings": format_currency(net_worth_record['cash_savings'], net_worth_record['currency']),
+                                "investments": format_currency(net_worth_record['investments'], net_worth_record['currency']),
+                                "property": format_currency(net_worth_record['property'], net_worth_record['currency']),
+                                "loans": format_currency(net_worth_record['loans'], net_worth_record['currency']),
+                                "total_assets": format_currency(net_worth_record['total_assets'], net_worth_record['currency']),
+                                "total_liabilities": format_currency(net_worth_record['total_liabilities'], net_worth_record['currency']),
+                                "net_worth": format_currency(net_worth_record['net_worth'], net_worth_record['currency']),
                                 "badges": net_worth_record['badges'],
                                 "created_at": net_worth_record['created_at'].strftime('%Y-%m-%d'),
                                 "cta_url": url_for('net_worth.main', _external=True),
@@ -217,9 +229,9 @@ def main():
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session['sid']})
                         flash(trans("general_email_send_failed", default="Failed to send email"), "warning")
 
+        # Fix: Use count_documents instead of count()
         user_records = get_mongo_db().net_worth_data.find(filter_criteria).sort('created_at', -1)
-        
-        if user_records.count() == 0 and current_user.is_authenticated and current_user.email:
+        if get_mongo_db().net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
             user_records = get_mongo_db().net_worth_data.find({'email': current_user.email}).sort('created_at', -1)
         
         records = []
@@ -231,13 +243,13 @@ def main():
                 'first_name': record.get('first_name'),
                 'email': record.get('email'),
                 'send_email': record.get('send_email', False),
-                'cash_savings': format_currency(record.get('cash_savings', 0)),
-                'investments': format_currency(record.get('investments', 0)),
-                'property': format_currency(record.get('property', 0)),
-                'loans': format_currency(record.get('loans', 0)),
-                'total_assets': format_currency(record.get('total_assets', 0)),
-                'total_liabilities': format_currency(record.get('total_liabilities', 0)),
-                'net_worth': format_currency(record.get('net_worth', 0)),
+                'cash_savings': format_currency(record.get('cash_savings', 0), record.get('currency', 'NGN')),
+                'investments': format_currency(record.get('investments', 0), record.get('currency', 'NGN')),
+                'property': format_currency(record.get('property', 0), record.get('currency', 'NGN')),
+                'loans': format_currency(record.get('loans', 0), record.get('currency', 'NGN')),
+                'total_assets': format_currency(record.get('total_assets', 0), record.get('currency', 'NGN')),
+                'total_liabilities': format_currency(record.get('total_liabilities', 0), record.get('currency', 'NGN')),
+                'net_worth': format_currency(record.get('net_worth', 0), record.get('currency', 'NGN')),
                 'badges': record.get('badges', []),
                 'created_at': record.get('created_at').strftime('%Y-%m-%d') if record.get('created_at') else 'N/A',
                 'currency': record.get('currency', 'NGN')
@@ -245,13 +257,13 @@ def main():
             records.append((record_data['id'], record_data))
         
         latest_record = records[0][1] if records else {
-            'cash_savings': format_currency(0),
-            'investments': format_currency(0),
-            'property': format_currency(0),
-            'loans': format_currency(0),
-            'total_assets': format_currency(0),
-            'total_liabilities': format_currency(0),
-            'net_worth': format_currency(0),
+            'cash_savings': format_currency(0, 'NGN'),
+            'investments': format_currency(0, 'NGN'),
+            'property': format_currency(0, 'NGN'),
+            'loans': format_currency(0, 'NGN'),
+            'total_assets': format_currency(0, 'NGN'),
+            'total_liabilities': format_currency(0, 'NGN'),
+            'net_worth': format_currency(0, 'NGN'),
             'badges': [],
             'created_at': 'N/A',
             'currency': 'NGN'
@@ -264,20 +276,20 @@ def main():
         average_net_worth = 0
         if all_net_worths:
             all_net_worths.sort(reverse=True)
-            user_net_worth = float(latest_record['net_worth'].replace(',', '')) if latest_record['net_worth'] != format_currency(0) else 0
+            user_net_worth = float(latest_record['net_worth'].replace(',', '').replace('NGN ', '')) if latest_record['net_worth'] != format_currency(0, 'NGN') else 0
             rank = sum(1 for nw in all_net_worths if nw > user_net_worth) + 1
             average_net_worth = sum(all_net_worths) / total_users
 
         insights = []
         cross_tool_insights = []
-        if latest_record and float(latest_record['net_worth'].replace(',', '')) != 0:
-            if float(latest_record['total_liabilities'].replace(',', '')) > float(latest_record['total_assets'].replace(',', '')) * 0.5:
+        if latest_record and float(latest_record['net_worth'].replace(',', '').replace('NGN ', '')) != 0:
+            if float(latest_record['total_liabilities'].replace(',', '').replace('NGN ', '')) > float(latest_record['total_assets'].replace(',', '').replace('NGN ', '')) * 0.5:
                 insights.append(trans("net_worth_insight_high_loans", default="Your liabilities are high relative to assets."))
-            if float(latest_record['cash_savings'].replace(',', '')) < float(latest_record['total_assets'].replace(',', '')) * 0.1:
+            if float(latest_record['cash_savings'].replace(',', '').replace('NGN ', '')) < float(latest_record['total_assets'].replace(',', '').replace('NGN ', '')) * 0.1:
                 insights.append(trans("net_worth_insight_low_cash", default="Consider increasing cash savings."))
-            if float(latest_record['investments'].replace(',', '')) >= float(latest_record['total_assets'].replace(',', '')) * 0.3:
+            if float(latest_record['investments'].replace(',', '').replace('NGN ', '')) >= float(latest_record['total_assets'].replace(',', '').replace('NGN ', '')) * 0.3:
                 insights.append(trans("net_worth_insight_strong_investments", default="Strong investment portfolio detected."))
-            if float(latest_record['net_worth'].replace(',', '')) <= 0:
+            if float(latest_record['net_worth'].replace(',', '').replace('NGN ', '')) <= 0:
                 insights.append(trans("net_worth_insight_negative_net_worth", default="Your net worth is negative; focus on reducing liabilities."))
             if total_users >= 5:
                 if rank <= total_users * 0.1:
@@ -292,7 +304,7 @@ def main():
         filter_kwargs_health = {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         health_data = get_mongo_db().financial_health_scores.find(filter_kwargs_health).sort('created_at', -1)
         health_data = list(health_data)
-        if health_data and latest_record and float(latest_record['net_worth'].replace(',', '')) <= 0:
+        if health_data and latest_record and float(latest_record['net_worth'].replace(',', '').replace('NGN ', '')) <= 0:
             latest_health = health_data[0]
             if latest_health.get('savings_rate', 0) > 0:
                 cross_tool_insights.append(trans(
@@ -317,25 +329,25 @@ def main():
             ],
             rank=rank,
             total_users=total_users,
-            average_net_worth=format_currency(average_net_worth),
+            average_net_worth=format_currency(average_net_worth, 'NGN'),
             tool_title=trans('net_worth_title', default='Net Worth Calculator')
         )
 
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
-        flash(trans("net_worth_dashboard_load_error", default="Error loading net worth dashboard"), "danger")
+        flash(trans("net_worth_dashboard_load_error", default="Unable to load net worth dashboard. Please try again."), "danger")
         return render_template(
             'personal/NETWORTH/net_worth_main.html',
             form=form,
             records=[],
             latest_record={
-                'cash_savings': format_currency(0),
-                'investments': format_currency(0),
-                'property': format_currency(0),
-                'loans': format_currency(0),
-                'total_assets': format_currency(0),
-                'total_liabilities': format_currency(0),
-                'net_worth': format_currency(0),
+                'cash_savings': format_currency(0, 'NGN'),
+                'investments': format_currency(0, 'NGN'),
+                'property': format_currency(0, 'NGN'),
+                'loans': format_currency(0, 'NGN'),
+                'total_assets': format_currency(0, 'NGN'),
+                'total_liabilities': format_currency(0, 'NGN'),
+                'net_worth': format_currency(0, 'NGN'),
                 'badges': [],
                 'created_at': 'N/A',
                 'currency': 'NGN'
@@ -350,7 +362,7 @@ def main():
             ],
             rank=0,
             total_users=0,
-            average_net_worth=format_currency(0),
+            average_net_worth=format_currency(0, 'NGN'),
             tool_title=trans('net_worth_title', default='Net Worth Calculator')
         ), 500
 
@@ -380,15 +392,15 @@ def summary():
         
         if not latest_record:
             current_app.logger.info(f"No net worth record found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-            return jsonify({'netWorth': format_currency(0.0), 'currency': 'NGN'})
+            return jsonify({'netWorth': format_currency(0.0, 'NGN'), 'currency': 'NGN'})
         
         net_worth = latest_record[0].get('net_worth', 0.0)
         currency = latest_record[0].get('currency', 'NGN')
         current_app.logger.info(f"Fetched net worth summary for user {current_user.id}: {net_worth} {currency}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'netWorth': format_currency(net_worth), 'currency': currency})
+        return jsonify({'netWorth': format_currency(net_worth, currency), 'currency': currency})
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'netWorth': format_currency(0.0), 'currency': 'NGN'}), 500
+        return jsonify({'netWorth': format_currency(0.0, 'NGN'), 'currency': 'NGN'}), 500
 
 @net_worth_bp.route('/unsubscribe/<email>')
 @custom_login_required
