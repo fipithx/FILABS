@@ -8,6 +8,7 @@ INVENTORY_TRANSLATIONS = {
         'inventory_add_item': 'Add Item',
         'inventory_dashboard': 'Inventory',
         'inventory_dashboard_desc': 'Manage your product stock and inventory.',
+        'inventory_title': 'Inventory',
         'inventory_tooltip': 'View and manage your inventory.',
         'inventory_dashboard_desc': 'Manage and Track Your Business Stock',
         'inventory_management_tab': 'Inventory',
@@ -112,6 +113,7 @@ INVENTORY_TRANSLATIONS = {
         'inventory_insufficient_coins': 'Ba isassun kuɗaɗe don ƙara jari',
         'inventory_total_value_stock': 'Jimillar Ƙimar Ajiya',
         'inventory_low_stock_alerts': 'Sanarwar Ƙarancin Ajiya',
+        'inventory_title': 'Kaya',
         'inventory_add_goods_stock': 'Ƙara Kaya zuwa Jari',
         'inventory_dashboard_desc': 'Sarrafa kayanka da ajiyarka.', # "Manage your product stock and inventory."
         'inventory_tooltip': 'Duba da sarrafa kayanka.',
