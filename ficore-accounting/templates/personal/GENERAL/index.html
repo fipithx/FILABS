@@ -30,7 +30,7 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <h5>{{ t('net_worth_net_worth', default='Net Worth') | e }}: <span id="netWorth" class="net-amount" data-amount="0">₦0</span></h5>
-                            <a href="{{ url_for('personal.net_worth.net_worth') }}" class="btn btn-primary btn-sm">
+                            <a href="{{ url_for('personal.net_worth.main') }}" class="btn btn-primary btn-sm">
                                 {{ t('general_view_detailed_summary', default='View Detailed Summary') | e }}
                             </a>
                         </div>
@@ -228,7 +228,7 @@
                             {{ t('general_login', default='Log In') | e }}
                         </a>
                     </div>
-                    <a href="{{ url_for('personal.quiz.quiz') }}" class="btn btn-secondary">
+                    <a href="{{ url_for('personal.quiz.main') }}" class="btn btn-secondary">
                         {{ t('quiz_take_quiz', default='Take Our Quiz') | e }}
                     </a>
                 </div>
@@ -459,7 +459,7 @@
                             {{ t('general_login', default='Log In') | e }}
                         </a>
                     </div>
-                    <a href="{{ url_for('personal.quiz.quiz') }}" class="btn btn-secondary">
+                    <a href="{{ url_for('personal.quiz.main') }}" class="btn btn-secondary">
                         {{ t('quiz_take_quiz', default='Take Our Quiz') | e }}
                     </a>
                 </div>
@@ -523,7 +523,9 @@
                 just_now: '{{ t("general_just_now", default="Just now") | e }}',
                 minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
                 hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
-                days_ago: '{{ t("general_days_ago", default="days ago") | e }}',
+                days_ago: '{{ t("general_days_ago", default="
+
+days ago") | e }}',
                 no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
                 start_by_adding: '{{ t("general_start_by_adding", default="Start by adding a budget or bill") | e }}',
                 no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
