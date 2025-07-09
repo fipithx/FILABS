@@ -13,6 +13,8 @@ AGENTS_TRANSLATIONS = {
         'lang_ha': 'Hausa',
         'general_email': 'Email',
         'general_business_name': 'Business Name',
+        'agents_trader_registration_form': 'Trader Registration Form',
+        'agents_username_help': 'Enter a unique username for your account.',
         'general_phone_number': 'Phone Number',
         'general_industry': 'Industry',
         'agents_dashboard_desc':'Overview of Tools for FICORE Agents.',
@@ -406,6 +408,8 @@ AGENTS_TRANSLATIONS = {
         'reports_generated_report': 'An ƙirƙiri Rahoto',
         # Settings
         'settings_title': 'Saituna',
+        'agents_trader_registration_form': 'Fom ɗin Rajistar Ɗan Kasuwa',
+        'agents_username_help': 'Shigar da sunan mai amfani na musamman don asusunku.',
         'settings_profile': 'Bayanan Martaba',
         # Coins
         'coins_balance': 'Ma’aunin Alama',
