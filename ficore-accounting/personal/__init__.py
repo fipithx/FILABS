@@ -49,13 +49,17 @@ def index():
             current_app.logger.debug("Redirecting anonymous user to login", extra={'session_id': session.get('sid', 'unknown')})
             return redirect(url_for('users.login'))
 
-        notifications = []  # Provide empty list to avoid template errors
+        notifications = []  
+        activities = get_recent_activities() # Provide empty list to avoid template errors
         notification = notifications[0] if notifications else None
+        activity = activities[0] if activities else None
         return render_template(
             'personal/GENERAL/index.html',
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
             notifications=notifications,
-            notification=notification,
+            notification=notification
+            activities=activities,
+            activity=activity,
             is_admin=utils.is_admin
         )
     except Exception as e:
