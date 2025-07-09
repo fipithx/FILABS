@@ -1956,6 +1956,18 @@ h2.card-title {
 .table .status-settled {
     background: var(--table-row-bg-settled);
 }
+.dark-mode .table,
+.dark-mode .table th,
+.dark-mode .table td {
+  color: var(--table-text) !important;
+  background: var(--table-light-bg) !important;
+  border-color: var(--table-border) !important;
+}
+
+.dark-mode .table th {
+  background: var(--table-header-bg) !important;
+  color: var(--table-header-text) !important;
+}
 
 /* Footer */
 .footer {
