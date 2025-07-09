@@ -241,6 +241,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     padding: 0.75rem 1rem;
     box-sizing: border-box;
     flex-wrap: wrap;
+    margin-bottom: 0 !important;
 }
 .welcome-text {
     font-size: clamp(0.75rem, 1.8vw, 0.875rem);
@@ -1613,6 +1614,8 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     margin-left: auto;
     margin-right: auto;
     position: relative;
+    margin-top: 0 !important;
+    margin-bottom: 0.5rem !important;
 }
 
 .alert {
@@ -1624,6 +1627,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     align-items: center;
     gap: 0.5rem;
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    margin-bottom: 0.5rem !important;
 }
 
 .alert-success {
@@ -2164,7 +2168,7 @@ h2.card-title {
         display: none !important;
     }
     .main-content {
-        padding-top: calc(var(--navbar-height) + 1rem) !important;
+        padding-top: 0.5rem !important;
          padding-bottom: 2rem !important; 
     }
 }
@@ -2771,4 +2775,27 @@ h2.card-title {
 .main-content > .explore-section {
     margin-top: 0 !important;
     padding-top: 1rem !important;
+}
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4 {
+    margin-top: 0 !important;
+}
+.main-content .page-container {
+    padding-top: 0 !important;
+    padding: 0.5rem 0.5rem 1.5rem;
+}
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .main-content {
+        padding-top: 0.5rem !important;
+        margin-top: var(--navbar-height) !important;
+    }
+}
+
+/* Ensure containers have no extra margins */
+.container, .container-fluid, .row, .col {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
