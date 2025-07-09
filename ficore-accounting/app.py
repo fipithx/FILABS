@@ -868,7 +868,7 @@ def create_app():
             flash(utils.trans(f'error: {str(e)}'), 'danger')
             try:
                 return render_template(
-                    'error/500.html',
+                    'personal/GENERAL/error.html',
                     error=str(e),
                     title=utils.trans('error')
                 ), 500
@@ -1217,7 +1217,7 @@ def create_app():
             logger.error(f'DB setup error: {str(e)}')
             try:
                 return render_template(
-                    'error/500.html',
+                    'personal/GENERAL/error.html',
                     content=utils.trans('server_error'),
                     title=utils.trans('error', lang=lang)
                 ), 500
@@ -1350,7 +1350,7 @@ def create_app():
         logger.error(f'Server error: {str(e)}')
         try:
             return render_template(
-                'error/500.html', 
+                'personal/GENERAL/error.html', 
                 error=str(e), 
                 title=utils.trans('server_error', lang=session.get('lang', 'en'))
             ), 500
