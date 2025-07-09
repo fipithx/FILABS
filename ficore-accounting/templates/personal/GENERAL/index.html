@@ -79,15 +79,27 @@
                 </a>
             </div>
             <div class="notification-list" id="notificationList">
-                <div class="notification-item">
-                    <div class="notification-icon">
-                        <i class="bi {{ notifications[0].icon | default('bi-bell') | e }} text-muted"></i>
+                {% if notifications and notifications | length > 0 %}
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="bi {{ notifications[0].icon | default('bi-bell') | e }} text-muted"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-description">{{ notifications[0].message | default(t('general_loading_notifications', default='Loading notifications...')) | e }}</div>
+                            <div class="notification-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                        </div>
                     </div>
-                    <div class="notification-content">
-                        <div class="notification-description">{{ t('general_loading_notifications', default='Loading notifications...') | e }}</div>
-                        <div class="notification-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                {% else %}
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="bi bi-bell text-muted"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-description">{{ t('general_no_notifications', default='No notifications') | e }}</div>
+                            <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -100,15 +112,27 @@
                 </a>
             </div>
             <div class="recent-activity-card" id="recentActivityList">
-                <div class="activity-item">
-                    <div class="activity-icon">
-                        <i class="bi {{ activities[0].icon | default('bi-info-circle') | e }} text-muted"></i>
+                {% if activities and activities | length > 0 %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="bi {{ activities[0].icon | default('bi-info-circle') | e }} text-muted"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-description">{{ activities[0].description | default(t('general_loading_activities', default='Loading recent activities...')) | e }}</div>
+                            <div class="activity-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                        </div>
                     </div>
-                    <div class="activity-content">
-                        <div class="activity-description">{{ t('general_loading_activities', default='Loading recent activities...') | e }}</div>
-                        <div class="activity-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                {% else %}
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="bi bi-info-circle text-muted"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-description">{{ t('general_no_recent_activity', default='No recent activity') | e }}</div>
+                            <div class="activity-time text-muted">{{ t('general_start_by_adding', default='Start by adding a budget or bill') | e }}</div>
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -150,7 +174,7 @@
                 {% endif %}
                 {% for category in categories %}
                     {% set category_tools = explore_features_for_template | selectattr('category', 'equalto', category) | list %}
-                    {% if category_tools %}
+                    {% if detaincategory_tools %}
                         <div class="mb-4">
                             <h3 class="fw-bold text-primary">{{ t('general_' + category | lower + '_tools', default=category + ' Tools') | e }}</h3>
                             <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -198,7 +222,7 @@
                     </button>
                     <ul class="dropdown-menu shadow" aria-labelledby="getStartedDropdown">
                         <li><a class="dropdown-item" href="{{ url_for('users.signup', role='personal') | e }}">{{ t('general_signup_personal', default='Personal Sign Up') | e }}</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('users.signup', role='trader') | e }}">{{ t('general_signup_business', default='Business Sign Up') | e }}</a></li>
+                        <li><a class="_dropdown-item" href="{{ url_for('users.signup', role='trader') | e }}">{{ t('general_signup_business', default='Business Sign Up') | e }}</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('users.signup', role='agent') | e }}">{{ t('general_signup_agent', default='Agent Sign Up') | e }}</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('users.login') | e }}">{{ t('general_login', default='Log In') | e }}</a></li>
@@ -257,7 +281,7 @@
                                             <div class="position-absolute top-0 end-0 p-2">
                                                 <i class="bi {{ 'bi-lock-fill' | default('bi-circle') | e }} text-muted" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_required', default='Log in to access this tool') | e }}"></i>
                                             </div>
-                                            <a href="{{ url_for('users.login') | e }}?next={{ url_for(tool.get('endpoint', 'personal.index')) | e }}" class="btn btn-outline-primary btn-sm mt-auto" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_to_access', default='Log in to access this tool') | e }}">{{ t('general_login', default='Log In') | e }}</a>
+                                            <a href="{{ url_for('users.login') | e }}?next={{ url_for(tool.get('endpoint', 'personal.index')) | e }}" class="btn btn-outline-primary Btn-sm mt-auto" data-bs-toggle="tooltip" data-bs-title="{{ t('general_login_to_access', default='Log in to access this tool') | e }}">{{ t('general_login', default='Log In') | e }}</a>
                                         </div>
                                     </div>
                                 {% endfor %}
@@ -609,6 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="activity-content">
                                 <div class="activity-description">${translations.no_recent_activity}</div>
                                 <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                                </div>
                             </div>
                         `;
                     }
