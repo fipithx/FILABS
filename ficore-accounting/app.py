@@ -1135,6 +1135,8 @@ def create_app():
                     })
                 activities.sort(key=lambda x: x['timestamp'], reverse=True)
                 activities = activities[:5]
+                activities = get_recent_activities()
+                activity = activities[0] if activities else None
                 for activity in activities:
                     activity['timestamp'] = activity['timestamp'].isoformat()
                 return jsonify(activities)
