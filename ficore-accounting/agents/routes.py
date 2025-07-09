@@ -70,32 +70,30 @@ def agent_portal():
         traders_registered = db.users.count_documents({
             'role': 'trader',
             'registered_by_agent': agent_id
-        })
+        }) or 0
         
         # Count token transactions facilitated today
         tokens_today = db.coin_transactions.count_documents({
             'facilitated_by_agent': agent_id,
             'date': {'$gte': today}
-        })
+        }) or 0
         
         # Get recent activities
         recent_activities = list(db.agent_activities.find({
             'agent_id': agent_id
-        }).sort('timestamp', -1).limit(10))
+        }).sort('timestamp', -1).limit(10)) or []
+        for activity in recent_activities:
+            activity['_id'] = str(activity['_id'])
         
         # Get traders this agent has assisted
         assisted_traders = list(db.users.find({
             'role': 'trader',
             'assisted_by_agents': agent_id
-        }).limit(5))
-        
+        }).limit(5)) or []
         for trader in assisted_traders:
             trader['_id'] = str(trader['_id'])
         
-        for activity in recent_activities:
-            activity['_id'] = str(activity['_id'])
-        
-        logger.info(f"Agent {agent_id} accessed dashboard")
+        logger.info(f"Agent {agent_id} accessed dashboard at {datetime.utcnow()}")
         return render_template(
             'agents/agent_portal.html',
             traders_registered=traders_registered,
@@ -187,7 +185,7 @@ def register_trader():
             })
             
             flash(trans('agents_trader_registered_success', default=f'Trader {username} registered successfully. Temporary password: {temp_password}'), 'success')
-            logger.info(f"Agent {current_user.id} registered trader {username}")
+            logger.info(f"Agent {current_user.id} registered trader {username} at {datetime.utcnow()}")
             return redirect(url_for('agents_bp.agent_portal'))
             
         except Exception as e:
@@ -265,7 +263,7 @@ def manage_tokens():
             })
             
             flash(trans('agents_tokens_processed_success', default=f'Successfully credited {coins} coins to {trader_username}'), 'success')
-            logger.info(f"Agent {current_user.id} facilitated {coins} coins for trader {trader_username}")
+            logger.info(f"Agent {current_user.id} facilitated {coins} coins for trader {trader_username} at {datetime.utcnow()}")
             return redirect(url_for('agents_bp.agent_portal'))
             
         except Exception as e:
@@ -300,29 +298,30 @@ def assist_trader_records(trader_id):
         # Mark agent as assisting this trader
         db.users.update_one(
             {'_id': trader_id},
-            {'$addToSet': {'assisted_by_agents': current_user.id}}
+            {'$addToSet': {'assisted_by_agents': current_user.id}},
+            upsert=True
         )
         
         # Get trader's recent records
         recent_debtors = list(db.records.find({
             'user_id': trader_id,
             'type': 'debtor'
-        }).sort('created_at', -1).limit(5))
+        }).sort('created_at', -1).limit(5)) or []
         
         recent_creditors = list(db.records.find({
             'user_id': trader_id,
             'type': 'creditor'
-        }).sort('created_at', -1).limit(5))
+        }).sort('created_at', -1).limit(5)) or []
         
         recent_cashflows = list(db.cashflows.find({
             'user_id': trader_id
-        }).sort('created_at', -1).limit(5))
+        }).sort('created_at', -1).limit(5)) or []
         
         # Convert ObjectIds to strings
         for record in recent_debtors + recent_creditors + recent_cashflows:
             record['_id'] = str(record['_id'])
         
-        logger.info(f"Agent {current_user.id} accessed records for trader {trader_id}")
+        logger.info(f"Agent {current_user.id} accessed records for trader {trader_id} at {datetime.utcnow()}")
         return render_template(
             'agents/assist_trader_records.html',
             trader=trader,
@@ -355,32 +354,28 @@ def generate_trader_report(trader_id):
             return redirect(url_for('agents_bp.agent_portal'))
         
         # Calculate financial summary
-        total_debtors = db.records.aggregate([
+        total_debtors = list(db.records.aggregate([
             {'$match': {'user_id': trader_id, 'type': 'debtor'}},
             {'$group': {'_id': None, 'total': {'$sum': '$amount_owed'}}}
-        ])
-        total_debtors = list(total_debtors)
+        ]))
         total_debtors_amount = total_debtors[0]['total'] if total_debtors else 0
         
-        total_creditors = db.records.aggregate([
+        total_creditors = list(db.records.aggregate([
             {'$match': {'user_id': trader_id, 'type': 'creditor'}},
             {'$group': {'_id': None, 'total': {'$sum': '$amount_owed'}}}
-        ])
-        total_creditors = list(total_creditors)
+        ]))
         total_creditors_amount = total_creditors[0]['total'] if total_creditors else 0
         
-        total_receipts = db.cashflows.aggregate([
+        total_receipts = list(db.cashflows.aggregate([
             {'$match': {'user_id': trader_id, 'type': 'receipt'}},
             {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-        ])
-        total_receipts = list(total_receipts)
+        ]))
         total_receipts_amount = total_receipts[0]['total'] if total_receipts else 0
         
-        total_payments = db.cashflows.aggregate([
+        total_payments = list(db.cashflows.aggregate([
             {'$match': {'user_id': trader_id, 'type': 'payment'}},
             {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-        ])
-        total_payments = list(total_payments)
+        ]))
         total_payments_amount = total_payments[0]['total'] if total_payments else 0
         
         # Log agent activity
@@ -396,7 +391,7 @@ def generate_trader_report(trader_id):
             'timestamp': datetime.utcnow()
         })
         
-        logger.info(f"Agent {current_user.id} generated report for trader {trader_id}")
+        logger.info(f"Agent {current_user.id} generated report for trader {trader_id} at {datetime.utcnow()}")
         return render_template(
             'agents/generate_trader_report.html',
             trader=trader,
@@ -412,6 +407,60 @@ def generate_trader_report(trader_id):
     except Exception as e:
         logger.error(f"Error generating trader report for agent {current_user.id}: {str(e)}")
         flash(trans('agents_report_generation_error', default='An error occurred while generating the report'), 'danger')
+        return render_template(
+            'personal/GENERAL/error.html',
+            title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
+        )
+
+@agents_bp.route('/recent_activity')
+@login_required
+@utils.requires_role('agent')
+def recent_activity():
+    """Display agent's recent activities and performance metrics."""
+    try:
+        db = utils.get_mongo_db()
+        agent_id = current_user.id
+        
+        # Get total traders registered by this agent
+        total_traders_registered = db.users.count_documents({
+            'role': 'trader',
+            'registered_by_agent': agent_id
+        }) or 0
+        
+        # Get total tokens facilitated
+        total_tokens_amount = db.coin_transactions.aggregate([
+            {'$match': {'facilitated_by_agent': agent_id}},
+            {'$group': {'_id': None, 'total': {'$sum': '$cash_amount'}}}
+        ])
+        total_tokens_amount = list(total_tokens_amount)
+        total_tokens_amount = total_tokens_amount[0]['total'] if total_tokens_amount else 0
+        
+        # Get recent activities
+        activities = list(db.agent_activities.find({
+            'agent_id': agent_id
+        }).sort('timestamp', -1).limit(50)) or []
+        for activity in activities:
+            activity['_id'] = str(activity['_id'])
+        
+        # Calculate performance rating
+        performance_rating = '★★★☆☆'
+        if total_traders_registered >= 10:
+            performance_rating = '★★★★★'
+        elif total_traders_registered >= 5:
+            performance_rating = '★★★★☆'
+        
+        logger.info(f"Agent {agent_id} accessed recent activity at {datetime.utcnow()}")
+        return render_template(
+            'agents/recent_activity.html',
+            total_traders_registered=total_traders_registered,
+            total_tokens_amount=total_tokens_amount,
+            activities=activities,
+            performance_rating=performance_rating,
+            title=trans('agents_my_activity_title', default='My Activity', lang=session.get('lang', 'en'))
+        )
+    except Exception as e:
+        logger.error(f"Error loading recent activity for {current_user.id}: {str(e)}")
+        flash(trans('agents_activity_error', default='An error occurred while loading your activity'), 'danger')
         return render_template(
             'personal/GENERAL/error.html',
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
@@ -434,7 +483,7 @@ def search_traders():
                 {'_id': {'$regex': query, '$options': 'i'}},
                 {'business_details.name': {'$regex': query, '$options': 'i'}}
             ]
-        }).limit(10))
+        }).limit(10)) or []
         
         results = []
         for trader in traders:
@@ -445,7 +494,7 @@ def search_traders():
                 'email': trader['email']
             })
         
-        logger.info(f"Agent {current_user.id} searched for traders with query: {query}")
+        logger.info(f"Agent {current_user.id} searched for traders with query: {query} at {datetime.utcnow()}")
         return jsonify(results)
         
     except Exception as e:
