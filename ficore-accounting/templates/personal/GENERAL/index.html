@@ -313,21 +313,21 @@
                 <div class="carousel-inner">
                     <div class="carousel-item active">
                         <div class="testimonial text-center">
-                            <img src="{{ testimonials[0].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="MU">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="MU">
                             <p class="text-muted">{{ t('general_impressed_features', default='FiCore’s tools are intuitive and perfect for managing my personal finances!') | e }}</p>
                             <p class="name fw-bold">Maisarata Uqubatu, {{ t('general_personal_user', default='Personal User') | e }}</p>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="testimonial text-center">
-                            <img src="{{ testimonials[1].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="AA">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="AA">
                             <p class="text-muted">{{ t('general_ficore_praise', default='Managing my business’s debtors and inventory has never been easier!') | e }}</p>
                             <p class="name fw-bold">Abubakar Abdulkadir, {{ t('general_business_owner', default='Business Owner') | e }}</p>
                         </div>
                     </div>
                     <div class="carousel-item">
                         <div class="testimonial text-center">
-                            <img src="{{ testimonials[2].avatar | default(url_for('static', filename='img/default_avatar.png')) | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="ASU">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="ASU">
                             <p class="text-muted">{{ t('general_potential_support', default='As an agent, FiCore makes onboarding traders seamless and efficient.') | e }}</p>
                             <p class="name fw-bold">Aminu Sani Usman, {{ t('general_agent', default='Agent') | e }}</p>
                         </div>
@@ -343,7 +343,7 @@
                 </button>
             </div>
             <div class="text-center mt-4">
-                <a href="{{ url_for('general_bp.about') | e }}" class="btn btn-primary btn-sm">{{ t('general_see_more_testimonials', default='See More Testimonials') | e }}</a>
+                <a href="{{ url_for('general_bp.about') | e }}" class="btn btn-primary btn-sm">{{ t('general_about_ficore_africa', default='Learn More About Us') | e }}</a>
             </div>
         </section>
 
