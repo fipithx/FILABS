@@ -8,9 +8,26 @@ GENERAL_TRANSLATIONS = {
         'settings_title': 'Settings',
         'general_i_am_owed': 'I Am Owed',
         'general_net_position': 'Net Position',
-        'general_logout': 'Log out',
         'general_view_detailed_summary': 'View Detailed Summary',
+                # General Shared Keys
         'general_logout': 'Logout',
+        'general_users': 'Users',
+        'general_records': 'Records',
+        'general_cashflows': 'Cashflows',
+        'general_actions': 'Actions',
+        'general_edit': 'Edit',
+        'general_delete': 'Delete',
+        'general_back': 'Back',
+        'general_username': 'Username',
+        'general_email': 'Email',
+        'general_role': 'Role',
+        'general_created_at': 'Created At',
+
+        # Role-Specific Keys
+        'general_personal': 'Personal',
+        'general_trader': 'Trader',
+        'general_agent': 'Agent',
+        'general_admin': 'Admin'
         'general_not_found': 'Page Not Found',
         'general_no_tools_available': 'No tools available yet.',
         'general_home': 'Home',
@@ -1322,7 +1339,6 @@ GENERAL_TRANSLATIONS = {
         'general_mode_toggle_tooltip_switch_to_black': 'Juya zuwa yanayin haske', # Literally: "Turn to light mode"
         'toggle_light_mode': 'Kunna yanayin haske', # "Turn on light mode"
         'toggle_dark_mode': 'Kunna yanayin duhu', # "Turn on dark mode"
-        'general_logout': 'Fita', # "Logout"
         'general_not_found': 'Ba a Samo Shafin ba', # "Page Not Found"
         'general_no_tools_available': 'Babu kayan aiki da aka samu tukuna.', # "No tools available yet."
         'general_home': 'Gida', # "Home"
@@ -1331,7 +1347,6 @@ GENERAL_TRANSLATIONS = {
         'general_business_home': 'Gida na Kasuwanci', # "Business Home"
         'general_business_home_desc': 'Je zuwa dashboard dinka na kasuwanci.', # "Go to your business dashboard."
         'general_business_home_tooltip': 'Shafinka na gida na kasuwanci.',
-        'general_logout': 'Fita',
         'taxation_calculator_desc': 'Duba harajinku.',
         'general_personal_desc': 'Sarrafa asusunka na sirri da zaɓuɓɓukanka.',
         'general_trader_desc': 'Samu kayan aiki da fasalulluka ga yan kasuwa.',
@@ -1350,5 +1365,22 @@ GENERAL_TRANSLATIONS = {
         'complete_setup_wizard': 'Kammala Mai Saurin Saita',
         'signup': 'Yi Rajista',
         'logout': 'Fita',
+        'general_users': 'Masu Amfani',
+        'general_records': 'Bayanan Ajiya',
+        'general_cashflows': 'Kudaden Shiga',
+        'general_actions': 'Ayyuka',
+        'general_edit': 'Gyara',
+        'general_delete': 'Goge',
+        'general_back': 'Koma Baya',
+        'general_username': 'Sunan Mai Amfani',
+        'general_email': 'Imel',
+        'general_role': 'Matsayi',
+        'general_created_at': 'Ƙirƙira A',
+
+        # Role-Specific Keys
+        'general_personal': 'Na Mutum',
+        'general_trader': 'Dan Kasuwa',
+        'general_agent': 'Wakili',
+        'general_admin': 'Mai Gudanarwa',
     }
 }
