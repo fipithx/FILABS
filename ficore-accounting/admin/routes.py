@@ -1,22 +1,33 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request, session
+import logging
+from bson import ObjectId
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, Response
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, SelectField, validators, SubmitField
-from datetime import datetime
+from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField
+from wtforms import validators
+from wtforms.validators import DataRequired, NumberRange
 from translations import trans
 import utils
-from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results, get_learning_progress
-from bson import ObjectId
-import logging
+import bleach
+import datetime
+from babel.dates import format_date
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from io import BytesIO
+import csv
 import re
+from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results, get_learning_progress
 
 logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint('admin', __name__, template_folder='templates/admin')
 
-# Initialize limiter
+# Regular expression for agent ID validation
 AGENT_ID_REGEX = re.compile(r'^[A-Z0-9]{8}$')  # Agent ID: 8 alphanumeric characters
 
+# Form Definitions
 class CreditForm(FlaskForm):
     user_id = StringField(trans('admin_user_id', default='User ID'), [
         validators.DataRequired(message=trans('admin_user_id_required', default='User ID is required')),
@@ -39,6 +50,26 @@ class AgentManagementForm(FlaskForm):
     ], validators=[validators.DataRequired(message=trans('agents_status_required', default='Status is required'))], render_kw={'class': 'form-select'})
     submit = SubmitField(trans('agents_manage_submit', default='Add/Update Agent'), render_kw={'class': 'btn btn-primary w-100'})
 
+class NewsForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired()], render_kw={'class': 'form-control'})
+    content = TextAreaField('Content', validators=[DataRequired()], render_kw={'class': 'form-control'})
+    source_link = StringField('Source Link', render_kw={'class': 'form-control'})
+    category = StringField('Category', render_kw={'class': 'form-control'})
+    submit = SubmitField('Save', render_kw={'class': 'btn btn-primary'})
+
+class TaxRateForm(FlaskForm):
+    role = SelectField('Role', choices=[('personal', 'Personal'), ('trader', 'Trader'), ('agent', 'Agent'), ('company', 'Company'), ('vat', 'VAT')], validators=[DataRequired()], render_kw={'class': 'form-select'})
+    min_income = FloatField('Minimum Income', validators=[DataRequired(), NumberRange(min=0)], render_kw={'class': 'form-control'})
+    max_income = FloatField('Maximum Income', validators=[DataRequired(), NumberRange(min=0)], render_kw={'class': 'form-control'})
+    rate = FloatField('Rate', validators=[DataRequired(), NumberRange(min=0, max=1)], render_kw={'class': 'form-control'})
+    description = StringField('Description', validators=[DataRequired()], render_kw={'class': 'form-control'})
+    submit = SubmitField('Add Tax Rate', render_kw={'class': 'btn btn-primary'})
+
+class RoleForm(FlaskForm):
+    role = SelectField('Role', choices=[('personal', 'Personal'), ('trader', 'Trader'), ('agent', 'Agent'), ('admin', 'Admin')], validators=[DataRequired()], render_kw={'class': 'form-select'})
+    submit = SubmitField('Update Role', render_kw={'class': 'btn btn-primary'})
+
+# Helper Functions
 def log_audit_action(action, details=None):
     """Log an admin action to audit_logs collection."""
     try:
@@ -52,6 +83,13 @@ def log_audit_action(action, details=None):
     except Exception as e:
         logger.error(f"Error logging audit action: {str(e)}")
 
+def sanitize_input(text):
+    """Sanitize HTML input for news content to prevent XSS."""
+    allowed_tags = ['p', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'a']
+    allowed_attributes = {'a': ['href', 'target']}
+    return bleach.clean(text, tags=allowed_tags, attributes=allowed_attributes)
+
+# Existing Routes
 @admin_bp.route('/dashboard', methods=['GET'])
 @login_required
 @utils.requires_role('admin')
@@ -68,6 +106,7 @@ def dashboard():
         audit_log_count = db.audit_logs.count_documents({})
         budgets_count = db.budgets.count_documents({})
         bills_count = db.bills.count_documents({})
+meals_count = db.bills.count_documents({})
         emergency_funds_count = db.emergency_funds.count_documents({})
         net_worth_count = db.net_worth_data.count_documents({})
         quiz_results_count = db.quiz_responses.count_documents({})
@@ -562,3 +601,250 @@ def admin_delete_learning_progress(progress_id):
         logger.error(f"Error deleting learning progress {progress_id}: {str(e)}")
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return redirect(url_for('admin.admin_learning_hub'))
+
+# New Routes from Integration Plan
+@admin_bp.route('/news', methods=['GET', 'POST'])
+@utils.requires_role('admin')
+@login_required
+def news_management():
+    """Manage news articles: list all articles and add new ones."""
+    db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
+    form = NewsForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+        source_link = form.source_link.data
+        category = form.category.data
+        sanitized_content = sanitize_input(content)
+        article = {
+            'title': title,
+            'content': sanitized_content,
+            'source_link': source_link if source_link else None,
+            'category': category if category else None,
+            'is_active': True,
+            'published_at': datetime.datetime.utcnow(),
+            'created_by': current_user.id
+        }
+        result = db.news.insert_one(article)
+        article_id = str(result.inserted_id)
+        logger.info(f"News article created: id={article_id}, title={title}, user={current_user.id}")
+        log_audit_action('add_news_article', {'article_id': article_id, 'title': title})
+        flash(trans('news_article_added', default='News article added successfully', lang=lang), 'success')
+        return redirect(url_for('admin.news_management'))
+    
+    articles = list(db.news.find().sort('published_at', -1))
+    for article in articles:
+        article['_id'] = str(article['_id'])
+        article['published_at_formatted'] = format_date(article['published_at'], format='medium', locale=lang)
+    return render_template('admin/news_management.html', form=form, articles=articles, title='News Management')
+
+@admin_bp.route('/news/edit/<article_id>', methods=['GET', 'POST'])
+@utils.requires_role('admin')
+@login_required
+def edit_news(article_id):
+    """Edit an existing news article."""
+    db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
+    article = db.news.find_one({'_id': ObjectId(article_id)})
+    if not article:
+        flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
+        return redirect(url_for('admin.news_management'))
+    
+    form = NewsForm(obj=article)
+    if request.method == 'POST' and form.validate_on_submit():
+        sanitized_content = sanitize_input(form.content.data)
+        db.news.update_one(
+            {'_id': ObjectId(article_id)},
+            {'$set': {
+                'title': form.title.data,
+                'content': sanitized_content,
+                'source_link': form.source_link.data if form.source_link.data else None,
+                'category': form.category.data if form.category.data else None,
+                'updated_at': datetime.datetime.utcnow()
+            }}
+        )
+        logger.info(f"News article updated: id={article_id}, user={current_user.id}")
+        log_audit_action('edit_news_article', {'article_id': article_id})
+        flash(trans('news_article_updated', default='News article updated successfully', lang=lang), 'success')
+        return redirect(url_for('admin.news_management'))
+    
+    return render_template('admin/news_edit.html', form=form, article=article, title='Edit News Article')
+
+@admin_bp.route('/news/delete/<article_id>', methods=['POST'])
+@utils.requires_role('admin')
+@login_required
+def delete_news(article_id):
+    """Delete a news article."""
+    db = utils.get_mongo_db()
+    lang = session.get('lang', 'en')
+    result = db.news.delete_one({'_id': ObjectId(article_id)})
+    if result.deleted_count > 0:
+        logger.info(f"News article deleted: id={article_id}, user={current_user.id}")
+        log_audit_action('delete_news_article', {'article_id': article_id})
+        flash(trans('news_article_deleted', default='News article deleted successfully', lang=lang), 'success')
+    else:
+        flash(trans('news_article_not_found', default='Article not found', lang=lang), 'danger')
+    return redirect(url_for('admin.news_management'))
+
+@admin_bp.route('/tax_rates', methods=['GET', 'POST'])
+@utils.requires_role('admin')
+@login_required
+def manage_tax_rates():
+    """Manage tax rates: list all tax rates and add new ones."""
+    db = utils.get_mongo_db()
+    form = TaxRateForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        tax_rate = {
+            'role': form.role.data,
+            'min_income': form.min_income.data,
+            'max_income': form.max_income.data,
+            'rate': form.rate.data,
+            'description': form.description.data,
+            'created_by': current_user.id,
+            'created_at': datetime.datetime.utcnow()
+        }
+        result = db.tax_rates.insert_one(tax_rate)
+        rate_id = str(result.inserted_id)
+        logger.info(f"Tax rate added: id={rate_id}, role={form.role.data}, user={current_user.id}")
+        log_audit_action('add_tax_rate', {'rate_id': rate_id, 'role': form.role.data})
+        flash('Tax rate added successfully', 'success')
+        return redirect(url_for('admin.manage_tax_rates'))
+    
+    rates = list(db.tax_rates.find().sort('created_at', -1))
+    for rate in rates:
+        rate['_id'] = str(rate['_id'])
+    return render_template('admin/tax_rates.html', form=form, rates=rates, title='Manage Tax Rates')
+
+@admin_bp.route('/tax_rates/edit/<rate_id>', methods=['GET', 'POST'])
+@utils.requires_role('admin')
+@login_required
+def edit_tax_rate(rate_id):
+    """Edit an existing tax rate."""
+    db = utils.get_mongo_db()
+    rate = db.tax_rates.find_one({'_id': ObjectId(rate_id)})
+    if not rate:
+        flash('Tax rate not found', 'danger')
+        return redirect(url_for('admin.manage_tax_rates'))
+    
+    form = TaxRateForm(obj=rate)
+    if request.method == 'POST' and form.validate_on_submit():
+        db.tax_rates.update_one(
+            {'_id': ObjectId(rate_id)},
+            {'$set': {
+                'role': form.role.data,
+                'min_income': form.min_income.data,
+                'max_income': form.max_income.data,
+                'rate': form.rate.data,
+                'description': form.description.data,
+                'updated_at': datetime.datetime.utcnow()
+            }}
+        )
+        logger.info(f"Tax rate updated: id={rate_id}, user={current_user.id}")
+        log_audit_action('edit_tax_rate', {'rate_id': rate_id})
+        flash('Tax rate updated successfully', 'success')
+        return redirect(url_for('admin.manage_tax_rates'))
+    
+    return render_template('admin/tax_rate_edit.html', form=form, rate=rate, title='Edit Tax Rate')
+
+@admin_bp.route('/tax_rates/delete/<rate_id>', methods=['POST'])
+@utils.requires_role('admin')
+@login_required
+def delete_tax_rate(rate_id):
+    """Delete a tax rate."""
+    db = utils.get_mongo_db()
+    result = db.tax_rates.delete_one({'_id': ObjectId(rate_id)})
+    if result.deleted_count > 0:
+        logger.info(f"Tax rate deleted: id={rate_id}, user={current_user.id}")
+        log_audit_action('delete_tax_rate', {'rate_id': rate_id})
+        flash('Tax rate deleted successfully', 'success')
+    else:
+        flash('Tax rate not found', 'danger')
+    return redirect(url_for('admin.manage_tax_rates'))
+
+@admin_bp.route('/reports/customers', methods=['GET'])
+@utils.requires_role('admin')
+@login_required
+def customer_reports():
+    """Generate customer reports in HTML, PDF, or CSV format."""
+    db = utils.get_mongo_db()
+    format = request.args.get('format', 'html')  # Changed to GET with query parameter
+    users = list(db.users.find())
+    for user in users:
+        user['_id'] = str(user['_id'])
+    
+    if format == 'pdf':
+        return generate_customer_report_pdf(users)
+    elif format == 'csv':
+        return generate_customer_report_csv(users)
+    
+    return render_template('admin/customer_reports.html', users=users, title='Customer Reports')
+
+def generate_customer_report_pdf(users):
+    """Generate a PDF report of customer data."""
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.setFont("Helvetica", 12)
+    p.drawString(1 * inch, 10.5 * inch, "Customer Report")
+    p.drawString(1 * inch, 10.2 * inch, f"Generated on: {datetime.datetime.utcnow().strftime('%Y-%m-%d')}")
+    y = 9.5 * inch
+    p.drawString(1 * inch, y, "Username")
+    p.drawString(2.5 * inch, y, "Email")
+    p.drawString(4 * inch, y, "Role")
+    p.drawString(5.5 * inch, y, "Created At")
+    y -= 0.3 * inch
+    for user in users:
+        p.drawString(1 * inch, y, user['_id'])
+        p.drawString(2.5 * inch, y, user['email'])
+        p.drawString(4 * inch, y, user['role'])
+        p.drawString(5.5 * inch, y, user['created_at'].strftime('%Y-%m-%d'))
+        y -= 0.3 * inch
+        if y < 1 * inch:
+            p.showPage()
+            y = 10.5 * inch
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': 'attachment;filename=customer_report.pdf'})
+
+def generate_customer_report_csv(users):
+    """Generate a CSV report of customer data."""
+    output = [['Username', 'Email', 'Role', 'Created At']]
+    for user in users:
+        output.append([user['_id'], user['email'], user['role'], user['created_at'].strftime('%Y-%m-%d')])
+    buffer = BytesIO()
+    writer = csv.writer(buffer, lineterminator='\n')
+    writer.writerows(output)
+    buffer.seek(0)
+    return Response(buffer, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=customer_report.csv'})
+
+@admin_bp.route('/users/roles', methods=['GET', 'POST'])
+@utils.requires_role('admin')
+@login_required
+def manage_user_roles():
+    """Manage user roles: list all users and update their roles."""
+    db = utils.get_mongo_db()
+    users = list(db.users.find())
+    form = RoleForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        user_id = request.form.get('user_id')
+        if not user_id:
+            flash('User ID is required', 'danger')
+            return redirect(url_for('admin.manage_user_roles'))
+        new_role = form.role.data
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        if not user:
+            flash('User not found', 'danger')
+            return redirect(url_for('admin.manage_user_roles'))
+        db.users.update_one(
+            {'_id': ObjectId(user_id)},
+            {'$set': {'role': new_role, 'updated_at': datetime.datetime.utcnow()}}
+        )
+        logger.info(f"User role updated: id={user_id}, new_role={new_role}, user={current_user.id}")
+        log_audit_action('update_user_role', {'user_id': user_id, 'new_role': new_role})
+        flash('User role updated successfully', 'success')
+        return redirect(url_for('admin.manage_user_roles'))
+    
+    for user in users:
+        user['_id'] = str(user['_id'])
+    return render_template('admin/user_roles.html', form=form, users=users, title='Manage User Roles')
