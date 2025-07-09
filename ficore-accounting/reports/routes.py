@@ -10,12 +10,14 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from io import BytesIO
 from flask_wtf import FlaskForm
-from wtforms import DateField, StringField, SubmitField
+from wtforms import DateField, StringField, SubmitField, SelectField
 from wtforms.validators import Optional
 import csv
 import logging
 
 logger = logging.getLogger(__name__)
+
+reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 class ReportForm(FlaskForm):
     start_date = DateField(trans('reports_start_date', default='Start Date'), validators=[Optional()])
@@ -27,7 +29,130 @@ class InventoryReportForm(FlaskForm):
     item_name = StringField(trans('inventory_item_name', default='Item Name'), validators=[Optional()])
     submit = SubmitField(trans('reports_generate_report', default='Generate Report'))
 
-reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
+class CustomerReportForm(FlaskForm):
+    role = SelectField('User Role', choices=[('', 'All'), ('personal', 'Personal'), ('trader', 'Trader'), ('agent', 'Agent'), ('admin', 'Admin')], validators=[Optional()])
+    format = SelectField('Format', choices=[('html', 'HTML'), ('pdf', 'PDF'), ('csv', 'CSV')], default='html')
+    submit = SubmitField('Generate Report')
+
+def to_dict_financial_health(record):
+    if not record:
+        return {'score': None, 'status': None}
+    return {
+        'score': record.get('score'),
+        'status': record.get('status'),
+        'debt_to_income': record.get('debt_to_income'),
+        'savings_rate': record.get('savings_rate'),
+        'interest_burden': record.get('interest_burden'),
+        'badges': record.get('badges', []),
+        'created_at': record.get('created_at')
+    }
+
+def to_dict_budget(record):
+    if not record:
+        return {'surplus_deficit': None, 'savings_goal': None}
+    return {
+        'income': record.get('income', 0),
+        'fixed_expenses': record.get('fixed_expenses', 0),
+        'variable_expenses': record.get('variable_expenses', 0),
+        'savings_goal': record.get('savings_goal', 0),
+        'surplus_deficit': record.get('surplus_deficit', 0),
+        'housing': record.get('housing', 0),
+        'food': record.get('food', 0),
+        'transport': record.get('transport', 0),
+        'dependents': record.get('dependents', 0),
+        'miscellaneous': record.get('miscellaneous', 0),
+        'others': record.get('others', 0),
+        'created_at': record.get('created_at')
+    }
+
+def to_dict_bill(record):
+    if not record:
+        return {'amount': None, 'status': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'bill_name': record.get('bill_name', ''),
+        'amount': record.get('amount', 0),
+        'due_date': record.get('due_date', ''),
+        'frequency': record.get('frequency', ''),
+        'category': record.get('category', ''),
+        'status': record.get('status', ''),
+        'send_email': record.get('send_email', False),
+        'reminder_days': record.get('reminder_days'),
+        'user_email': record.get('user_email', ''),
+        'first_name': record.get('first_name', '')
+    }
+
+def to_dict_net_worth(record):
+    if not record:
+        return {'net_worth': None, 'total_assets': None}
+    return {
+        'cash_savings': record.get('cash_savings', 0),
+        'investments': record.get('investments', 0),
+        'property': record.get('property', 0),
+        'loans': record.get('loans', 0),
+        'total_assets': record.get('total_assets', 0),
+        'total_liabilities': record.get('total_liabilities', 0),
+        'net_worth': record.get('net_worth', 0),
+        'badges': record.get('badges', []),
+        'created_at': record.get('created_at')
+    }
+
+def to_dict_emergency_fund(record):
+    if not record:
+        return {'target_amount': None, 'savings_gap': None}
+    return {
+        'monthly_expenses': record.get('monthly_expenses', 0),
+        'monthly_income': record.get('monthly_income', 0),
+        'current_savings': record.get('current_savings', 0),
+        'risk_tolerance_level': record.get('risk_tolerance_level', ''),
+        'dependents': record.get('dependents', 0),
+        'timeline': record.get('timeline', 0),
+        'recommended_months': record.get('recommended_months', 0),
+        'target_amount': record.get('target_amount', 0),
+        'savings_gap': record.get('savings_gap', 0),
+        'monthly_savings': record.get('monthly_savings', 0),
+        'percent_of_income': record.get('percent_of_income'),
+        'badges': record.get('badges', []),
+        'created_at': record.get('created_at')
+    }
+
+def to_dict_learning_progress(record):
+    if not record:
+        return {'lessons_completed': [], 'quiz_scores': {}}
+    return {
+        'course_id': record.get('course_id', ''),
+        'lessons_completed': record.get('lessons_completed', []),
+        'quiz_scores': record.get('quiz_scores', {}),
+        'current_lesson': record.get('current_lesson')
+    }
+
+def to_dict_quiz_result(record):
+    if not record:
+        return {'personality': None, 'score': None}
+    return {
+        'personality': record.get('personality', ''),
+        'score': record.get('score', 0),
+        'badges': record.get('badges', []),
+        'insights': record.get('insights', []),
+        'tips': record.get('tips', []),
+        'created_at': record.get('created_at')
+    }
+
+def to_dict_tax_reminder(record):
+    if not record:
+        return {'tax_type': None, 'amount': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'tax_type': record.get('tax_type', ''),
+        'due_date': record.get('due_date'),
+        'amount': record.get('amount', 0),
+        'status': record.get('status', ''),
+        'created_at': record.get('created_at'),
+        'notification_id': record.get('notification_id'),
+        'sent_at': record.get('sent_at'),
+        'payment_location_id': record.get('payment_location_id')
+    }
 
 @reports_bp.route('/')
 @login_required
@@ -50,14 +175,10 @@ def index():
 def profit_loss():
     """Generate profit/loss report with filters."""
     form = ReportForm()
-    # TEMPORARY: Bypass coin check for admin during testing
-    # TODO: Restore original check_coin_balance(1) for production
     if not utils.is_admin() and not utils.check_coin_balance(1):
         flash(trans('reports_insufficient_coins', default='Insufficient coins to generate a report. Purchase more coins.'), 'danger')
         return redirect(url_for('coins.purchase'))
     cashflows = []
-    # TEMPORARY: Allow admin to view all cashflows during testing
-    # TODO: Restore original user_id filter {'user_id': str(current_user.id)} for production
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
         try:
@@ -74,8 +195,6 @@ def profit_loss():
                 return generate_profit_loss_pdf(cashflows)
             elif output_format == 'csv':
                 return generate_profit_loss_csv(cashflows)
-            # TEMPORARY: Skip coin deduction for admin during testing
-            # TODO: Restore original coin deduction for production
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
@@ -108,14 +227,10 @@ def profit_loss():
 def inventory():
     """Generate inventory report with filters."""
     form = InventoryReportForm()
-    # TEMPORARY: Bypass coin check for admin during testing
-    # TODO: Restore original check_coin_balance(1) for production
     if not utils.is_admin() and not utils.check_coin_balance(1):
         flash(trans('reports_insufficient_coins', default='Insufficient coins to generate a report. Purchase more coins.'), 'danger')
         return redirect(url_for('coins.purchase'))
     items = []
-    # TEMPORARY: Allow admin to view all inventory items during testing
-    # TODO: Restore original user_id filter {'user_id': str(current_user.id)} for production
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
         try:
@@ -128,8 +243,6 @@ def inventory():
                 return generate_inventory_pdf(items)
             elif output_format == 'csv':
                 return generate_inventory_csv(items)
-            # TEMPORARY: Skip coin deduction for admin during testing
-            # TODO: Restore original coin deduction for production
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
@@ -156,8 +269,159 @@ def inventory():
         title=utils.trans('reports_inventory', default='Inventory Report', lang=session.get('lang', 'en'))
     )
 
+@reports_bp.route('/admin/customer-reports', methods=['GET', 'POST'])
+@login_required
+@utils.requires_role('admin')
+def customer_reports():
+    """Generate customer reports for admin."""
+    form = CustomerReportForm()
+    if form.validate_on_submit():
+        role = form.role.data if form.role.data else None
+        report_format = form.format.data
+        try:
+            db = utils.get_mongo_db()
+            pipeline = [
+                {'$match': {'role': role}} if role else {},
+                {'$lookup': {
+                    'from': 'financial_health_scores',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$sort': {'created_at': -1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'latest_financial_health'
+                }},
+                {'$lookup': {
+                    'from': 'budgets',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$sort': {'created_at': -1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'latest_budget'
+                }},
+                {'$lookup': {
+                    'from': 'bills',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$group': {
+                            '_id': '$status',
+                            'count': {'$sum': 1}
+                        }}
+                    ],
+                    'as': 'bill_status_counts'
+                }},
+                {'$lookup': {
+                    'from': 'net_worth_data',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$sort': {'created_at': -1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'latest_net_worth'
+                }},
+                {'$lookup': {
+                    'from': 'emergency_funds',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$sort': {'created_at': -1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'latest_emergency_fund'
+                }},
+                {'$lookup': {
+                    'from': 'learning_materials',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$group': {
+                            '_id': None,
+                            'total_lessons_completed': {'$sum': {'$size': '$lessons_completed'}}
+                        }}
+                    ],
+                    'as': 'learning_progress'
+                }},
+                {'$lookup': {
+                    'from': 'quiz_responses',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}}},
+                        {'$sort': {'created_at': -1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'latest_quiz_result'
+                }},
+                {'$lookup': {
+                    'from': 'tax_reminders',
+                    'let': {'user_id': '$_id'},
+                    'pipeline': [
+                        {'$match': {'$expr': {'$eq': ['$user_id', '$$user_id']}, 'due_date': {'$gte': datetime.utcnow()}}},
+                        {'$sort': {'due_date': 1}},
+                        {'$limit': 1}
+                    ],
+                    'as': 'next_tax_reminder'
+                }},
+            ]
+            users = list(db.users.aggregate(pipeline))
+            report_data = []
+            for user in users:
+                financial_health = to_dict_financial_health(user['latest_financial_health'][0] if user['latest_financial_health'] else None)
+                budget = to_dict_budget(user['latest_budget'][0] if user['latest_budget'] else None)
+                bill_counts = {status['_id']: status['count'] for status in user['bill_status_counts']} if user['bill_status_counts'] else {'pending': 0, 'paid': 0, 'overdue': 0}
+                net_worth = to_dict_net_worth(user['latest_net_worth'][0] if user['latest_net_worth'] else None)
+                emergency_fund = to_dict_emergency_fund(user['latest_emergency_fund'][0] if user['latest_emergency_fund'] else None)
+                learning_progress = user['learning_progress'][0]['total_lessons_completed'] if user['learning_progress'] else 0
+                quiz_result = to_dict_quiz_result(user['latest_quiz_result'][0] if user['latest_quiz_result'] else None)
+                tax_reminder = to_dict_tax_reminder(user['next_tax_reminder'][0] if user['next_tax_reminder'] else None)
+
+                data = {
+                    'username': user['_id'],
+                    'email': user.get('email', ''),
+                    'role': user.get('role', ''),
+                    'coin_balance': user.get('coin_balance', 0),
+                    'language': user.get('language', 'en'),
+                    'financial_health_score': financial_health['score'] if financial_health['score'] is not None else '-',
+                    'financial_health_status': financial_health['status'] if financial_health['status'] is not None else '-',
+                    'debt_to_income': financial_health['debt_to_income'] if financial_health['debt_to_income'] is not None else '-',
+                    'savings_rate': financial_health['savings_rate'] if financial_health['savings_rate'] is not None else '-',
+                    'budget_income': budget['income'] if budget['income'] is not None else '-',
+                    'budget_fixed_expenses': budget['fixed_expenses'] if budget['fixed_expenses'] is not None else '-',
+                    'budget_variable_expenses': budget['variable_expenses'] if budget['variable_expenses'] is not None else '-',
+                    'budget_surplus_deficit': budget['surplus_deficit'] if budget['surplus_deficit'] is not None else '-',
+                    'pending_bills': bill_counts.get('pending', 0),
+                    'paid_bills': bill_counts.get('paid', 0),
+                    'overdue_bills': bill_counts.get('overdue', 0),
+                    'net_worth': net_worth['net_worth'] if net_worth['net_worth'] is not None else '-',
+                    'total_assets': net_worth['total_assets'] if net_worth['total_assets'] is not None else '-',
+                    'total_liabilities': net_worth['total_liabilities'] if net_worth['total_liabilities'] is not None else '-',
+                    'emergency_fund_target': emergency_fund['target_amount'] if emergency_fund['target_amount'] is not None else '-',
+                    'emergency_fund_savings': emergency_fund['current_savings'] if emergency_fund['current_savings'] is not None else '-',
+                    'emergency_fund_gap': emergency_fund['savings_gap'] if emergency_fund['savings_gap'] is not None else '-',
+                    'lessons_completed': learning_progress,
+                    'quiz_personality': quiz_result['personality'] if quiz_result['personality'] is not None else '-',
+                    'quiz_score': quiz_result['score'] if quiz_result['score'] is not None else '-',
+                    'next_tax_due_date': utils.format_date(tax_reminder['due_date']) if tax_reminder['due_date'] else '-',
+                    'next_tax_amount': tax_reminder['amount'] if tax_reminder['amount'] is not None else '-'
+                }
+                report_data.append(data)
+
+            if report_format == 'html':
+                return render_template('reports/customer_reports.html', report_data=report_data, title='Customer Reports')
+            elif report_format == 'pdf':
+                return generate_customer_report_pdf(report_data)
+            elif report_format == 'csv':
+                return generate_customer_report_csv(report_data)
+        except Exception as e:
+            logger.error(f"Error generating customer report: {str(e)}")
+            flash('An error occurred while generating the report', 'danger')
+    return render_template('reports/customer_reports_form.html', form=form, title='Generate Customer Report')
+
 def generate_profit_loss_pdf(cashflows):
-    """Generate PDF for profit/loss report."""
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     p.setFont("Helvetica", 12)
@@ -169,7 +433,7 @@ def generate_profit_loss_pdf(cashflows):
     p.drawString(2.5 * inch, y, trans('general_party_name', default='Party Name'))
     p.drawString(4 * inch, y, trans('general_type', default='Type'))
     p.drawString(5 * inch, y, trans('general_amount', default='Amount'))
-    p.drawString(6.5 * inch, y, trans('general PX0Hgeneral_category', default='Category'))
+    p.drawString(6.5 * inch, y, trans('general_category', default='Category'))
     y -= 0.3 * inch
     total_income = 0
     total_expense = 0
@@ -199,7 +463,6 @@ def generate_profit_loss_pdf(cashflows):
     return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': 'attachment;filename=profit_loss.pdf'})
 
 def generate_profit_loss_csv(cashflows):
-    """Generate CSV for profit/loss report."""
     output = []
     output.append([trans('general_date', default='Date'), trans('general_party_name', default='Party Name'), trans('general_type', default='Type'), trans('general_amount', default='Amount'), trans('general_category', default='Category')])
     total_income = 0
@@ -220,7 +483,6 @@ def generate_profit_loss_csv(cashflows):
     return Response(buffer, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=profit_loss.csv'})
 
 def generate_inventory_pdf(items):
-    """Generate PDF for inventory report."""
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     p.setFont("Helvetica", 12)
@@ -252,7 +514,6 @@ def generate_inventory_pdf(items):
     return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': 'attachment;filename=inventory.pdf'})
 
 def generate_inventory_csv(items):
-    """Generate CSV for inventory report."""
     output = []
     output.append([trans('inventory_item_name', default='Item Name'), trans('inventory_quantity', default='Quantity'), trans('inventory_unit', default='Unit'), trans('inventory_buying_price', default='Buying Price'), trans('inventory_selling_price', default='Selling Price'), trans('inventory_threshold', default='Threshold')])
     for item in items:
@@ -262,3 +523,73 @@ def generate_inventory_csv(items):
     writer.writerows(output)
     buffer.seek(0)
     return Response(buffer, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=inventory.csv'})
+
+def generate_customer_report_pdf(report_data):
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.setFont("Helvetica", 8)
+    p.drawString(0.5 * inch, 10.5 * inch, "Customer Report")
+    p.drawString(0.5 * inch, 10.2 * inch, f"Generated on: {utils.format_date(datetime.utcnow())}")
+    y = 9.5 * inch
+    headers = [
+        'Username', 'Email', 'Role', 'Coins', 'Lang', 'FH Score', 'FH Status', 'DTI', 'Savings',
+        'Income', 'Fixed Exp', 'Var Exp', 'Surplus', 'Pending Bills', 'Paid Bills', 'Overdue Bills',
+        'Net Worth', 'Assets', 'Liabs', 'EF Target', 'EF Savings', 'EF Gap', 'Lessons', 'Quiz Pers', 'Quiz Score',
+        'Tax Due', 'Tax Amt'
+    ]
+    x_positions = [0.5 * inch + i * 0.3 * inch for i in range(len(headers))]
+    for header, x in zip(headers, x_positions):
+        p.drawString(x, y, header)
+    y -= 0.2 * inch
+    for data in report_data:
+        values = [
+            data['username'], data['email'], data['role'], str(data['coin_balance']), data['language'],
+            str(data['financial_health_score']), data['financial_health_status'], str(data['debt_to_income']), str(data['savings_rate']),
+            str(data['budget_income']), str(data['budget_fixed_expenses']), str(data['budget_variable_expenses']), str(data['budget_surplus_deficit']),
+            str(data['pending_bills']), str(data['paid_bills']), str(data['overdue_bills']),
+            str(data['net_worth']), str(data['total_assets']), str(data['total_liabilities']),
+            str(data['emergency_fund_target']), str(data['emergency_fund_savings']), str(data['emergency_fund_gap']),
+            str(data['lessons_completed']), data['quiz_personality'], str(data['quiz_score']),
+            data['next_tax_due_date'], str(data['next_tax_amount'])
+        ]
+        for value, x in zip(values, x_positions):
+            p.drawString(x, y, str(value)[:15])  # Truncate long values
+        y -= 0.2 * inch
+        if y < 0.5 * inch:
+            p.showPage()
+            y = 10.5 * inch
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    return Response(buffer, mimetype='application/pdf', headers={'Content-Disposition': 'attachment;filename=customer_report.pdf'})
+
+def generate_customer_report_csv(report_data):
+    output = []
+    headers = [
+        'Username', 'Email', 'Role', 'Coin Balance', 'Language',
+        'Financial Health Score', 'Financial Health Status', 'Debt-to-Income', 'Savings Rate',
+        'Budget Income', 'Budget Fixed Expenses', 'Budget Variable Expenses', 'Budget Surplus/Deficit',
+        'Pending Bills', 'Paid Bills', 'Overdue Bills',
+        'Net Worth', 'Total Assets', 'Total Liabilities',
+        'Emergency Fund Target', 'Emergency Fund Savings', 'Emergency Fund Gap',
+        'Lessons Completed', 'Quiz Personality', 'Quiz Score',
+        'Next Tax Due Date', 'Next Tax Amount'
+    ]
+    output.append(headers)
+    for data in report_data:
+        row = [
+            data['username'], data['email'], data['role'], data['coin_balance'], data['language'],
+            data['financial_health_score'], data['financial_health_status'], data['debt_to_income'], data['savings_rate'],
+            data['budget_income'], data['budget_fixed_expenses'], data['budget_variable_expenses'], data['budget_surplus_deficit'],
+            data['pending_bills'], data['paid_bills'], data['overdue_bills'],
+            data['net_worth'], data['total_assets'], data['total_liabilities'],
+            data['emergency_fund_target'], data['emergency_fund_savings'], data['emergency_fund_gap'],
+            data['lessons_completed'], data['quiz_personality'], data['quiz_score'],
+            data['next_tax_due_date'], data['next_tax_amount']
+        ]
+        output.append(row)
+    buffer = BytesIO()
+    writer = csv.writer(buffer, lineterminator='\n')
+    writer.writerows(output)
+    buffer.seek(0)
+    return Response(buffer, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=customer_report.csv'})
