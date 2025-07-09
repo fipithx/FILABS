@@ -40,7 +40,7 @@ GENERAL_TRANSLATIONS = {
         'general_ha': 'Hausa',
         'general_personal_desc': 'Manage your personal account and preferences.',
         'general_trader_desc': 'Access tools and features for traders.',
-        'general_agent_desc': 'View and manage your agent activities.',
+        'general_agent_desc': 'Everything you need to succeed as a FiCore agent.',
         'general_login_to_access': 'Login to Access',
         'general_page_not_found': 'Page not found',
         'general_access_now': 'Access Now',
