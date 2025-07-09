@@ -209,7 +209,7 @@ def main():
                                 "savings_goal": savings_goal,
                                 "surplus_deficit": surplus_deficit,
                                 "created_at": budget_data['created_at'].strftime('%Y-%m-%d'),
-                                "cta_url": url_for('budget.main', _external=True)
+                                "cta_url": url_for('personal/BUDGET/budget_main.html', _external=True)
                             },
                             lang=session.get('lang', 'en')
                         )
@@ -303,7 +303,7 @@ def main():
             tool_title=trans('budget_title', default='Budget Planner')
         )
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in budget.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        current_app.logger.error(f"Unexpected error in personal/BUDGET/budget_main.html for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("budget_dashboard_load_error", default='Error loading budget dashboard.'), "danger")
         return render_template(
             'personal/BUDGET/budget_main.html',
