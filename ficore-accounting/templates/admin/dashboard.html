@@ -107,12 +107,34 @@
                 </div>
             </div>
         </div>
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">{{ t('payment_locations_title', default='Payment Locations') | escape }}</h2>
+                    <p class="card-text fs-3">{{ stats.payment_locations }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">{{ t('tax_deadlines_title', default='Tax Deadlines') | escape }}</h2>
+                    <p class="card-text fs-3">{{ stats.tax_deadlines }}</p>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <a href="{{ url_for('admin.manage_users') }}" class="btn btn-primary">{{ t('admin_manage_users', default='Manage Users') | escape }}</a>
         <a href="{{ url_for('admin.credit_coins') }}" class="btn btn-primary">{{ t('admin_credit_coins', default='Credit Coins') | escape }}</a>
         <a href="{{ url_for('admin.audit') }}" class="btn btn-primary">{{ t('admin_view_audit_logs', default='View Audit Logs') | escape }}</a>
         <a href="{{ url_for('admin.manage_agents') }}" class="btn btn-primary">{{ t('admin_manage_agents', default='Manage Agents') | escape }}</a>
+        <a href="{{ url_for('admin.news_management') }}" class="btn btn-primary">{{ t('admin_manage_news', default='Manage News') | escape }}</a>
+        <a href="{{ url_for('admin.manage_tax_rates') }}" class="btn btn-primary">{{ t('admin_manage_tax_rates', default='Manage Tax Rates') | escape }}</a>
+        <a href="{{ url_for('admin.manage_payment_locations') }}" class="btn btn-primary">{{ t('admin_manage_payment_locations', default='Manage Payment Locations') | escape }}</a>
+        <a href="{{ url_for('admin.manage_tax_deadlines') }}" class="btn btn-primary">{{ t('admin_manage_tax_deadlines', default='Manage Tax Deadlines') | escape }}</a>
+        <a href="{{ url_for('admin.customer_reports') }}" class="btn btn-primary">{{ t('admin_customer_reports', default='Customer Reports') | escape }}</a>
+        <a href="{{ url_for('admin.manage_user_roles') }}" class="btn btn-primary">{{ t('admin_manage_user_roles', default='Manage User Roles') | escape }}</a>
         <a href="{{ url_for('admin.admin_budgets') }}" class="btn btn-primary">{{ t('admin_manage_budgets', default='Manage Budgets') | escape }}</a>
         <a href="{{ url_for('admin.admin_bills') }}" class="btn btn-primary">{{ t('admin_manage_bills', default='Manage Bills') | escape }}</a>
         <a href="{{ url_for('admin.admin_emergency_funds') }}" class="btn btn-primary">{{ t('admin_manage_emergency_funds', default='Manage Emergency Funds') | escape }}</a>
