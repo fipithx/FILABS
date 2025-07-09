@@ -6,6 +6,15 @@ PAYMENTS_TRANSLATIONS = {
     'en': {
         'payments_dashboard': 'Payments',
         'payments_list': 'Payments List',
+        'payment_location_name': 'Name',
+        'payment_location_address': 'Address',
+        'payment_location_city': 'City',
+        'payment_location_country': 'Country',
+        'payment_location_name_placeholder': 'Enter location name',
+        'payment_location_address_placeholder': 'Enter address',
+        'payment_location_city_placeholder': 'Enter city',
+        'payment_location_country_placeholder': 'Enter country',
+        'confirm_delete_payment_location': 'Are you sure you want to delete this payment location?',
         'payments_add_payment': 'Add Payment',
         # Payments
         'payments_recipient_name': 'Recipient Name',
@@ -108,5 +117,15 @@ PAYMENTS_TRANSLATIONS = {
         'payments_total_amount': 'Jimillar Adadi',
         'payments_today_payments': 'Biyan Kuɗin Yau',
         'payments_monthly_payments': 'Biyan Kuɗin Wata',
+                # Payment Locations
+        'payment_location_name': 'Suna',
+        'payment_location_address': 'Adireshi',
+        'payment_location_city': 'Gari',
+        'payment_location_country': 'Ƙasa',
+        'payment_location_name_placeholder': 'Shigar da sunan wurin',
+        'payment_location_address_placeholder': 'Shigar da adireshi',
+        'payment_location_city_placeholder': 'Shigar da gari',
+        'payment_location_country_placeholder': 'Shigar da ƙasa',
+        'confirm_delete_payment_location': 'Kuna da tabbacin cewa kuna so ku goge wannan wurin biya?',
     }
 }
