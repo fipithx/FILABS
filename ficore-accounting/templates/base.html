@@ -271,7 +271,7 @@
                 return;
             }
             try {
-                const response = await fetch('{{ url_for("notifications") | e }}');
+                const response = await fetch('{{ url_for("personal.notifications") | e }}');
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 if (data.error) {
