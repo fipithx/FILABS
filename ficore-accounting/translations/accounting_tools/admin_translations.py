@@ -115,6 +115,59 @@ ADMIN_TRANSLATIONS = {
         'admin_maintenance_mode': 'Maintenance Mode',
         'admin_enable_maintenance': 'Enable Maintenance Mode',
         'admin_disable_maintenance': 'Disable Maintenance Mode',
+                # Admin Dashboard
+        'admin_dashboard': 'Admin Dashboard',
+        'admin_recent_users': 'Recent Users',
+        'admin_no_users': 'No users found',
+        'admin_manage_users': 'Manage Users',
+        'admin_credit_coins': 'Credit Coins',
+        'admin_view_audit_logs': 'View Audit Logs',
+        'admin_manage_agents': 'Manage Agents',
+        'admin_manage_budgets': 'Manage Budgets',
+        'admin_manage_bills': 'Manage Bills',
+        'admin_manage_emergency_funds': 'Manage Emergency Funds',
+        'admin_manage_net_worth': 'Manage Net Worth',
+        'admin_manage_quiz_results': 'Manage Quiz Results',
+        'admin_manage_learning_hub': 'Manage Learning Hub',
+        'payment_locations_title': 'Payment Locations',
+        'tax_deadlines_title': 'Tax Deadlines',
+
+        # News Management
+        'admin_news_management': 'News Management',
+        'admin_add_news': 'Add News Article',
+        'admin_edit_news': 'Edit News Article',
+        'admin_no_news': 'No news articles found',
+        'admin_manage_news': 'Manage News',
+
+        # Tax Rates
+        'admin_tax_rates': 'Manage Tax Rates',
+        'admin_add_tax_rate': 'Add Tax Rate',
+        'admin_edit_tax_rate': 'Edit Tax Rate',
+        'admin_tax_rates_list': 'Tax Rates',
+        'admin_no_tax_rates': 'No tax rates found',
+        'admin_manage_tax_rates': 'Manage Tax Rates',
+
+        # User Roles
+        'admin_user_roles': 'Manage User Roles',
+        'admin_users_list': 'Users',
+        'admin_update_role': 'Update Role',
+        'admin_manage_user_roles': 'Manage User Roles',
+
+        # Payment Locations
+        'admin_payment_locations': 'Manage Payment Locations',
+        'admin_add_payment_location': 'Add Payment Location',
+        'admin_edit_payment_location': 'Edit Payment Location',
+        'admin_payment_locations_list': 'Payment Locations',
+        'admin_no_payment_locations': 'No payment locations found',
+        'admin_manage_payment_locations': 'Manage Payment Locations',
+
+        # Tax Deadlines
+        'admin_tax_deadlines': 'Manage Tax Deadlines',
+        'admin_add_tax_deadline': 'Add Tax Deadline',
+        'admin_edit_tax_deadline': 'Edit Tax Deadline',
+        'admin_deadlines_list': 'Tax Deadlines',
+        'admin_no_tax_deadlines': 'No tax deadlines found',
+        'admin_manage_tax_deadlines': 'Manage Tax Deadlines',
     },
     'ha': {
         'admin_dashboard': 'Allon Gudanarwa',
@@ -228,5 +281,112 @@ ADMIN_TRANSLATIONS = {
         'admin_no_quiz_results': 'Babu Sakamakon Jarabawa a Samuwa',
         'admin_no_net_worth': 'Babu Bayanan Darajar Kuɗi a Samuwa',
         'admin_no_emergency_funds': 'Babu Kuɗaɗen Gaggawa a Samuwa',
+                # Admin Dashboard
+        'admin_dashboard': 'Admin Dashboard',
+        'admin_recent_users': 'Recent Users',
+        'admin_no_users': 'No users found',
+        'admin_manage_users': 'Manage Users',
+        'admin_credit_coins': 'Credit Coins',
+        'admin_view_audit_logs': 'View Audit Logs',
+        'admin_manage_agents': 'Manage Agents',
+        'admin_manage_budgets': 'Manage Budgets',
+        'admin_manage_bills': 'Manage Bills',
+        'admin_manage_emergency_funds': 'Manage Emergency Funds',
+        'admin_manage_net_worth': 'Manage Net Worth',
+        'admin_manage_quiz_results': 'Manage Quiz Results',
+        'admin_manage_learning_hub': 'Manage Learning Hub',
+        'payment_locations_title': 'Payment Locations',
+        'tax_deadlines_title': 'Tax Deadlines',
+
+        # News Management
+        'admin_news_management': 'News Management',
+        'admin_add_news': 'Add News Article',
+        'admin_edit_news': 'Edit News Article',
+        'admin_no_news': 'No news articles found',
+        'admin_manage_news': 'Manage News',
+
+        # Tax Rates
+        'admin_tax_rates': 'Manage Tax Rates',
+        'admin_add_tax_rate': 'Add Tax Rate',
+        'admin_edit_tax_rate': 'Edit Tax Rate',
+        'admin_tax_rates_list': 'Tax Rates',
+        'admin_no_tax_rates': 'No tax rates found',
+        'admin_manage_tax_rates': 'Manage Tax Rates',
+
+        # User Roles
+        'admin_user_roles': 'Manage User Roles',
+        'admin_users_list': 'Users',
+        'admin_update_role': 'Update Role',
+        'admin_manage_user_roles': 'Manage User Roles',
+
+        # Payment Locations
+        'admin_payment_locations': 'Manage Payment Locations',
+        'admin_add_payment_location': 'Add Payment Location',
+        'admin_edit_payment_location': 'Edit Payment Location',
+        'admin_payment_locations_list': 'Payment Locations',
+        'admin_no_payment_locations': 'No payment locations found',
+        'admin_manage_payment_locations': 'Manage Payment Locations',
+
+        # Tax Deadlines
+        'admin_tax_deadlines': 'Manage Tax Deadlines',
+        'admin_add_tax_deadline': 'Add Tax Deadline',
+        'admin_edit_tax_deadline': 'Edit Tax Deadline',
+        'admin_deadlines_list': 'Tax Deadlines',
+        'admin_no_tax_deadlines': 'No tax deadlines found',
+        'admin_manage_tax_deadlines': 'Manage Tax Deadlines'
+    },
+    'ha': {
+        # Admin Dashboard
+        'admin_dashboard': 'Dashboard na Admin',
+        'admin_recent_users': 'Masu Amfani na Kwanan Nan',
+        'admin_no_users': 'Ba a sami masu amfani ba',
+        'admin_manage_users': 'Gudanar da Masu Amfani',
+        'admin_credit_coins': 'Ba da Kuɗin Kuɗi',
+        'admin_view_audit_logs': 'Duba Rajistan Ayyuka',
+        'admin_manage_agents': 'Gudanar da Wakilai',
+        'admin_manage_budgets': 'Gudanar da Kasafin Kuɗi',
+        'admin_manage_bills': 'Gudanar da Kuɗin Bili',
+        'admin_manage_emergency_funds': 'Gudanar da Asusu na Gaggawa',
+        'admin_manage_net_worth': 'Gudanar da Darajar Kuɗi',
+        'admin_manage_quiz_results': 'Gudanar da Sakamakon Tambayoyi',
+        'admin_manage_learning_hub': 'Gudanar da Cibiyar Koyo',
+        'payment_locations_title': 'Wuraren Biya',
+        'tax_deadlines_title': 'Ranar Ƙarshe na Haraji',
+
+        # News Management
+        'admin_news_management': 'Gudanar da Labarai',
+        'admin_add_news': 'Ƙara Labarin Labarai',
+        'admin_edit_news': 'Gyara Labarin Labarai',
+        'admin_no_news': 'Ba a sami labaran labarai ba',
+        'admin_manage_news': 'Gudanar da Labarai',
+
+        # Tax Rates
+        'admin_tax_rates': 'Gudanar da Ƙimar Haraji',
+        'admin_add_tax_rate': 'Ƙara Ƙimar Haraji',
+        'admin_edit_tax_rate': 'Gyara Ƙimar Haraji',
+        'admin_tax_rates_list': 'Ƙimar Haraji',
+        'admin_no_tax_rates': 'Ba a sami ƙimar haraji ba',
+        'admin_manage_tax_rates': 'Gudanar da Ƙimar Haraji',
+
+        # User Roles
+        'admin_user_roles': 'Gudanar da Matsayin Masu Amfani',
+        'admin_users_list': 'Masu Amfani',
+        'admin_update_role': 'Sabunta Matsayi',
+        'admin_manage_user_roles': 'Gudanar da Matsayin Masu Amfani',
+
+        # Payment Locations
+        'admin_payment_locations': 'Gudanar da Wuraren Biya',
+        'admin_add_payment_location': 'Ƙara Wurin Biya',
+        'admin_edit_payment_location': 'Gyara Wurin Biya',
+        'admin_payment_locations_list': 'Wuraren Biya',
+        'admin_no_payment_locations': 'Ba a sami wuraren biya ba',
+        'admin_manage_payment_locations': 'Gudanar da Wuraren Biya',
+
+        # Tax Deadlines
+        'admin_tax_deadlines': 'Gudanar da Ranar Ƙarshe na Haraji',
+        'admin_add_tax_deadline': 'Ƙara Ranar Ƙarshe na Haraji',
+        'admin_edit_tax_deadline': 'Gyara Ranar Ƙarshe na Haraji',
+        'admin_deadlines_list': 'Ranar Ƙarshe na Haraji',
+        'admin_no_tax_deadlines': 'Ba a sami ranar ƙarshe na haraji ba',
     }
 }
