@@ -191,19 +191,6 @@
                 </div>
             </div>
 
-            <!-- Bottom Navigation -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <nav class="nav justify-content-center">
-                        {% for item in bottom_nav_items %}
-                            <a class="nav-link" href="{{ item.get('url', '#') }}">
-                                {{ t(item.label_key, default=item.label) | e }}
-                            </a>
-                        {% endfor %}
-                    </nav>
-                </div>
-            </div>
-        </div>
     {% else %}
         <div class="container">
             <!-- Welcome Section -->
