@@ -5,6 +5,18 @@ Budget management translations for personal finance tools
 BUDGET_TRANSLATIONS = {
     'en': {
         'budget_budget_planner': 'Budget',
+        'budget_income_max': 'Maximum income limit reached.',
+    'budget_amount_positive': 'Amount must be a positive value.',
+    'budget_tip_track_expenses': 'Track your expenses daily to stay within budget.',
+    'budget_tip_ajo_savings': 'Consider ajo savings for consistent group contributions.',
+    'budget_tip_data_subscriptions': 'Review data subscriptions to reduce unnecessary costs.',
+    'budget_tip_plan_dependents': 'Plan for dependents to ensure financial stability.',
+    'budget_title': 'Budget Overview',
+    'budget_manage_finances': 'Manage Your Finances',
+    'budget_dashboard': 'Budget Dashboard',
+    'budget_personal_info': 'Personal Information',
+    'budget_first_name': 'First Name',
+    'budget_first_name_placeholder': 'Enter your first name',
         'budget_budget_desc': 'Plan and track your spending with a budget.',
         'budget_tooltip': 'Create and manage your budget.',
         'monthly_income': 'Monthly Income',
@@ -191,6 +203,18 @@ BUDGET_TRANSLATIONS = {
         'budget_savings_goal_help': 'Wannan shine adadin da kake son adanawa kowane wata.', # "This is the amount you aim to save each month."
         'budget_calculate_budget': 'Lissafta Kasafin Kudi', # "Calculate Budget"
         'budget_summary': 'Takaitaccen Kasafin Kudi', # "Budget Summary"
+        'budget_income_max': 'An kai iyakar kuɗin shiga.',
+    'budget_amount_positive': 'Adadin dole ne ya zama mai inganci.',
+    'budget_tip_track_expenses': 'Bincika kashe kuɗin ku yau da kullum don kasancewa cikin kasafin kuɗi.',
+    'budget_tip_ajo_savings': 'Yi la’akari da tanadi na ajo don gudummawar ƙungiya mai dorewa.',
+    'budget_tip_data_subscriptions': 'Duba biyan kuɗin bayanai don rage kashe kuɗi maras muhimmanci.',
+    'budget_tip_plan_dependents': 'Shirya wa masu dogara da ku don tabbatar da kwanciyar hankali na kuɗi.',
+    'budget_title': 'Bayani akan Kasafin Kuɗi',
+    'budget_manage_finances': 'Sarrafa Kuɗin Ku',
+    'budget_dashboard': 'Dashboard na Kasafin Kuɗi',
+    'budget_personal_info': 'Bayanin Kai Tsaye',
+    'budget_first_name': 'Sunan Farko',
+    'budget_first_name_placeholder': 'Shigar da sunan farko',
         'budget_surplus_deficit': 'Riba/Rashi', # "Surplus/Deficit"
         'budget_expense_breakdown': 'Rabon Kashe-kashe', # "Expense Breakdown"
     }
