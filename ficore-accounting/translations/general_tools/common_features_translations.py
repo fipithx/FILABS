@@ -6,7 +6,15 @@ COMMON_FEATURES_TRANSLATIONS = {
     'en': {
         # News Management
         'news_article_not_found': 'Article not found',
-                # News Management
+                # Tax Deadlines
+        'deadline_date': 'Deadline Date',
+        'tax_deadline_description_placeholder': 'Enter description',
+        'confirm_delete_tax_deadline': 'Are you sure you want to delete this tax deadline?',
+        'deadline_personal': 'Personal',
+        'deadline_trader': 'Trader',
+        'deadline_agent': 'Agent',
+        'deadline_company': 'Company',
+        'deadline_vat': 'VAT',
         'news_title': 'Title',
         'news_content': 'Content',
         'news_source_link': 'Source Link',
@@ -529,5 +537,13 @@ COMMON_FEATURES_TRANSLATIONS = {
         'tax_role_agent': 'Wakili',
         'tax_role_company': 'Kamfani',
         'tax_role_vat': 'VAT',
+                # Tax Deadlines
+        'deadline_date': 'Ranar Ƙarshe',
+        'tax_deadline_description_placeholder': 'Shigar da bayani',
+        'confirm_delete_tax_deadline': 'Kuna da tabbacin cewa kuna so ku goge wannan ranar ƙarshe na haraji?',
+        'deadline_personal': 'Na Mutum',
+        'deadline_trader': 'Dan Kasuwa',
+        'deadline_agent': 'Wakili',
+        'deadline_company': 'Kamfani',
     }
 }
