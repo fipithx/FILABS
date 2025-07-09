@@ -835,12 +835,12 @@ def create_app():
             if current_user.role == 'agent':
                 return redirect(url_for('agents_bp.agent_portal'))
             elif current_user.role == 'trader':
-                return redirect(url_for('general'))
+                return redirect(url_for('general_bp.home'))
             elif current_user.role == 'admin':
                 try:
-                    return redirect(url_for('dashboard'))
+                    return redirect(url_for('dashboard.index'))
                 except:
-                    return redirect(url_for('general'))
+                    return redirect(url_for('general_bp.home'))
             elif current_user.role == 'personal':
                 return redirect(url_for('personal_info'))
         try:
