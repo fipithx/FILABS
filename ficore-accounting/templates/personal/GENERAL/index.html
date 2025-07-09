@@ -212,16 +212,16 @@
                     <h1>{{ t('general_welcome', default='Manage Your Finances with FiCore Africa') | e }}</h1>
                     <p>{{ t('general_ficore_desc', default='Africa’s leading platform for personal finance, business management, and agent services, tailored for you.') | e }}</p>
                     <div class="btn-group mb-3">
-                        <a href="{{ url_for('users.register') }}" class="btn btn-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-primary">
                             {{ t('general_get_started', default='Get Started') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_personal') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_personal', default='Personal Sign Up') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_business') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_business', default='Business Sign Up') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_agent') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_agent', default='Agent Sign Up') | e }}
                         </a>
                         <a href="{{ url_for('users.login') }}" class="btn btn-outline-primary">
@@ -245,7 +245,7 @@
                         <div class="card-body">
                             <h5>{{ t('general_personal', default='Personal Users') | e }}</h5>
                             <p>{{ t('general_personal_desc', default='Plan budgets, track bills, and boost your financial health.') | e }}</p>
-                            <a href="{{ url_for('users.register_personal') }}" class="btn btn-primary btn-sm">
+                            <a href="{{ url_for('users.signup') }}" class="btn btn-primary btn-sm">
                                 {{ t('general_get_started', default='Get Started') | e }}
                             </a>
                         </div>
@@ -256,7 +256,7 @@
                         <div class="card-body">
                             <h5>{{ t('general_trader', default='Business Owners') | e }}</h5>
                             <p>{{ t('general_trader_desc', default='Streamline debtors, creditors, and inventory management.') | e }}</p>
-                            <a href="{{ url_for('users.register_business') }}" class="btn btn-primary btn-sm">
+                            <a href="{{ url_for('users.signup') }}" class="btn btn-primary btn-sm">
                                 {{ t('general_get_started', default='Get Started') | e }}
                             </a>
                         </div>
@@ -267,7 +267,7 @@
                         <div class="card-body">
                             <h5>{{ t('general_agent', default='Agents') | e }}</h5>
                             <p>{{ t('general_agent_desc', default='Onboard traders and manage tokens effortlessly.') | e }}</p>
-                            <a href="{{ url_for('users.register_agent') }}" class="btn btn-primary btn-sm">
+                            <a href="{{ url_for('users.signup') }}" class="btn btn-primary btn-sm">
                                 {{ t('general_get_started', default='Get Started') | e }}
                             </a>
                         </div>
@@ -443,16 +443,16 @@
                     <h3>{{ t('general_ready_to_start', default='Ready to Take Control of Your Finances?') | e }}</h3>
                     <p>{{ t('general_signup_prompt', default='Sign up today to access tools for personal finance, business management, or agent services.') | e }}</p>
                     <div class="btn-group mb-3">
-                        <a href="{{ url_for('users.register') }}" class="btn btn-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-primary">
                             {{ t('general_get_started', default='Get Started') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_personal') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_personal', default='Personal Sign Up') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_business') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_business', default='Business Sign Up') | e }}
                         </a>
-                        <a href="{{ url_for('users.register_agent') }}" class="btn btn-outline-primary">
+                        <a href="{{ url_for('users.signup') }}" class="btn btn-outline-primary">
                             {{ t('general_signup_agent', default='Agent Sign Up') | e }}
                         </a>
                         <a href="{{ url_for('users.login') }}" class="btn btn-outline-primary">
