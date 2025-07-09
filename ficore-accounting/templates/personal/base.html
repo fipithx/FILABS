@@ -23,10 +23,10 @@
 <body class="{% if session.get('dark_mode', False) %}dark-mode{% endif %}">
     <header class="top-header container-fluid d-flex align-items-center justify-content-between py-2 px-3 mb-3" style="z-index: 1030;">
         {% if current_user.is_authenticated %}
-            <div class="d-flex align-items-center text-truncate">
+            <div class="d-flex align-items-center ">
                 <a class="navbar-brand d-flex align-items-center" href="{{ url_for('personal.index') | e }}" aria-label="{{ t('general_ficore_africa', default='FiCore Africa') | e }}">
                     <img src="{{ current_user.profile_picture if current_user.profile_picture else url_for('static', filename='img/default_profile.png') | e }}" alt="{{ t('general_user_profile_picture', default='User Profile Picture') | e }}" class="logo rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
-                    <span class="welcome-text text-truncate" style="max-width: 150px;">{{ t('general_welcome', default='Welcome') | e }}, {{ current_user.display_name | default(current_user.id) | e }}</span>
+                    <span class="welcome-text " style="max-width: 150px;">{{ t('general_welcome', default='Welcome') | e }}, {{ current_user.display_name | default(current_user.id) | e }}</span>
                 </a>
             </div>
             <div class="header-actions d-flex align-items-center gap-2">
@@ -84,9 +84,9 @@
             <div class="container-fluid d-flex justify-content-around align-items-center px-3">
                 {% if bottom_nav_items and bottom_nav_items|length > 0 %}
                     {% for item in bottom_nav_items %}
-                        <a href="{{ item.url | default('#') | e }}" class="nav-item text-center text-truncate {% if request.endpoint == item.endpoint %}active{% endif %}" aria-label="{{ t(item.label_key, default=item.label) | e }}">
+                        <a href="{{ item.url | default('#') | e }}" class="nav-item text-center  {% if request.endpoint == item.endpoint %}active{% endif %}" aria-label="{{ t(item.label_key, default=item.label) | e }}">
                             <i class="bi {{ item.icon | default('bi-question-circle') | e }} fs-4 mb-1"></i>
-                            <div class="nav-label text-truncate fs-6">{{ t(item.label_key, default=item.label) | e }}</div>
+                            <div class="nav-label  fs-6">{{ t(item.label_key, default=item.label) | e }}</div>
                         </a>
                     {% endfor %}
                 {% else %}
