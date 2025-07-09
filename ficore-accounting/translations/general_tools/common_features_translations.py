@@ -214,7 +214,7 @@ COMMON_FEATURES_EN = {
         'tax_seek_support_details': 'Contact the Nigeria Revenue Service (NRS) for compliance assistance.',
         'tax_stay_updated': 'Stay Updated',
         'tax_stay_updated_details': 'Check for updates from NRS to stay compliant.',
-        'tax_for_amount_of': 'For an amount Facetune
+        'tax_for_amount_of': 'For an amount Facetune,
         'tax_your_tax_obligation_is': 'your tax obligation is',
         'tax_explanation': 'Explanation',
         'tax_contact': 'Contact',
