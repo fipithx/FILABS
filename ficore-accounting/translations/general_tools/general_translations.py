@@ -27,7 +27,7 @@ GENERAL_TRANSLATIONS = {
         'general_personal': 'Personal',
         'general_trader': 'Trader',
         'general_agent': 'Agent',
-        'general_admin': 'Admin'
+        'general_admin': 'Admin',
         'general_not_found': 'Page Not Found',
         'general_no_tools_available': 'No tools available yet.',
         'general_home': 'Home',
