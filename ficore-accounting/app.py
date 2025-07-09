@@ -986,7 +986,7 @@ def create_app():
         except Exception as e:
             logger.error(f'Session error: {str(e)}')
             flash(utils.trans('invalid_lang'), 'danger')
-        return redirect(request.referer or url_for('index'))
+        return redirect(request.referrer or url_for('index'))
     
     # Accounting API routes
     @app.route('/api/debt-summary')
