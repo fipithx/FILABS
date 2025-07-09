@@ -132,6 +132,48 @@
                 <p class="text-muted text-center">{{ t('general_no_actions_available', default='No quick actions available.') | e }}</p>
             {% endif %}
         </section>
+
+        <!-- Tools Overview (for authenticated users) -->
+        <section class="section-card tools-section">
+            <h2 class="section-title text-center"><i class="bi bi-tools me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
+            <p class="text-center text-muted mb-4">{{ t('general_tools_desc', default='Powerful tools to manage your finances effectively.') | e }}</p>
+            {% if explore_features_for_template %}
+                {% set categories = [] %}
+                {% if current_user.role == 'personal' %}
+                    {% set categories = ['Personal'] %}
+                {% elif current_user.role == 'trader' %}
+                    {% set categories = ['Business'] %}
+                {% elif current_user.role == 'agent' %}
+                    {% set categories = ['Agent'] %}
+                {% elif current_user.role == 'admin' %}
+                    {% set categories = ['Personal', 'Business', 'Agent', 'Proof of Concept', 'News'] %}
+                {% endif %}
+                {% for category in categories %}
+                    {% set category_tools = explore_features_for_template | selectattr('category', 'equalto', category) | list %}
+                    {% if category_tools %}
+                        <div class="mb-4">
+                            <h3 class="fw-bold text-primary">{{ t('general_' + category | lower + '_tools', default=category + ' Tools') | e }}</h3>
+                            <div class="row row-cols-1 row-cols-md-3 g-4">
+                                {% for tool in category_tools %}
+                                    <div class="col">
+                                        <div class="tool-card h-100 shadow-sm">
+                                            <h4 class="fw-bold"><i class="bi {{ tool.get('icon', 'bi-circle') | e }} me-2 text-primary"></i>{{ t(tool.get('label_key', ''), default=tool.get('label', 'Tool')) | e }}</h4>
+                                            <p class="text-muted">{{ t(tool.get('description_key', ''), default=tool.get('description', 'Description not available')) | e }}</p>
+                                            <a href="{{ url_for(tool.get('endpoint', 'personal.index')) | e }}" class="btn btn-primary btn-sm mt-auto">{{ t('general_access_now', default='Access Now') | e }}</a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if not categories %}
+                    <p class="text-muted text-center">{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
+                {% endif %}
+            {% else %}
+                <p class="text-muted text-center">{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
+            {% endif %}
+        </section>
     {% else %}
         <!-- Hero Section -->
         <section class="section-card hero text-center">
@@ -355,43 +397,6 @@
                 </div>
                 <a href="{{ url_for('personal.quiz.main') | e }}" class="btn btn-outline-primary btn-lg" aria-label="{{ t('quiz_take_quiz', default='Discover Your Financial Personality') | e }}">{{ t('quiz_take_quiz', default='Take Our Quiz') | e }}</a>
             </div>
-        </section>
-    {% endif %}
-
-    <!-- Tools Overview (for authenticated users) -->
-    {% if current_user.is_authenticated %}
-        <section class="section-card tools-section">
-            <h2 class="section-title text-center"><i class="bi bi-tools me-2 text-primary"></i>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h2>
-            <p class="text-center text-muted mb-4">{{ t('general_tools_desc', default='Powerful tools to manage your finances effectively.') | e }}</p>
-            {% if current_user.role == 'personal' %}
-                {% set tools_for_template = _PERSONAL_EXPLORE_FEATURES %}
-            {% endif %}
-            {% if tools_for_template %}
-                {% set categories = ['Personal'] %}
-                {% for category in categories %}
-                    {% set category_tools = tools_for_template | selectattr('category', 'equalto', category) | list %}
-                    {% if category_tools %}
-                        <div class="mb-4">
-                            <h3 class="fw-bold text-primary">{{ t('general_' + category | lower + '_tools', default=category + ' Tools') | e }}</h3>
-                            <div class="row row-cols-1 row-cols-md-3 g-4">
-                                {% for tool in category_tools %}
-                                    <div class="col">
-                                        <div class="tool-card h-100 shadow-sm">
-                                            <h4 class="fw-bold"><i class="bi {{ tool.get('icon', 'bi-circle') | e }} me-2 text-primary"></i>{{ t(tool.get('label_key', ''), default=tool.get('label', 'Tool')) | e }}</h4>
-                                            <p class="text-muted">{{ t(tool.get('description_key', ''), default=tool.get('description', 'Description not available')) | e }}</p>
-                                            <a href="{{ url_for(tool.get('endpoint', 'personal.index')) | e }}" class="btn btn-primary btn-sm mt-auto">{{ t('general_access_now', default='Access Now') | e }}</a>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% else %}
-                        <p class="text-muted text-center">{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
-                    {% endif %}
-                {% endfor %}
-            {% else %}
-                <p class="text-muted text-center">{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
-            {% endif %}
         </section>
     {% endif %}
 </div>
