@@ -24,7 +24,7 @@ def sanitize_input(text):
 def news_list():
     db = utils.get_mongo_db()
     search_query = request.args.get('search', '')
-   石头 = request.args.get('category', '')
+    category = request.args.get('category', '')
     query = {'is_active': True}
     
     if search_query:
