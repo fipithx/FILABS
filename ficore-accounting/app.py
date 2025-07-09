@@ -127,6 +127,19 @@ def ensure_session_id(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def is_safe_referrer(referrer, host):
+    """Check if the referrer is safe (same host or None)."""
+    if not referrer:
+        return False
+    try:
+        from urllib.parse import urlparse
+        parsed_referrer = urlparse(referrer)
+        parsed_host = urlparse(f'http://{host}')
+        return parsed_referrer.netloc == parsed_host.netloc
+    except Exception as e:
+        logger.error(f'Error checking referrer safety: {str(e)}')
+        return False
+
 def setup_logging(app):
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logging.INFO)
@@ -964,7 +977,7 @@ def create_app():
         except Exception as e:
             logger.error(f'Translate API error: {str(e)}')
             return jsonify({'error': utils.trans('error')}), 500
-            
+    
     @app.route('/set_language/<lang>')
     @utils.limiter.limit('10 per minute')
     def set_language(lang):
@@ -973,10 +986,10 @@ def create_app():
         
         try:
             session['lang'] = new_lang
-            if current_user.is_authenticated and ObjectId.is_valid(current_user.id):
+            if current_user.is_authenticated:
                 try:
                     current_app.extensions['mongo']['ficodb'].users.update_one(
-                        {'_id': ObjectId(current_user.id)},
+                        {'_id': current_user.id},
                         {'$set': {'lang': new_lang}}
                     )
                 except Exception as e:
@@ -987,22 +1000,21 @@ def create_app():
                     flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
                     return redirect(url_for('index'))
                     
-        logger.info(
-            f'Set language to {new_lang} for user {current_user.id if current_user.is_authenticated else "anonymous"}',
-            extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
-        )
-        flash(utils.trans('lang_updated', default='Language updated successfully'), 'success')
-        
-        redirect_url = request.referrer if is_safe_referrer(request.referrer, request.host) else url_for('index')
-        return redirect(redirect_url)
-         
-    except Exception as e:
-    logger.error(
-        f'Session error: {str(e)}',
-        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
-    )
-    flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
-    return redirect(url_for('index'))
+            logger.info(
+                f'Set language to {new_lang} for user {current_user.id if current_user.is_authenticated else "anonymous"}',
+                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
+            )
+            flash(utils.trans('lang_updated', default='Language updated successfully'), 'success')
+            
+            redirect_url = request.referrer if is_safe_referrer(request.referrer, request.host) else url_for('index')
+            return redirect(redirect_url)
+        except Exception as e:
+            logger.error(
+                f'Session error: {str(e)}',
+                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
+            )
+            flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
+            return redirect(url_for('index'))
     
     # Accounting API routes
     @app.route('/api/debt-summary')
