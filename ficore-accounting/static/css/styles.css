@@ -1498,25 +1498,6 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     border-color: var(--navbar-text-color) transparent transparent transparent;
 }
 
-.dropdown-menu {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 10px;
-    box-shadow: var(--card-shadow);
-    min-width: 120px;
-}
-
-.dropdown-item {
-    color: var(--text-color);
-    padding: 0.5rem 1rem;
-    font-size: clamp(0.875rem, 2vw, 0.9375rem);
-    transition: var(--transition-base);
-}
-
-.dropdown-item:hover, .dropdown-item:focus {
-    background: var(--button-secondary-hover);
-    color: var(--accent-blue);
-}
 
 .btn-link {
     color: var(--navbar-text-color);
@@ -2457,64 +2438,84 @@ h2.card-title {
     background-color: #0d6efd;
     color: #fff;
 }
-/* Dropdown Menu for Hero Section */
-.hero .dropdown-menu {
-    background: var(--card-bg); /* #ffffff in light mode, #1e293b in dark mode */
-    border: 1px solid var(--card-border); /* #e5e7eb in light mode, #4b5563 in dark mode */
-    border-radius: 8px;
-    box-shadow: var(--card-shadow); /* 0 4px 12px rgba(0, 0, 0, 0.08) in light mode */
-    min-width: 200px; /* Ensure sufficient width for dropdown items */
-    z-index: 1050; /* Higher than hero section's z-index (z-index: 1 for hero content) */
-    padding: 0.5rem 0; /* Add padding to the menu container */
-}
-
-.hero .dropdown-item {
-    color: var(--text-color); /* #1e293b in light mode, #f1f5f9 in dark mode */
-    padding: 0.5rem 1rem; /* Consistent padding for each item */
-    font-size: clamp(0.875rem, 2vw, 0.9375rem);
-    transition: var(--transition-base); /* Smooth hover effect */
-    background: transparent; /* Ensure no inherited background */
-    border-radius: 4px; /* Subtle rounding for hover effect */
-    margin: 0.125rem 0.5rem; /* Small margin to prevent text clipping */
-}
-
-.hero .dropdown-item:hover,
-.hero .dropdown-item:focus {
-    background: var(--button-secondary-hover); /* #e8f0ff in light mode, #334155 in dark mode */
-    color: var(--accent-blue); /* #3A86FF in light mode, #93c5fd in dark mode */
-}
-
-.hero .dropdown-divider {
-    border-top: 1px solid var(--card-border); /* #e5e7eb in light mode, #4b5563 in dark mode */
-    margin: 0.5rem 0; /* Consistent spacing */
-}
-
-/* Ensure dropdown menu is visible in hero section */
-.hero .dropdown {
+/* Dropdown Menu for CTA Section */
+.cta-section .dropdown {
     position: relative;
-    z-index: 1050; /* Ensure dropdown container is above hero's ::before overlay */
+    z-index: 1050; /* Ensure dropdown appears above overlapping sections */
 }
 
-/* Dark mode specific adjustments */
-.dark-mode .hero .dropdown-menu {
-    background: var(--card-bg); /* #1e293b */
-    border: 1px solid var(--card-border); /* #4b5563 */
-    box-shadow: var(--card-shadow); /* 0 4px 12px rgba(0, 0, 0, 0.2) */
+.cta-section .dropdown-menu {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    min-width: 200px;
+    z-index: 1055;
+    padding: 0.5rem 0;
 }
 
-.dark-mode .hero .dropdown-item {
-    color: var(--text-color); /* #f1f5f9 */
+.cta-section .dropdown-item {
+    color: var(--text-color);
+    padding: 0.5rem 1rem;
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    transition: var(--transition-base);
+    background: transparent;
+    border-radius: 4px;
+    margin: 0.125rem 0.5rem;
 }
 
-.dark-mode .hero .dropdown-item:hover,
-.dark-mode .hero .dropdown-item:focus {
-    background: var(--button-secondary-hover); /* #334155 */
-    color: var(--accent-blue); /* #93c5fd */
+.cta-section .dropdown-item:hover,
+.cta-section .dropdown-item:focus {
+    background: var(--button-secondary-hover);
+    color: var(--accent-blue);
 }
 
-.dark-mode .hero .dropdown-divider {
-    border-top: 1px solid var(--card-border); /* #4b5563 */
+.cta-section .dropdown-divider {
+    border-top: 1px solid var(--card-border);
+    margin: 0.5rem 0;
 }
+
+/* Dark Mode */
+.dark-mode .cta-section .dropdown-menu {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+}
+
+.dark-mode .cta-section .dropdown-item {
+    color: var(--text-color);
+}
+
+.dark-mode .cta-section .dropdown-item:hover,
+.dark-mode .cta-section .dropdown-item:focus {
+    background: var(--button-secondary-hover);
+    color: var(--accent-blue);
+}
+
+.dark-mode .cta-section .dropdown-divider {
+    border-top: 1px solid var(--card-border);
+}
+
+.dropdown-menu {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    min-width: 120px;
+}
+
+.dropdown-item {
+    color: var(--text-color);
+    padding: 0.5rem 1rem;
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    transition: var(--transition-base);
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background: var(--button-secondary-hover);
+    color: var(--accent-blue);
+}
+
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
 .notification-description,
