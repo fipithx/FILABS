@@ -109,6 +109,22 @@ _PERSONAL_TOOLS = [
         "tooltip_key": "quiz_tooltip",
         "icon": "bi-question-circle"
     },
+        {
+        "endpoint": "personal.learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
+    },
+    {
+        "endpoint": "personal.net_worth.main",
+        "label": "Net Worth",
+        "label_key": "net_worth_calculator",
+        "description_key": "net_worth_desc",
+        "tooltip_key": "net_worth_tooltip",
+        "icon": "bi-cash-stack"
+    },
 ]
 
 _PERSONAL_NAV = [
@@ -218,6 +234,14 @@ _PERSONAL_EXPLORE_FEATURES = [
         "description_key": "bill_bill_desc",
         "tooltip_key": "bill_tooltip",
         "icon": "bi-receipt"
+    },
+        {
+        "endpoint": "personal.learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
     },
 ]
 
