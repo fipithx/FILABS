@@ -3,6 +3,7 @@ Common features translations including news, notifications, and shared functiona
 """
 
 COMMON_FEATURES_EN = {
+'en': {
     # News Management
     'news_article_not_found': 'Article not found',
     'news_title': 'Title',
@@ -292,7 +293,7 @@ COMMON_FEATURES_EN = {
     'connection_successful': 'Connection successful',
     'connection_failed': 'Connection failed'
 }
-    'ha': {
+'ha': {
     # News Management
     'news_article_not_found': 'Ba a sami labarin ba',
     'news_title': 'Take',
