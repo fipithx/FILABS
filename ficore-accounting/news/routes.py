@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from translations import trans
 import utils
 import bleach
-import datetime
+from datetime import datetime
 from babel.dates import format_date
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def sanitize_input(text):
 def news_list():
     db = utils.get_mongo_db()
     search_query = request.args.get('search', '')
-    category = request.args.get('category', '')
+   石头 = request.args.get('category', '')
     query = {'is_active': True}
     
     if search_query:
@@ -41,14 +41,25 @@ def news_list():
         article['_id'] = str(article['_id'])
         # Format date for translation
         try:
-            article['published_at_formatted'] = format_date(
-                article['published_at'], 
-                format='medium', 
-                locale=lang
-            )
+            if not isinstance(article['published_at'], datetime):
+                logger.error(f"Invalid published_at type for article {article['_id']}: {type(article['published_at'])} - {article['published_at']}")
+                article['published_at_formatted'] = "Date unavailable"
+            else:
+                article['published_at_formatted'] = format_date(
+                    article['published_at'], 
+                    format='medium', 
+                    locale=lang
+                )
         except Exception as e:
-            logger.error(f"Date formatting failed for article {article['_id']}: {str(e)}")
-            article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+            logger.error(f"Date formatting failed for article {article['_id']}: published_at={article['published_at']}, error={str(e)}")
+            article['published_at_formatted'] = "Date unavailable"
+        
+        article['published_on'] = trans(
+            'news_published_on', 
+            default='Published on {date}', 
+            lang=lang, 
+            date=str(article['published_at_formatted'])
+        )
     
     categories = db.news.distinct('category')
     logger.info(f"News list queried: user={current_user.id}, search={search_query}, category={category}, articles={len(articles)}")
@@ -58,22 +69,9 @@ def news_list():
             'id': str(article['_id']),
             'title': article['title'],
             'category': article.get('category', ''),
-            'published_at': article['published_at'].strftime('%Y-%m-%d'),
+            'published_at': article['published_at'].strftime('%Y-%m-%d') if isinstance(article['published_at'], datetime) else "Date unavailable",
             'content': article['content'][:100] + '...' if len(article['content']) > 100 else article['content']
         } for article in articles])
-    
-    # Pass formatted date to trans function for news_published_on
-    articles = [
-        {
-            **article,
-            'published_on': trans(
-                'news_published_on', 
-                default='Published on {date}', 
-                lang=lang, 
-                date=article['published_at_formatted']
-            )
-        } for article in articles
-    ]
     
     return render_template(
         'news/news.html',
@@ -104,20 +102,24 @@ def news_detail(article_id):
     article['_id'] = str(article['_id'])
     # Format date for translation
     try:
-        article['published_at_formatted'] = format_date(
-            article['published_at'], 
-            format='medium', 
-            locale=lang
-        )
+        if not isinstance(article['published_at'], datetime):
+            logger.error(f"Invalid published_at type for article {article['_id']}: {type(article['published_at'])} - {article['published_at']}")
+            article['published_at_formatted'] = "Date unavailable"
+        else:
+            article['published_at_formatted'] = format_date(
+                article['published_at'], 
+                format='medium', 
+                locale=lang
+            )
     except Exception as e:
-        logger.error(f"Date formatting failed for article {article_id}: {str(e)}")
-        article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+        logger.error(f"Date formatting failed for article {article['_id']}: published_at={article['published_at']}, error={str(e)}")
+        article['published_at_formatted'] = "Date unavailable"
     
     article['published_on'] = trans(
         'news_published_on', 
         default='Published on {date}', 
         lang=lang, 
-        date=article['published_at_formatted']
+        date=str(article['published_at_formatted'])
     )
     
     logger.info(f"News detail viewed: id={article_id}, title={article['title']}, user={current_user.id}")
@@ -165,20 +167,24 @@ def news_management():
         article['_id'] = str(article['_id'])
         # Format date for translation
         try:
-            article['published_at_formatted'] = format_date(
-                article['published_at'], 
-                format='medium', 
-                locale=lang
-            )
+            if not isinstance(article['published_at'], datetime):
+                logger.error(f"Invalid published_at type for article {article['_id']}: {type(article['published_at'])} - {article['published_at']}")
+                article['published_at_formatted'] = "Date unavailable"
+            else:
+                article['published_at_formatted'] = format_date(
+                    article['published_at'], 
+                    format='medium', 
+                    locale=lang
+                )
         except Exception as e:
-            logger.error(f"Date formatting failed for article {article['_id']}: {str(e)}")
-            article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+            logger.error(f"Date formatting failed for article {article['_id']}: published_at={article['published_at']}, error={str(e)}")
+            article['published_at_formatted'] = "Date unavailable"
         
         article['published_on'] = trans(
             'news_published_on', 
             default='Published on {date}', 
             lang=lang, 
-            date=article['published_at_formatted']
+            date=str(article['published_at_formatted'])
         )
     
     return render_template(
@@ -234,20 +240,24 @@ def edit_news(article_id):
     
     article['_id'] = str(article['_id'])
     try:
-        article['published_at_formatted'] = format_date(
-            article['published_at'], 
-            format='medium', 
-            locale=lang
-        )
+        if not isinstance(article['published_at'], datetime):
+            logger.error(f"Invalid published_at type for article {article['_id']}: {type(article['published_at'])} - {article['published_at']}")
+            article['published_at_formatted'] = "Date unavailable"
+        else:
+            article['published_at_formatted'] = format_date(
+                article['published_at'], 
+                format='medium', 
+                locale=lang
+            )
     except Exception as e:
-        logger.error(f"Date formatting failed for article {article_id}: {str(e)}")
-        article['published_at_formatted'] = article['published_at'].strftime('%Y-%m-%d')
+        logger.error(f"Date formatting failed for article {article['_id']}: published_at={article['published_at']}, error={str(e)}")
+        article['published_at_formatted'] = "Date unavailable"
     
     article['published_on'] = trans(
         'news_published_on', 
         default='Published on {date}', 
         lang=lang, 
-        date=article['published_at_formatted']
+        date=str(article['published_at_formatted'])
     )
     
     return render_template(
