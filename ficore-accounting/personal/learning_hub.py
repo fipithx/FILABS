@@ -580,7 +580,7 @@ def init_storage(app):
         current_app.logger.info("Initializing courses storage.", extra={'session_id': 'no-request-context'})
         try:
             existing_courses = get_mongo_db().learning_materials.find({'type': 'course'})
-            if existing_courses.count() == 0:
+            if get_mongo_db().learning_materials.count_documents({'type': 'course'}) == 0:
                 current_app.logger.info("Courses collection is empty. Initializing with default courses.", extra={'session_id': 'no-request-context'})
                 default_courses = [
                     {
