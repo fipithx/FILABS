@@ -1346,16 +1346,6 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     background-size: 50%;
 }
 
-/* FAQ Section */
-.faq-section {
-    margin: 2rem 0;
-    padding: 2rem;
-    background: var(--gradient-card);
-    border-radius: 16px;
-    box-shadow: var(--card-shadow);
-    transition: var(--transition-base);
-}
-
 .accordion-item {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -2555,13 +2545,36 @@ h2.card-title {
     border-radius: 50%;
 }
 
-/* FAQ section */
+/* FAQ Section */
 .faq-section .accordion-button {
     font-size: 1.1rem;
     font-weight: 500;
+    color: var(--text-color);
+    background: var(--card-bg);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
 }
+
+.faq-section .accordion-button:not(.collapsed) {
+    background: var(--button-secondary-hover);
+    color: var(--accent-blue);
+}
+
+.faq-section .accordion-button i { margin-right: 0.5rem; font-size: 1.2rem; }
+
 .faq-section .accordion-body {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 0.75rem;
+    line-height: 1.6;
+}
+
+@media (max-width: 576px) {
+    .faq-section { margin: 1.5rem 0.5rem; }
+    .faq-section .accordion-button { font-size: 1rem; }
+    .faq-section .accordion-body { font-size: 0.85rem; }
 }
 
 /* CTA section */
