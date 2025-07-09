@@ -2440,6 +2440,8 @@ h2.card-title {
     border-radius: 0.5rem;
     box-shadow: var(--card-shadow);
     animation: slideIn 0.3s ease-out;
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes slideIn {
@@ -2687,6 +2689,8 @@ h2.card-title {
     border-radius: 10px;
     box-shadow: var(--card-shadow);
     min-width: 120px;
+    position: absolute;
+    z-index: 1055;
 }
 
 .dropdown-item {
