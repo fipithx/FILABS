@@ -1181,7 +1181,8 @@ def create_app():
                         {'$set': {'read_status': True}}
                     )
                     logger.info(f"Marked {len(notification_ids)} notifications read for user {user_id}")
-                return jsonify({'notifications': result}), 200
+                notification = result[0] if result else None
+                return jsonify({'notifications': result, 'notification': notification}), 200
         except Exception as e:
             logger.error(f'Notifications error for user {user_id}: {str(e)}')
             return jsonify({'error': utils.trans('notifications_error')}), 500
