@@ -12,7 +12,7 @@ from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db
+from utils import requires_role, is_admin, get_mongo_db, format_currency, clean_currency
 from bson import ObjectId
 from werkzeug import Response
 import utils
@@ -195,7 +195,7 @@ courses_data = {
                         "content_key": "learning_hub_lesson_tax_reforms_content",
                         "content_en": """
 ### Personal Income Tax (PIT) Changes
-- Individuals earning ₦1 million or less annually now enjoy ₦200,000 rent relief, reducing their taxable income to ₦800,000.
+- Individuals earning 1000000 or less annually now enjoy 200000 rent relief, reducing their taxable income to 800000.
 - Result: No PIT for most low-income earners.
 
 ### Value Added Tax (VAT) Relief
@@ -203,7 +203,7 @@ courses_data = {
 - Helps families reduce cost of living.
 
 ### Corporate Income Tax (CIT) Reforms
-- **Small businesses (≤₦50M turnover):**
+- **Small businesses (≤50000000 turnover):**
   - Now pay 0% CIT.
   - Can file simpler tax returns, no audited accounts required.
 - **Large companies:**
@@ -379,13 +379,13 @@ quizzes_data = {
                     "learning_hub_quiz_tax_reforms_opt1_c",
                     "learning_hub_quiz_tax_reforms_opt1_d"
                 ],
-                "options_en": ["₦100k", "₦200k", "₦500k", "None"],
+                "options_en": ["100000", "200000", "500000", "None"],
                 "answer_key": "learning_hub_quiz_tax_reforms_opt1_b",
-                "answer_en": "₦200k"
+                "answer_en": "200000"
             },
             {
                 "question_key": "learning_hub_quiz_tax_reforms_q2",
-                "question_en": "A business earning ₦30M yearly will pay what CIT rate?",
+                "question_en": "A business earning 30000000 yearly will pay what CIT rate?",
                 "options_keys": [
                     "learning_hub_quiz_tax_reforms_opt2_a",
                     "learning_hub_quiz_tax_reforms_opt2_b",
@@ -662,17 +662,17 @@ def calculate_progress_summary():
             'total': lessons_total,
             'percent': percent,
             'current_lesson': current_lesson_id,
-            'coins_earned': cp.get('coins_earned', 0)
+            'coins_earned': format_currency(cp.get('coins_earned', 0), currency='NGN')
         })
         
         total_completed += completed
-        total_quiz_scores += sum(cp.get('quiz_scores', {}).values())
-        total_coins_earned += cp.get('coins_earned', 0)
+        total_quiz_scores += sum(clean_currency(score) for score in cp.get('quiz_scores', {}).values())
+        total_coins_earned += clean_currency(cp.get('coins_earned', 0))
         badges_earned.extend(cp.get('badges_earned', []))
         if completed == lessons_total and lessons_total > 0:
             certificates_earned += 1
     
-    return progress_summary, total_completed, total_quiz_scores, certificates_earned, total_coins_earned, badges_earned
+    return progress_summary, total_completed, total_quiz_scores, certificates_earned, format_currency(total_coins_earned, currency='NGN'), badges_earned
 
 @learning_hub_bp.route('/')
 @learning_hub_bp.route('/main', methods=['GET', 'POST'])
@@ -693,8 +693,7 @@ def main():
                 tool_name='learning_hub',
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session['sid'],
-                action='main_view',
-                mongo=get_mongo_db()
+                action='main_view'
             )
         except Exception as e:
             current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -810,7 +809,7 @@ def main():
             total_courses=0,
             quiz_scores_count=0,
             certificates_earned=0,
-            total_coins_earned=0,
+            total_coins_earned=format_currency(0, currency='NGN'),
             badges_earned=[],
             profile_form=LearningHubProfileForm(),
             upload_form=UploadForm(),
@@ -948,7 +947,7 @@ def lesson_action():
                 elif course_id == 'digital_foundations' and lesson_id == 'digital_foundations-module-1-lesson-1':
                     coins_earned = 3
                     badge_earned = {'title_key': 'learning_hub_badge_digital_starter', 'title_en': 'Digital Starter'}
-                course_progress['coins_earned'] = course_progress.get('coins_earned', 0) + coins_earned
+                course_progress['coins_earned'] = clean_currency(course_progress.get('coins_earned', 0)) + coins_earned
                 if badge_earned and badge_earned not in course_progress['badges_earned']:
                     course_progress['badges_earned'].append(badge_earned)
                 save_course_progress(course_id, course_progress)
@@ -977,7 +976,7 @@ def lesson_action():
                                 "completed_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                                 "cta_url": url_for('learning_hub.main', _external=True),
                                 "unsubscribe_url": url_for('learning_hub.unsubscribe', email=profile['email'], _external=True),
-                                "coins_earned": coins_earned,
+                                "coins_earned": format_currency(coins_earned, currency='NGN'),
                                 "badge_earned": badge_earned.get('title_en') if badge_earned else None
                             },
                             lang=session.get('lang', 'en')
@@ -988,14 +987,14 @@ def lesson_action():
                 return jsonify({
                     'success': True,
                     'message': trans('learning_hub_lesson_completed', default='Lesson marked as complete'),
-                    'coins_earned': coins_earned,
+                    'coins_earned': format_currency(coins_earned, currency='NGN'),
                     'badge_earned': badge_earned.get('title_en') if badge_earned else None
                 })
             else:
                 return jsonify({
                     'success': True,
                     'message': trans('learning_hub_lesson_already_completed', default='Lesson already completed'),
-                    'coins_earned': 0,
+                    'coins_earned': format_currency(0, currency='NGN'),
                     'badge_earned': None
                 })
         
@@ -1047,7 +1046,7 @@ def quiz_action():
                 badge_earned = {'title_key': 'learning_hub_badge_reality_check', 'title_en': 'Reality Check'}
             
             course_progress['quiz_scores'][quiz_id] = score
-            course_progress['coins_earned'] = course_progress.get('coins_earned', 0) + coins_earned
+            course_progress['coins_earned'] = clean_currency(course_progress.get('coins_earned', 0)) + coins_earned
             if badge_earned and badge_earned not in course_progress['badges_earned']:
                 course_progress['badges_earned'].append(badge_earned)
             if quiz_id != 'reality_check_quiz':
@@ -1079,7 +1078,7 @@ def quiz_action():
                             "score": score,
                             "total": len(quiz['questions']),
                             "passed": passed,
-                            "coins_earned": coins_earned,
+                            "coins_earned": format_currency(coins_earned, currency='NGN'),
                             "badge_earned": badge_earned.get('title_en') if badge_earned else None,
                             "completed_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
                             "cta_url": url_for('learning_hub.main', _external=True),
@@ -1101,7 +1100,7 @@ def quiz_action():
                 'score': score,
                 'total': len(quiz['questions']),
                 'passed': passed,
-                'coins_earned': coins_earned,
+                'coins_earned': format_currency(coins_earned, currency='NGN'),
                 'badge_earned': badge_earned.get('title_en') if badge_earned else None
             })
         
@@ -1193,8 +1192,7 @@ def profile():
                 tool_name='learning_hub',
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session['sid'],
-                action='profile_submit' if request.method == 'POST' else 'profile_view',
-                mongo=get_mongo_db()
+                action='profile_submit' if request.method == 'POST' else 'profile_view'
             )
         except Exception as e:
             current_app.logger.error(f"Failed to log profile action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -1220,7 +1218,7 @@ def profile():
         tools = utils.PERSONAL_TOOLS if current_user.role == 'personal' else utils.ALL_TOOLS
         bottom_nav_items = utils.PERSONAL_NAV if current_user.role == 'personal' else utils.ADMIN_NAV
         return render_template(
-            'personal/learning_hub/learning_hub_profile.html',
+            'personal/LEARNINGHUB/learning_hub_profile.html',
             profile_form=profile_form,
             t=trans,
             lang=lang,
@@ -1235,7 +1233,7 @@ def profile():
         tools = utils.PERSONAL_TOOLS if current_user.role == 'personal' else utils.ALL_TOOLS
         bottom_nav_items = utils.PERSONAL_NAV if current_user.role == 'personal' else utils.ADMIN_NAV
         return render_template(
-            'personal/learning_hub/learning_hub_profile.html',
+            'personal/LEARNINGHUB/learning_hub_profile.html',
             profile_form=LearningHubProfileForm(),
             t=trans,
             lang=lang,
@@ -1260,8 +1258,7 @@ def unsubscribe(email):
                 tool_name='learning_hub',
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session['sid'],
-                action='unsubscribe',
-                mongo=get_mongo_db()
+                action='unsubscribe'
             )
         except Exception as e:
             current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -1304,8 +1301,7 @@ def serve_uploaded_file(filename):
                 tool_name='learning_hub',
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session['sid'],
-                action='serve_file',
-                mongo=get_mongo_db()
+                action='serve_file'
             )
         except Exception as e:
             current_app.logger.error(f"Failed to log file serve action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -1343,7 +1339,7 @@ def handle_not_found(e):
         total_courses=0,
         quiz_scores_count=0,
         certificates_earned=0,
-        total_coins_earned=0,
+        total_coins_earned=format_currency(0, currency='NGN'),
         badges_earned=[],
         profile_form=LearningHubProfileForm(),
         upload_form=UploadForm(),
@@ -1378,7 +1374,7 @@ def handle_csrf_error(e):
         total_courses=0,
         quiz_scores_count=0,
         certificates_earned=0,
-        total_coins_earned=0,
+        total_coins_earned=format_currency(0, currency='NGN'),
         badges_earned=[],
         profile_form=LearningHubProfileForm(),
         upload_form=UploadForm(),
@@ -1389,7 +1385,45 @@ def handle_csrf_error(e):
         tools=tools,
         bottom_nav_items=bottom_nav_items,
         role_filter='all'
-    ), 400
+    ), 403
+
+@learning_hub_bp.route('/legacy/<course_id>')
+@custom_login_required
+@requires_role(['personal', 'admin'])
+def legacy_course_redirect(course_id):
+    """Redirect legacy course URLs to the main learning hub."""
+    try:
+        if 'sid' not in session:
+            create_anonymous_session()
+            session.permanent = True
+            session.modified = True
+        
+        current_app.logger.info(f"Redirecting legacy course {course_id} to main", extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_legacy_redirect', default='This course URL has been updated. Redirecting to the main Learning Hub.', lang=session.get('lang', 'en')), 'info')
+        return redirect(url_for('learning_hub.main'))
+    except Exception as e:
+        current_app.logger.error(f"Error redirecting legacy course {course_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error loading course', lang=session.get('lang', 'en')), 'danger')
+        return redirect(url_for('personal.index')), 500
+
+@learning_hub_bp.route('/legacy/quiz/<quiz_id>')
+@custom_login_required
+@requires_role(['personal', 'admin'])
+def legacy_quiz_redirect(quiz_id):
+    """Redirect legacy quiz URLs to the main learning hub."""
+    try:
+        if 'sid' not in session:
+            create_anonymous_session()
+            session.permanent = True
+            session.modified = True
+        
+        current_app.logger.info(f"Redirecting legacy quiz {quiz_id} to main", extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_legacy_redirect', default='This quiz URL has been updated. Redirecting to the main Learning Hub.', lang=session.get('lang', 'en')), 'info')
+        return redirect(url_for('learning_hub.main'))
+    except Exception as e:
+        current_app.logger.error(f"Error redirecting legacy quiz {quiz_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error loading quiz', lang=session.get('lang', 'en')), 'danger')
+        return redirect(url_for('personal.index')), 500
 
 # Legacy route redirects for backward compatibility
 @learning_hub_bp.route('/courses')
@@ -1428,3 +1462,9 @@ def forum():
     lang = session.get('lang', 'en')
     flash(trans('learning_hub_forum_coming_soon', default='Community forum coming soon!'), 'info')
     return redirect(url_for('learning_hub.main'))
+
+# Initialize CSRF protection with the blueprint
+csrf.init_app(learning_hub_bp)
+
+# Register the init_app function with the Flask app
+learning_hub_bp.init_app = init_app
