@@ -123,6 +123,20 @@ def main():
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('budget_log_error', default='Error logging budget activity. Please try again.'), 'warning')
     
+    # Fetch recent activities for the current user or session
+    try:
+        activities = get_all_recent_activities(
+            db=db,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
+            limit=10
+        )
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('budget_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
+    
     try:
         filter_criteria = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         if request.method == 'POST':
@@ -185,6 +199,7 @@ def main():
                         categories={},
                         tips=[],
                         insights=[],
+                        activities=[],  # Pass empty activities list on error
                         tool_title=trans('budget_title', default='Budget Planner')
                     )
                 if form.send_email.data and form.email.data:
@@ -316,6 +331,7 @@ def main():
             categories=categories,
             tips=tips,
             insights=insights,
+            activities=activities,  # Pass activities to the template
             tool_title=trans('budget_title', default='Budget Planner')
         )
     except Exception as e:
@@ -342,6 +358,7 @@ def main():
             categories={},
             tips=[],
             insights=[],
+            activities=[],  # Pass empty activities list on error
             tool_title=trans('budget_title', default='Budget Planner')
         ), 500
 
