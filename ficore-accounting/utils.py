@@ -592,6 +592,97 @@ _ADMIN_EXPLORE_FEATURES = [
     },
 ]
 
+def get_explore_features():
+    """Return explore features for unauthenticated users on the landing page."""
+    try:
+        with current_app.app_context():
+            return generate_tools_with_urls([
+                {
+                    "endpoint": "personal.budget.main",
+                    "label": "Budget Planner",
+                    "label_key": "budget_budget_planner",
+                    "description_key": "budget_budget_desc",
+                    "tooltip_key": "budget_tooltip",
+                    "icon": "bi-wallet",
+                    "category": "Personal"
+                },
+                {
+                    "endpoint": "personal.financial_health.main",
+                    "label": "Financial Health",
+                    "label_key": "financial_health_calculator",
+                    "description_key": "financial_health_desc",
+                    "tooltip_key": "financial_health_tooltip",
+                    "icon": "bi-heart",
+                    "category": "Personal"
+                },
+                {
+                    "endpoint": "personal.quiz.main",
+                    "label": "Financial Personality Quiz",
+                    "label_key": "quiz_personality_quiz",
+                    "description_key": "quiz_personality_desc",
+                    "tooltip_key": "quiz_tooltip",
+                    "icon": "bi-question-circle",
+                    "category": "Personal"
+                },
+                {
+                    "endpoint": "inventory.index",
+                    "label": "Inventory",
+                    "label_key": "inventory_dashboard",
+                    "description_key": "inventory_dashboard_desc",
+                    "tooltip_key": "inventory_tooltip",
+                    "icon": "bi-box",
+                    "category": "Business"
+                },
+                {
+                    "endpoint": "creditors.index",
+                    "label": "I Owe",
+                    "label_key": "creditors_dashboard",
+                    "description_key": "creditors_dashboard_desc",
+                    "tooltip_key": "creditors_tooltip",
+                    "icon": "bi-person-lines",
+                    "category": "Business"
+                },
+                {
+                    "endpoint": "debtors.index",
+                    "label": "They Owe",
+                    "label_key": "debtors_dashboard",
+                    "description_key": "debtors_dashboard_desc",
+                    "tooltip_key": "debtors_tooltip",
+                    "icon": "bi-person-plus",
+                    "category": "Business"
+                },
+                {
+                    "endpoint": "agents_bp.agent_portal",
+                    "label": "Agent Portal",
+                    "label_key": "agents_dashboard",
+                    "description_key": "agents_dashboard_desc",
+                    "tooltip_key": "agents_tooltip",
+                    "icon": "bi-person-workspace",
+                    "category": "Agent"
+                },
+                {
+                    "endpoint": "coins.history",
+                    "label": "Coins",
+                    "label_key": "proof_coins_dashboard",
+                    "description_key": "proof_coins_desc",
+                    "tooltip_key": "coins_tooltip",
+                    "icon": "bi-coin",
+                    "category": "Proof of Concept"
+                },
+                {
+                    "endpoint": "news_bp.news_list",
+                    "label": "News",
+                    "label_key": "news_list",
+                    "description_key": "news_list_desc",
+                    "tooltip_key": "news_tooltip",
+                    "icon": "bi-newspaper",
+                    "category": "News"
+                }
+            ])
+    except Exception as e:
+        logger.error(f"Error generating explore features: {str(e)}", exc_info=True)
+        return []
+
 # Initialize module-level variables (will be populated with URLs later)
 PERSONAL_TOOLS = []
 PERSONAL_NAV = []
@@ -1339,5 +1430,5 @@ __all__ = [
     'PERSONAL_TOOLS', 'PERSONAL_NAV', 'PERSONAL_EXPLORE_FEATURES',
     'BUSINESS_TOOLS', 'BUSINESS_NAV', 'BUSINESS_EXPLORE_FEATURES',
     'AGENT_TOOLS', 'AGENT_NAV', 'AGENT_EXPLORE_FEATURES',
-    'ADMIN_TOOLS', 'ADMIN_NAV', 'ADMIN_EXPLORE_FEATURES', 'ALL_TOOLS'
+    'ADMIN_TOOLS', 'ADMIN_NAV', 'ADMIN_EXPLORE_FEATURES', 'ALL_TOOLS', 'get_explore_features'
 ]
