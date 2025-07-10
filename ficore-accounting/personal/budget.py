@@ -113,6 +113,7 @@ def main():
     form = BudgetForm(data=form_data)
     try:
         log_tool_usage(
+            db=db,
             tool_name='budget',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -129,6 +130,7 @@ def main():
             if action == 'create_budget' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        db=db,
                         tool_name='budget',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -221,6 +223,7 @@ def main():
                 budget_id = request.form.get('budget_id')
                 try:
                     log_tool_usage(
+                        db=db,
                         tool_name='budget',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -349,6 +352,7 @@ def summary():
     """Return summary of the latest budget for the current user."""
     try:
         log_tool_usage(
+            db=db,
             tool_name='budget',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
