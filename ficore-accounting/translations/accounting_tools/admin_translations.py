@@ -7,6 +7,8 @@ ADMIN_TRANSLATIONS = {
         'admin_dashboard': 'Admin Dashboard',
         'user_id': 'User ID',
         'user_id_required': 'User ID is required',
+        'admin_news_list': 'News List',
+        'admin_view_all_data': 'View All Data',
         # Customer Reports
         'admin_customer_reports': 'Customer Reports',
         'admin_download_pdf': 'Download PDF',
@@ -390,6 +392,8 @@ ADMIN_TRANSLATIONS = {
         'admin_download_pdf': 'Zazzage PDF',
         'admin_download_csv': 'Zazzage CSV',
         'admin_customers_list': 'Abokan Ciniki',
+        'admin_news_list': 'Jerin Labarai',
+        'admin_view_all_data': 'Duba Duk Bayanai',
 
         # Tax Deadlines
         'admin_tax_deadlines': 'Gudanar da Ranar Ƙarshe na Haraji',
