@@ -3,16 +3,18 @@
 {% block title %}
     {% if request.endpoint == 'agents_bp.agent_portal' %}
         {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
-    {% elif request.endpoint == 'agents.assist_trader_records' %}
+    {% elif request.endpoint == 'agents_bp.assist_trader_records' %}
         {{ t('agents_assist_trader_records', default='Assist Trader Records') }} - FiCore
-    {% elif request.endpoint == 'agents.generate_trader_report' %}
+    {% elif request.endpoint == 'agents_bp.generate_trader_report' %}
         {{ t('reports_generate_trader_report', default='Generate Trader Report') }} - FiCore
     {% elif request.endpoint == 'agents_bp.manage_tokens' %}
         {{ t('agents_manage_tokens', default='Manage Tokens') }} - FiCore
-    {% elif request.endpoint == 'recent_activity' %}
+    {% elif request.endpoint == 'agents_bp.recent_activity' %}
         {{ t('agents_my_activity', default='My Activity') }} - FiCore
     {% elif request.endpoint == 'agents_bp.register_trader' %}
         {{ t('agents_register_trader', default='Register Trader') }} - FiCore
+    {% elif request.endpoint == 'agents_bp.created_traders' %}
+        {{ t('agents_created_traders', default='Created Traders') }} - FiCore
     {% else %}
         {{ t('agents_dashboard', default='Agent Dashboard') }} - FiCore
     {% endif %}
@@ -103,7 +105,7 @@
                         </a>
                     </div>
                     <div class="col-md-3 mb-2">
-                        <a href="{{ url_for('recent_activity') }}" class="btn btn-info w-100">
+                        <a href="{{ url_for('agents_bp.recent_activity') }}" class="btn btn-info w-100">
                             <i class="bi bi-activity me-2"></i>{{ t('agents_view_my_activity', default='View My Activity') }}
                         </a>
                     </div>
@@ -143,6 +145,12 @@
                         <a class="nav-link {% if request.endpoint == 'agents_bp.register_trader' %}active{% endif %}" href="{{ url_for('agents_bp.register_trader') }}">
                             <i class="bi bi-person-plus me-2"></i>
                             {{ t('agents_register_trader', default='Register Trader') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'agents_bp.created_traders' %}active{% endif %}" href="{{ url_for('agents_bp.created_traders') }}">
+                            <i class="bi bi-people me-2"></i>
+                            {{ t('agents_created_traders', default='Created Traders') }}
                         </a>
                     </li>
                     <li class="nav-item">
@@ -237,13 +245,13 @@
                                                 <small class="text-muted">{{ trader._id }} • {{ trader.email }}</small>
                                             </div>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('agents.assist_trader_records', trader_id=trader._id) }}" 
+                                                <a href="{{ url_for('agents_bp.assist_trader_records', trader_id=trader._id) }}" 
                                                    class="btn btn-outline-primary btn-sm"
                                                    data-bs-toggle="tooltip" 
                                                    title="{{ t('agents_assist_records', default='Assist with Records') }}">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <a href="{{ url_for('agents.generate_trader_report', trader_id=trader._id) }}" 
+                                                <a href="{{ url_for('agents_bp.generate_trader_report', trader_id=trader._id) }}" 
                                                    class="btn btn-outline-success btn-sm"
                                                    data-bs-toggle="tooltip" 
                                                    title="{{ t('reports_generate_report', default='Generate Report') }}">
@@ -304,7 +312,7 @@
                     </div>
                 </div>
 
-            {% elif request.endpoint == 'agents.assist_trader_records' %}
+            {% elif request.endpoint == 'agents_bp.assist_trader_records' %}
                 {{ page_header('agents_assist_trader_records') }}
                 {{ trader_info(trader) }}
                 {{ quick_actions(trader._id) }}
@@ -422,7 +430,7 @@
                     </div>
                 </div>
 
-            {% elif request.endpoint == 'agents.generate_trader_report' %}
+            {% elif request.endpoint == 'agents_bp.generate_trader_report' %}
                 {{ page_header('reports_generate_trader_report') }}
                 {{ trader_info(trader) }}
 
@@ -655,7 +663,7 @@
                     </div>
                 </div>
 
-            {% elif request.endpoint == 'recent_activity' %}
+            {% elif request.endpoint == 'agents_bp.recent_activity' %}
                 {{ page_header('agents_my_activity') }}
 
                 <!-- Performance Metrics -->
@@ -886,6 +894,80 @@
                         </div>
                     </div>
                 </div>
+
+            {% elif request.endpoint == 'agents_bp.created_traders' %}
+                {{ page_header('agents_created_traders') }}
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ t('agents_created_traders', default='Created Traders') }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    {{ t('agents_created_traders_note', default='Below is a list of traders you have registered. Temporary passwords expire after 24 hours for security.') }}
+                                </div>
+                                {% if trader_details %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>{{ t('general_username', default='Username') }}</th>
+                                                    <th>{{ t('general_email', default='Email') }}</th>
+                                                    <th>{{ t('agents_temp_password', default='Temporary Password') }}</th>
+                                                    <th>{{ t('agents_business_name', default='Business Name') }}</th>
+                                                    <th>{{ t('general_phone_number', default='Phone Number') }}</th>
+                                                    <th>{{ t('agents_industry', default='Industry') }}</th>
+                                                    <th>{{ t('general_date', default='Created At') }}</th>
+                                                    <th>{{ t('general_actions', default='Actions') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for trader in trader_details %}
+                                                <tr>
+                                                    <td>{{ trader.username }}</td>
+                                                    <td>{{ trader.email }}</td>
+                                                    <td>{{ trader.temp_password }}</td>
+                                                    <td>{{ trader.business_name }}</td>
+                                                    <td>{{ trader.phone_number }}</td>
+                                                    <td>{{ t(trader.industry, default=trader.industry.title()) }}</td>
+                                                    <td>{{ format_date(trader.created_at) }}</td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <a href="{{ url_for('agents_bp.assist_trader_records', trader_id=trader.username) }}"
+                                                               class="btn btn-outline-primary btn-sm"
+                                                               data-bs-toggle="tooltip"
+                                                               title="{{ t('agents_assist_records', default='Assist with Records') }}">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </a>
+                                                            <a href="{{ url_for('agents_bp.generate_trader_report', trader_id=trader.username) }}"
+                                                               class="btn btn-outline-success btn-sm"
+                                                               data-bs-toggle="tooltip"
+                                                               title="{{ t('reports_generate_report', default='Generate Report') }}">
+                                                                <i class="bi bi-file-earmark-text"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted text-center">{{ t('agents_no_created_traders', default='No traders have been registered yet') }}</p>
+                                    <div class="text-center mt-3">
+                                        <a href="{{ url_for('agents_bp.register_trader') }}" class="btn btn-primary">
+                                            <i class="bi bi-person-plus me-2"></i>{{ t('agents_register_first_trader', default='Register First Trader') }}
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             {% endif %}
         </main>
     </div>
@@ -901,7 +983,7 @@ document.addEventListener('DOMContentLoaded', function() {
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
 
     // Dashboard auto-refresh
-    if (window.location.pathname.includes('/agents/')) {
+    if (window.location.pathname.includes('/agents/') && window.location.pathname === '/agents/') {
         const refreshDashboard = () => {
             document.querySelectorAll('#traders-registered, #tokens-today').forEach(el => el.classList.add('text-muted'));
             fetch('/agents/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
