@@ -10,8 +10,7 @@ from translations import trans
 from pymongo.errors import DuplicateKeyError
 from flask import jsonify
 from bson import ObjectId
-from utils import requires_role, is_admin, get_mongo_db, limiter
-from models import log_tool_usage
+from utils import requires_role, is_admin, get_mongo_db, limiter, clean_currency, log_tool_usage
 
 bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL')
 
@@ -113,7 +112,6 @@ def main():
     })
     try:
         log_tool_usage(
-            get_mongo_db(),
             tool_name='bill',
             user_id=current_user.id,
             session_id=session.get('sid', 'unknown'),
@@ -138,7 +136,6 @@ def main():
             if action == 'add_bill' and form.validate_on_submit():
                 try:
                     log_tool_usage(
-                        get_mongo_db(),
                         tool_name='bill',
                         user_id=current_user.id,
                         session_id=session.get('sid', 'unknown'),
@@ -161,7 +158,7 @@ def main():
                     'user_email': form.email.data,
                     'first_name': form.first_name.data,
                     'bill_name': form.bill_name.data,
-                    'amount': float(form.amount.data),
+                    'amount': float(clean_currency(form.amount.data)),
                     'due_date': due_date.isoformat(),
                     'frequency': form.frequency.data,
                     'category': form.category.data,
@@ -249,22 +246,26 @@ def main():
             bill_id = str(bill['_id'])
             try:
                 bill['due_date'] = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
-            except (ValueError, TypeError):
+            except ValueError, TypeError) as e:
                 current_app.logger.warning(f"Invalid due_date for bill {bill_id}: {bill.get('due_date')}")
                 bill['due_date'] = date.today()
             edit_form = EditBillForm(bill=bill)
-            bills_data.append((bill_id, bill, edit_form))
+            bills_data.append((bill_id, bill_data, edit_form))
             edit_forms[bill_id] = edit_form
         paid_count = unpaid_count = overdue_count = pending_count = 0
         total_paid = total_unpaid = total_overdue = total_bills = 0.0
         categories = {}
-        due_today = due_week = due_month = upcoming_bills = []
+        due_today = [] ( due_today = [])
+        due_week = []
+        due_month = [] ( due_month = [])
+        upcoming_bills = []
         today = date.today()
         for bill_id, bill, edit_form in bills_data:
             try:
-                bill_amount = float(bill['amount'])
+                bill_amount = clean_currency(bill.get('amount', '0')) or 0.0
+                bill_amount = float(bill_amount)
                 total_bills += bill_amount
-                cat = bill['category']
+                cat = bill.get('category')
                 categories[cat] = categories.get(cat, 0) + bill_amount
                 if bill['status'] == 'paid':
                     paid_count += 1
@@ -286,8 +287,8 @@ def main():
                     due_month.append((bill_id, bill, edit_form))
                 if today < bill_due_date:
                     upcoming_bills.append((bill_id, bill, edit_form))
-            except (ValueError, TypeError):
-                current_app.logger.warning(f"Invalid amount for bill {bill_id}: {bill.get('amount')}")
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Invalid amount for bill {bill_id}: {bill.get('amount')}, error: {str(e)}")
                 continue
         return render_template(
             'personal/BILL/bill_main.html',
@@ -359,12 +360,11 @@ def summary():
 @bill_bp.route('/unsubscribe/<email>')
 @login_required
 @requires_role(['personal', 'admin'])
-def unsubscribe(email):
+def unsubscribe():
     """Unsubscribe user from bill email notifications."""
     try:
         try:
             log_tool_usage(
-                get_mongo_db(),
                 tool_name='bill',
                 user_id=current_user.id,
                 session_id=session.get('sid', 'unknown'),
