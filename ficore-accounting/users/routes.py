@@ -742,7 +742,10 @@ def logout():
         logout_user()
         # Clear session data
         session.clear()
-        # Explicitly delete session from MongoDB if used
+        # Explicitly mark as anonymous
+        session['lang'] = lang
+        session['is_anonymous'] = True
+        # Delete MongoDB session if used
         if current_app.config.get('SESSION_TYPE') == 'mongodb':
             try:
                 db = utils.get_mongo_db()
@@ -750,16 +753,15 @@ def logout():
                 logger.info(f"Deleted MongoDB session for user {user_id}, SID: {sid}")
             except Exception as e:
                 logger.error(f"Failed to delete MongoDB session for SID {sid}: {str(e)}")
-        # Restore language setting
-        session['lang'] = lang
         # Log audit action
         log_audit_action('logout', {'user_id': user_id, 'session_id': sid})
         logger.info(f"User {user_id} logged out successfully. After logout - Session: {dict(session)}, Authenticated: {current_user.is_authenticated}")
-        # Create response with no-cache headers
+        # Create response with no-cache headers and clear session cookie
         response = make_response(redirect(url_for('personal.index')))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+        response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
         flash(trans('general_logged_out', default='Logged out successfully'), 'success')
         return response
     except Exception as e:
@@ -767,6 +769,9 @@ def logout():
         flash(trans('general_error', default='An error occurred during logout'), 'danger')
         response = make_response(redirect(url_for('personal.index')))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
         return response
 
 @users_bp.route('/auth/signin')
