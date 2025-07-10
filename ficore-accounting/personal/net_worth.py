@@ -202,14 +202,14 @@ def main():
                             data=email_data,
                             lang=session.get('lang', 'en')
                         )
-                        current_app.logger.info(f"Email sent to {email.form.email.data} for session {session.get('sid', 'unknown')}", extra={'session_id': email_data})
+                        current_app.logger.info(f"Email sent to {form.email.data} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
                     except Exception as e:
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans("general_email_action", default="Failed to send email"), "warning")
 
-        user_records = get_mongo_db().collections.net_worth_data.find(filter_criteria).sort('created_at', -1)
-        if get_mongo_db().collections.net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email():
-            user_records = get_mongo_db().collections.net_worth_data.find({'email': email.current_user.email}).sort('created_at', -1)
+        user_records = get_mongo_db().net_worth_data.find(filter_criteria).sort('created_at', -1)
+        if get_mongo_db().net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
+            user_records = get_mongo_db().net_worth_data.find({'email': current_user.email}).sort('created_at', -1)
         
         records_data = []
         for record in user_records:
@@ -228,27 +228,26 @@ def main():
                 'total_liabilities': format_currency(record.get('total_liabilities', 0), record.get('currency', 'NGN')),
                 'net_worth': format_currency(record.get('net_worth', 0), record.get('currency', 'NGN')),
                 'badges': record.get('badges', []),
-                'created_at': record.get('created_at').strftime('%b %d, %Y-%m-%d') if record.get('created_at') else None,
+                'created_at': record.get('created_at').strftime('%b %d, %Y') if record.get('created_at') else None,
                 'currency': record.get('currency', 'NGN')
             }
             records_data.append((record_data['id'], record_data))
         
         latest_record = records_data[0][1] if records_data else {
-            'cash_savings': format_currency(0, '0.00'),
-            'investments': format_currency(0),
-            'property': format_currency(0),
-            'loans': format_currency(0),
-            'total_assets': format_currency(0),
-            'total_liabilities': format_currency(0),
-            'netWorth': format_currency(0),
-            'amounts': [],
+            'cash_savings': format_currency(0, 'NGN'),
+            'investments': format_currency(0, 'NGN'),
+            'property': format_currency(0, 'NGN'),
+            'loans': format_currency(0, 'NGN'),
+            'total_assets': format_currency(0, 'NGN'),
+            'total_liabilities': format_currency(0, 'NGN'),
+            'net_worth': format_currency(0, 'NGN'),
             'badges': [],
             'created_at': None,
             'currency': 'NGN'
         }
 
-        all_records = list(get_mongo_db().collections.net_worth_data.find({'currency': 'NGN'}))
-        all_net_worths = [record['amount'] for record in all_records if record.get('net_worth') is not None]
+        all_records = list(get_mongo_db().net_worth_data.find({'currency': 'NGN'}))
+        all_net_worths = [record['net_worth'] for record in all_records if record.get('net_worth') is not None]
         total_users = len(all_net_worths)
         rank = 0
         average_net_worth = 0
@@ -258,6 +257,7 @@ def main():
                 user_net_worth = float(clean_currency(latest_record['net_worth']) or 0)
             except (ValueError, TypeError) as e:
                 current_app.logger.warning(f"Error parsing net_worth: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                user_net_worth = 0
             rank = sum(1 for nw in all_net_worths if nw > user_net_worth) + 1
             average_net_worth = sum(all_net_worths) / total_users if total_users else 0
 
@@ -288,11 +288,11 @@ def main():
                 else:
                     insights.append(trans("net_worth_insight_not_enough_users", default="Not enough users for ranking comparison."))
         except (ValueError, TypeError) as e:
-            current_app.logger.warning(f"Error parsing amounts for insights: {amounts}", extra={'session_id': str(e)})
+            current_app.logger.warning(f"Error parsing amounts for insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
 
         cross_tool_insights = []
         filter_kwargs_health = {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session.get('sid', 'unknown')}
-        health_data = get_mongo_db().collections.financial_health_scores.find(filter_kwargs_health).sort('created_at', date=-1)
+        health_data = get_mongo_db().financial_health_scores.find(filter_kwargs_health).sort('created_at', -1)
         health_data = list(health_data)
         if health_data and latest_record and net_worth_float <= 0:
             latest_health = health_data[0]
@@ -325,7 +325,7 @@ def main():
 
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans_error("net_worth_dashboard_load_error", default="Unable to load net worth dashboard. Please try again."), "danger")
+        flash(trans("net_worth_dashboard_load_error", default="Unable to load net worth dashboard. Please try again."), "danger")
         return render_template(
             'personal/NET_WORTH/net_worth_main.html',
             form=form,
@@ -345,7 +345,7 @@ def main():
             insights=[],
             cross_tool_insights=[],
             tips=[
-                trans("net_worth_tip_track_Ajo", default="Track your contributions to ajo or other savings groups."),
+                trans("net_worth_tip_track_ajo", default="Track your contributions to ajo or other savings groups."),
                 trans("net_worth_tip_review_property", default="Review property valuations annually"),
                 trans("net_worth_tip_pay_loans_early", default="Pay off high-interest loans early"),
                 trans("net_worth_tip_diversify_investments", default="Diversify investments to reduce risk")
@@ -356,7 +356,7 @@ def main():
             tool_title=trans('net_worth_title', default='Net Worth Calculator')
         )
 
-@app.route('/summary')
+@net_worth_bp.route('/summary')
 @login_required
 @requires_role(['personal', 'admin'])
 def summary():
@@ -370,24 +370,24 @@ def summary():
         )
         
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
-        net_worth_collection = get_mongo_db().collections.net_worth_data
+        net_worth_collection = get_mongo_db().net_worth_data
         
-        latest_record = net_worth_collection.find(filter_criteria).sort('created_at', date=-1).limit(1)
+        latest_record = net_worth_collection.find(filter_criteria).sort('created_at', -1).limit(1)
         latest_records = list(latest_record)
         
         if not latest_records:
             current_app.logger.info(f"No net worth found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-            return jsonify({'netWorth': format_currency(0.0, 'NGN'), 'currency': 'NGN'})
+            return jsonify({'net_worth': format_currency(0.0, 'NGN'), 'currency': 'NGN'})
         
         net_worth = latest_records[0].get('net_worth', 0.0)
         currency = latest_records[0].get('currency', 'NGN')
         current_app.logger.info(f"Fetched net worth summary for user {current_user.id}: {net_worth} {currency}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'netWorth': format_currency(net_worth, currency=currency), 'currency': currency})
+        return jsonify({'net_worth': format_currency(net_worth, currency=currency), 'currency': currency})
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'netWorth': format_currency(0.0, 'NGN'), 'currency': 'NGN'}), 500
+        return jsonify({'net_worth': format_currency(0.0, 'NGN'), 'currency': 'NGN'}), 500
 
-@app.route('/unsubscribe/<email>')
+@net_worth_bp.route('/unsubscribe/<email>')
 @login_required
 @custom_login_required
 @requires_role(['personal', 'admin'])
@@ -405,15 +405,16 @@ def unsubscribe(email):
             action='unsubscribe'
         )
         
-        filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'amount': session.get('sid', 'unknown')}
+        filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session.get('sid', 'unknown')}
         
+        net_worth_collection = get_mongo_db().net_worth_data
         existing_record = net_worth_collection.find_one(filter_criteria)
         if not existing_record:
             current_app.logger.warning(f"No matching email found for {email} to unsubscribe for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("net_worth_unsubscribe_failed", default="Unable to find matching email or already unsubscribed"), "danger")
             return redirect(url_for('personal.index'))
 
-        success = net_worth_collection.update(
+        success = net_worth_collection.update_one(
             filter_criteria,
             {'$set': {'send_email': False}}
         )
@@ -426,12 +427,12 @@ def unsubscribe(email):
         return redirect(url_for('personal.index'))
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.unsubscribe: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans_error("net_worth_unsubscribe_error", default="Failed to process unsubscribe request"), "danger")
+        flash(trans("net_worth_unsubscribe_error", default="Failed to process unsubscribe request"), "danger")
         return redirect(url_for('personal.index'))
 
-@errorhandler(CSRFError)
+@net_worth_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
     """Handle CSRF errors with a user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e}", extra={'session_id': session.get('sid', 'unknown')})
-    flash(f"Form submission failed due to missing security token. Please refresh and try again.", "error")
+    flash("Form submission failed due to missing security token. Please refresh and try again.", "error")
     return redirect(url_for('personal.index')), 400
