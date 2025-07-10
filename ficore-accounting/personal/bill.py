@@ -122,6 +122,15 @@ def main():
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_log_error', default='Error logging bill activity. Please try again.'), 'warning')
     
+    # Fetch recent activities for the current user
+    try:
+        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
+    
     tips = [
         trans('bill_tip_pay_early', default='Pay bills early to avoid penalties.'),
         trans('bill_tip_energy_efficient', default='Use energy-efficient appliances to reduce utility bills.'),
@@ -311,6 +320,7 @@ def main():
             due_month=due_month,
             upcoming_bills=upcoming_bills,
             tips=tips,
+            activities=activities,  # Pass activities to the template
             tool_title=trans('bill_title', default='Bill Manager')
         )
     except Exception as e:
@@ -335,6 +345,7 @@ def main():
             due_month=[],
             upcoming_bills=[],
             tips=tips,
+            activities=[],  # Pass empty activities list on error
             tool_title=trans('bill_title', default='Bill Manager')
         ), 500
 
@@ -343,9 +354,10 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return summary of upcoming bills for the current user."""
+    db = get_mongo_db()
     try:
         filter_kwargs = {} if is_admin() else {'user_id': current_user.id}
-        bills_collection = get_mongo_db().bills
+        bills_collection = db.bills
         today = date.today()
         pipeline = [
             {'$match': {**filter_kwargs, 'status': {'$ne': 'paid'}, 'due_date': {'$gte': today.isoformat()}}},
