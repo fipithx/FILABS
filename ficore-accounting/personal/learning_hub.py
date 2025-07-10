@@ -8,7 +8,7 @@ from datetime import datetime
 import logging
 import os
 from werkzeug.utils import secure_filename
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities
 from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from models import log_tool_usage
@@ -687,6 +687,7 @@ def main():
         session.modified = True
     
     lang = session.get('lang', 'en')
+    db = get_mongo_db()
     
     try:
         try:
@@ -1187,6 +1188,7 @@ def profile():
         session.modified = True
     
     lang = session.get('lang', 'en')
+    db = get_mongo_db()
     
     try:
         try:
@@ -1254,6 +1256,7 @@ def unsubscribe(email):
         create_anonymous_session()
         session.permanent = True
         session.modified = True
+        db = get_mongo_db()
     
     try:
         try:
@@ -1298,6 +1301,7 @@ def serve_uploaded_file(filename):
         create_anonymous_session()
         session.permanent = True
         session.modified = True
+        db = get_mongo_db()
     
     try:
         try:
