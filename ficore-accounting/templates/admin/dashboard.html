@@ -123,6 +123,14 @@
                 </div>
             </div>
         </div>
+        <div class="col">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">{{ t('log_tool_usage', default='Log Tool Usage') | escape }}</h2>
+                    <p class="card-text fs-3">{{ tool_usage.get('audit_logs', 0) }}</p>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <a href="{{ url_for('admin.manage_users') }}" class="btn btn-primary">{{ t('admin_manage_users', default='Manage Users') | escape }}</a>
