@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, render_template, request, session
+from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, render_template, request, session, make_response
 from flask_login import current_user, login_required
 from utils import requires_role, is_admin, get_mongo_db, limiter
 import utils
