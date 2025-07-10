@@ -22,23 +22,6 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if session.get('dark_mode', False) %}dark-mode{% endif %}">
-    {% if current_user.is_authenticated %}
-        <nav class="bottom-nav navbar fixed-bottom d-md-none shadow-sm bg-light" role="navigation" aria-label="{{ t('general_mobile_navigation', default='Mobile navigation') | e }}">
-            <div class="container-fluid d-flex justify-content-around align-items-center px-3">
-                {% if bottom_nav_items and bottom_nav_items|length > 0 %}
-                    {% for item in bottom_nav_items %}
-                        <a href="{{ item.url | default('#') | e }}" class="nav-item text-center  {% if request.endpoint == item.endpoint %}active{% endif %}" aria-label="{{ t(item.label_key, default=item.label) | e }}">
-                            <i class="bi {{ item.icon | default('bi-question-circle') | e }} fs-4 mb-1"></i>
-                            <div class="nav-label  fs-6">{{ t(item.label_key, default=item.label) | e }}</div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center">{{ t('general_no_nav_items', default='No navigation items available') | e }}</p>
-                {% endif %}
-            </div>
-        </nav>
-    {% endif %}
-
     <header class="top-header container-fluid d-flex align-items-center justify-content-between py-2 px-3 mb-3" style="z-index: 1030;">
         {% if current_user.is_authenticated %}
             <div class="d-flex align-items-center ">
@@ -123,6 +106,23 @@
             </div>
         {% endblock %}
     </main>
+
+    {% if current_user.is_authenticated %}
+        <nav class="bottom-nav navbar fixed-bottom d-md-none shadow-sm bg-light" role="navigation" aria-label="{{ t('general_mobile_navigation', default='Mobile navigation') | e }}">
+            <div class="container-fluid d-flex justify-content-around align-items-center px-3">
+                {% if bottom_nav_items and bottom_nav_items|length > 0 %}
+                    {% for item in bottom_nav_items %}
+                        <a href="{{ item.url | default('#') | e }}" class="nav-item text-center  {% if request.endpoint == item.endpoint %}active{% endif %}" aria-label="{{ t(item.label_key, default=item.label) | e }}">
+                            <i class="bi {{ item.icon | default('bi-question-circle') | e }} fs-4 mb-1"></i>
+                            <div class="nav-label  fs-6">{{ t(item.label_key, default=item.label) | e }}</div>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">{{ t('general_no_nav_items', default='No navigation items available') | e }}</p>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
 
     {% if not current_user.is_authenticated %}
         <footer class="footer mt-5 py-4 bg-light" role="contentinfo">
