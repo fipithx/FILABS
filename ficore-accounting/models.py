@@ -15,7 +15,7 @@ import traceback
 # Sample courses data
 SAMPLE_COURSES = [
     {
-        'id': 'budgeting_learning_101',
+        'id': 'budgeting_101',
         'title_key': 'learning_hub_course_budgeting101_title',
         'title_en': 'Budgeting Learning 101',
         'title_ha': 'Tsarin Kudi 101',
@@ -39,6 +39,24 @@ SAMPLE_COURSES = [
         'title_ha': 'Asalin Tattara Kudi',
         'description_en': 'Understand how to save effectively.',
         'description_ha': 'Fahimci yadda ake tattara kudi yadda ya kamata.',
+        'is_premium': False
+    },
+    {
+        'id': 'tax_reforms_2025',
+        'title_key': 'learning_hub_course_tax_reforms_2025_title',
+        'title_en': 'Tax Reforms 2025',
+        'title_ha': 'Gyaran Haraji 2025',
+        'description_en': 'Learn about the 2025 tax reforms.',
+        'description_ha': 'Koyi game da gyaran haraji na 2025.',
+        'is_premium': False
+    },
+    {
+        'id': 'digital_foundations',
+        'title_key': 'learning_hub_course_digital_foundations_title',
+        'title_en': 'Digital Foundations',
+        'title_ha': 'Tusar Dijital',
+        'description_en': 'Understand digital financial tools.',
+        'description_ha': 'Fahimci kayan aikin kudi na dijital.',
         'is_premium': False
     }
 ]
