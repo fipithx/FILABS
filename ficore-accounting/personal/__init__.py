@@ -41,7 +41,7 @@ def init_app(app):
         current_app.logger.error(f"Error initializing personal finance blueprints: {str(e)}", extra={'session_id': 'no-request-context'})
         raise
 
-# --- NEW HELPER FUNCTION ---
+# --- HELPER FUNCTION ---
 def get_recent_activities(user_id=None, is_admin_user=False, db=None):
     if db is None:
         db = get_mongo_db()
@@ -52,7 +52,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
     bills = db.bills.find(query).sort('created_at', -1).limit(5)
     for bill in bills:
         if not bill.get('created_at') or not bill.get('bill_name'):
-            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+            logging.warning(f"Skipping invalid bill record: {bill.get('_id')}")
             continue
         activities.append({
             'type': 'bill',
@@ -65,47 +65,6 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
             },
             'icon': 'bi-receipt'
         })
-
-    return activities
-
-# --- NEW HELPER FUNCTION ---
-def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
-    if db is None:
-        db = get_mongo_db()
-    query = {} if is_admin_user else {'user_id': str(user_id)}
-    activities = []
-
-    # Fetch recent bills
-    bills = db.bills.find(query).sort('created_at', -1).limit(5)
-    for bill in bills:
-        if not bill.get('created_at') or not bill.get('bill_name'):
-            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
-            continue
-        activities.append({
-            'type': 'bill',
-            'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
-            'timestamp': bill.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'amount': bill.get('amount', 0),
-                'due_date': bill.get('due_date', 'N/A'),
-                'status': bill.get('status', 'Unknown')
-            },
-            'icon': 'bi-receipt'
-        })
-
-    def get_all_recent_activities(user_id=None, is_admin_user=False, db=None):
-    """
-    Fetch recent activities across all personal finance tools for a user.
-    
-    Args:
-        user_id: ID of the user (optional for admin)
-        is_admin_user: Whether the user is an admin (default: False)
-        db: MongoDB database instance (optional)
-    
-    Returns:
-        list: List of recent activity records
-    """
-    return _get_recent_activities_data(user_id, is_admin_user, db)
 
     # Fetch recent budgets
     budgets = db.budgets.find(query).sort('created_at', -1).limit(5)
@@ -118,7 +77,7 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                 'income': budget.get('income', 0),
                 'surplus_deficit': budget.get('surplus_deficit', 0)
             },
-            'icon': 'bi-cash-coin'  # Add an icon for the template
+            'icon': 'bi-cash-coin'
         })
 
     # Fetch recent net worth records
@@ -133,7 +92,7 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                 'total_assets': nw.get('total_assets', 0),
                 'total_liabilities': nw.get('total_liabilities', 0)
             },
-            'icon': 'bi-graph-up'  # Add an icon for the template
+            'icon': 'bi-graph-up'
         })
 
     # Fetch recent financial health scores
@@ -147,7 +106,7 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                 'score': hs.get('score', 0),
                 'status': hs.get('status', 'Unknown')
             },
-            'icon': 'bi-heart-pulse'  # Add an icon for the template
+            'icon': 'bi-heart-pulse'
         })
 
     # Fetch recent emergency fund plans
@@ -162,7 +121,7 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                 'savings_gap': ef.get('savings_gap', 0),
                 'monthly_savings': ef.get('monthly_savings', 0)
             },
-            'icon': 'bi-piggy-bank'  # Add an icon for the template
+            'icon': 'bi-piggy-bank'
         })
 
     # Fetch recent quiz results
@@ -170,13 +129,13 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
     for quiz in quizzes:
         activities.append({
             'type': 'quiz',
-            'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get('score', 0)),
+            'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get( 'score', 0)),
             'timestamp': quiz.get('created_at', datetime.utcnow()).isoformat(),
             'details': {
                 'score': quiz.get('score', 0),
                 'personality': quiz.get('personality', 'N/A')
             },
-            'icon': 'bi-question-circle'  # Add an icon for the template
+            'icon': 'bi-question-circle'
         })
 
     # Fetch recent learning hub progress
@@ -192,13 +151,45 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                     'lessons_completed': len(progress.get('lessons_completed', [])),
                     'current_lesson': progress.get('current_lesson', 'N/A')
                 },
-                'icon': 'bi-book'  # Add an icon for the template
+                'icon': 'bi-book'
             })
 
     activities.sort(key=lambda x: x['timestamp'], reverse=True)
     return activities[:10]
 
-# --- NEW HELPER FUNCTION FOR NOTIFICATIONS ---
+# --- HELPER FUNCTION ---
+def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
+    """
+    Fetch recent activities across all personal finance tools for a user.
+
+    Args:
+        user_id: ID of the user (optional for admin)
+        is_admin_user: Whether the user is an admin (default: False)
+        db: MongoDB database instance (optional)
+
+    Returns:
+        list: List of recent activity records
+    """
+    if db is None:
+        db = get_mongo_db()
+    return get_recent_activities(user_id, is_admin_user, db)
+
+# --- EXPORTER FUNCTION ---
+def get_all_recent_activities(user_id=None, is_admin_user=False, db=None):
+    """
+    Fetch recent activities across all personal finance tools for a user.
+
+    Args:
+        user_id: ID of the user (optional for admin)
+        is_admin_user: Whether the user is an admin (default: False)
+        db: MongoDB database instance (optional)
+
+    Returns:
+        list: List of recent activity records
+    """
+    return _get_recent_activities_data(user_id, is_admin_user, db)
+
+# --- HELPER FUNCTION FOR NOTIFICATIONS ---
 def _get_notifications_data(user_id, is_admin_user, db):
     """
     Helper function to fetch recent notifications for a user.
@@ -214,7 +205,7 @@ def _get_notifications_data(user_id, is_admin_user, db):
         'icon': get_notification_icon(n.get('type', 'info'))
     } for n in notifications]
 
-# --- NEW HELPER FUNCTION FOR NOTIFICATION ICONS ---
+# --- HELPER FUNCTION FOR NOTIFICATION ICONS ---
 def get_notification_icon(notification_type):
     """
     Map notification types to Bootstrap Icons.
@@ -246,8 +237,8 @@ def index():
             notification=notification,
             activities=activities,
             activity=activity,
-            tools_for_template=utils.PERSONAL_TOOLS,  # Explicitly pass
-            explore_features_for_template=utils.PERSONAL_EXPLORE_FEATURES,  # Explicitly pass
+            tools_for_template=utils.PERSONAL_TOOLS,
+            explore_features_for_template=utils.PERSONAL_EXPLORE_FEATURES,
             is_admin=is_admin(),
             is_anonymous=False,
             is_public=False
