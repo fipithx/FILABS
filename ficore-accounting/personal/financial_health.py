@@ -105,6 +105,14 @@ class FinancialHealthForm(FlaskForm):
 def main():
     """Main financial health interface with tabbed layout."""
     db = get_mongo_db()  # Ensure valid database connection
+    try:
+        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
+
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -223,7 +231,7 @@ def main():
                     current_app.logger.info(f"Financial health data saved to MongoDB with ID {record_data['_id']} for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_completed_success", default='Financial health score calculated successfully!'), "success")
                 except Exception as e:
-                    current_app.logger.error(f"Failed to save financial health data to MongoDB: (str(e)}", extra={'session_id': session['sid']})
+                    current_app.logger.error(f"Failed to save financial health data to MongoDB: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_storage_error", default='Error saving financial health score.'), "danger")
                     return redirect(url_for('financial_health.main'))
 
@@ -360,6 +368,7 @@ def main():
             latest_record=latest_record,
             insights=insights,
             cross_tool_insights=cross_tool_insights,
+            activities=activities,
             tips=[
                 trans("financial_health_tip_track_expenses", default='Track your expenses to identify savings opportunities.'),
                 trans("financial_health_tip_ajo_savings", default='Contribute to ajo savings for financial discipline.'),
@@ -394,8 +403,9 @@ def main():
             },
             insights=[trans("financial_health_insight_no_data", default='No financial health data available.')],
             cross_tool_insights=[],
+            activities=[],
             tips=[
-                trans("financial_health_tip_track_expenses", default='Track your expenses to identify savings opportunities.'),
+                trans("financial_health_tip_trackExpenses", default='Track your expenses to identify savings opportunities.'),
                 trans("financial_health_tip_ajo_savings", default='Contribute to ajo savings for financial discipline.'),
                 trans("financial_health_tip_pay_debts", default='Prioritize paying off high-interest debts.'),
                 trans("financial_health_tip_plan_expenses", default='Plan your expenses to maintain a positive savings rate.')
