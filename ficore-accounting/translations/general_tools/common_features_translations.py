@@ -7,6 +7,7 @@ COMMON_FEATURES_TRANSLATIONS = {
         # News Management
         'news_article_not_found': 'Article not found',
         'news_title': 'Title',
+        'tax_deadlines_title': 'Tax Deadlines',
         'news_content': 'Content',
         'news_source_link': 'Source Link',
         'news_category': 'Category',
@@ -499,6 +500,7 @@ COMMON_FEATURES_TRANSLATIONS = {
         'tax_update_strategy': 'Sabunta Dabara',
         'tax_update_strategy_details': 'Gyara tsarin haraji don amfani da keɓancewa da kiredit.',
         'tax_implement_changes': 'Aiwatar da Canje-canje',
+        'tax_deadlines_title': 'Ranar Ƙarshe na Biyan Haraji',
         'tax_implement_changes_details': 'Sabunta bayanai da matakai don bin sabbin dokoki zuwa Janairu 2026.',
         'tax_seek_support': 'Nemi Tallafi',
         'tax_seek_support_details': 'Tuntuɓi Hukumar Harajin Najeriya (NRS) don taimakon bin doka.',
