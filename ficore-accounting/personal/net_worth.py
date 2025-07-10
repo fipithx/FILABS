@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
+from personal import get_all_recent_activities
 from bson import ObjectId
 from models import log_tool_usage
 from session_utils import create_anonymous_session
