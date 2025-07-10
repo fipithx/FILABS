@@ -66,7 +66,10 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
             'icon': 'bi-receipt'
         })
 
-    def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
+    return activities
+
+# --- NEW HELPER FUNCTION ---
+def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
     if db is None:
         db = get_mongo_db()
     query = {} if is_admin_user else {'user_id': str(user_id)}
@@ -250,7 +253,7 @@ def index():
         ), 500)
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         return response
-        
+
 @personal_bp.route('/notification_count')
 @login_required
 @requires_role(['personal', 'admin'])
