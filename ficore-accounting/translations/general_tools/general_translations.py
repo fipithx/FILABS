@@ -526,7 +526,7 @@ GENERAL_TRANSLATIONS = {
         'general_category': 'Category',
         'general_home': 'Home',
         'general_dashboard': 'Dashboard',
-        'general_about': 'Financial empowerment for individuals, micro-businesses & agents—tools, education, and support in one platform.',
+        'general_about': 'About Us',
         'general_contact': 'Contact',
         'general_help': 'Help',
         'general_support': 'Support',
