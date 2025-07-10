@@ -207,7 +207,11 @@ def index():
             notification=notification,
             activities=activities,
             activity=activity,
-            is_admin=is_admin()
+            tools_for_template=utils.PERSONAL_TOOLS,  # Explicitly pass
+            explore_features_for_template=utils.PERSONAL_EXPLORE_FEATURES,  # Explicitly pass
+            is_admin=is_admin(),
+            is_anonymous=False,
+            is_public=False
         ))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
