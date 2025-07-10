@@ -706,7 +706,17 @@ def create_anonymous_session():
     except Exception as e:
         logger.error(f"{trans('general_anonymous_session_error', default='Error creating anonymous session')}: {str(e)}", exc_info=True)
         raise
-
+def clean_currency(value):
+    if not value or not isinstance(value, str):
+        return float(value) if isinstance(value, (int, float)) else 0.0
+    # Remove currency symbols and non-numeric characters
+    cleaned = re.sub(r'[^\d.]', '', value)
+    try:
+        return float(cleaned) if cleaned else 0.0
+    except ValueError:
+        logger.warning(f"Invalid currency value: {value}")
+        return 0.0
+        
 def trans_function(key, lang=None, **kwargs):
     '''
     Translation function wrapper for backward compatibility.
@@ -1306,7 +1316,7 @@ def to_dict_tax_reminder(record):
 
 # Export all functions and variables
 __all__ = [
-    'login_manager', 'flask_session', 'csrf', 'babel', 'compress', 'limiter',
+    'login_manager', 'clean_currency', 'flask_session', 'csrf', 'babel', 'compress', 'limiter',
     'get_limiter', 'create_anonymous_session', 'trans_function', 'is_valid_email',
     'get_mongo_db', 'close_mongo_db', 'get_mail', 'requires_role', 'check_coin_balance',
     'get_user_query', 'is_admin', 'format_currency', 'format_date', 'sanitize_input',
