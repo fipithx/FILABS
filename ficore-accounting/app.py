@@ -551,7 +551,7 @@ def create_app():
             locale = session.get('lang', 'en')
             if value.is_integer():
                 return f'{currency}{int(value):,}'
-                return f'{currency}{value:,.2f}'
+            return f'{currency}{value:,.2f}'
         except (TypeError, ValueError) as e:
             logger.warning(f'Error formatting currency {value}: {str(e)}')
             return f'{currency}0'
