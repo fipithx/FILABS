@@ -689,6 +689,15 @@ def main():
     lang = session.get('lang', 'en')
     db = get_mongo_db()
     
+    # Fetch recent activities
+    try:
+        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
+    
     try:
         try:
             log_tool_usage(
@@ -795,7 +804,8 @@ def main():
             tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
             tools=tools,
             bottom_nav_items=bottom_nav_items,
-            role_filter=role_filter
+            role_filter=role_filter,
+            activities=activities
         )
         
     except Exception as e:
@@ -822,7 +832,8 @@ def main():
             tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
             tools=tools,
             bottom_nav_items=bottom_nav_items,
-            role_filter='all'
+            role_filter='all',
+            activities=[]
         ), 500
 
 @learning_hub_bp.route('/api/course/<course_id>')
@@ -1358,7 +1369,8 @@ def handle_not_found(e):
         tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
         tools=tools,
         bottom_nav_items=bottom_nav_items,
-        role_filter='all'
+        role_filter='all',
+        activities=[]
     ), 404
 
 @learning_hub_bp.errorhandler(CSRFError)
@@ -1393,7 +1405,8 @@ def handle_csrf_error(e):
         tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
         tools=tools,
         bottom_nav_items=bottom_nav_items,
-        role_filter='all'
+        role_filter='all',
+        activities=[]
     ), 403
 
 @learning_hub_bp.route('/legacy/<course_id>')
