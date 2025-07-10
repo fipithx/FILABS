@@ -174,20 +174,6 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
         db = get_mongo_db()
     return get_recent_activities(user_id, is_admin_user, db)
 
-# --- EXPORTER FUNCTION ---
-def get_all_recent_activities(user_id=None, is_admin_user=False, db=None):
-    """
-    Fetch recent activities across all personal finance tools for a user.
-
-    Args:
-        user_id: ID of the user (optional for admin)
-        is_admin_user: Whether the user is an admin (default: False)
-        db: MongoDB database instance (optional)
-
-    Returns:
-        list: List of recent activity records
-    """
-    return _get_recent_activities_data(user_id, is_admin_user, db)
 
 # --- HELPER FUNCTION FOR NOTIFICATIONS ---
 def _get_notifications_data(user_id, is_admin_user, db):
