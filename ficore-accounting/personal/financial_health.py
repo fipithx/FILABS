@@ -10,7 +10,7 @@ from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter
+from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 
 financial_health_bp = Blueprint(
     'financial_health',
@@ -122,9 +122,8 @@ def main():
         log_tool_usage(
             tool_name='financial_health',
             user_id=current_user.id if current_user.is_authenticated else None,
-            session_id=session['sid'],
-            action='main_view',
-            mongo=get_mongo_db()
+            session_id=session.get('sid', 'unknown'),
+            action='main_view'
         )
     except Exception as e:
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -141,9 +140,8 @@ def main():
                     log_tool_usage(
                         tool_name='financial_health',
                         user_id=current_user.id if current_user.is_authenticated else None,
-                        session_id=session['sid'],
-                        action='calculate_score',
-                        mongo=get_mongo_db()
+                        session_id=session.get('sid', 'unknown'),
+                        action='calculate_score'
                     )
                 except Exception as e:
                     current_app.logger.error(f"Failed to log financial health score calculation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -213,7 +211,8 @@ def main():
                     'status_key': status_key,
                     'badges': badges,
                     'send_email': form.send_email.data,
-                    'created_at': datetime.utcnow()
+                    'created_at': datetime.utcnow(),
+                    'currency': 'NGN'
                 }
 
                 try:
@@ -240,9 +239,9 @@ def main():
                                 "first_name": form.first_name.data,
                                 "score": score,
                                 "status": status,
-                                "income": format_currency(income),
-                                "expenses": format_currency(expenses),
-                                "debt": format_currency(debt),
+                                "income": format_currency(income, currency='NGN'),
+                                "expenses": format_currency(expenses, currency='NGN'),
+                                "debt": format_currency(debt, currency='NGN'),
                                 "interest_rate": f"{interest_rate:.2f}%",
                                 "debt_to_income": f"{debt_to_income:.2f}%",
                                 "savings_rate": f"{savings_rate:.2f}%",
@@ -271,9 +270,9 @@ def main():
                 'first_name': record.get('first_name'),
                 'email': record.get('email'),
                 'user_type': record.get('user_type'),
-                'income': format_currency(record.get('income', 0)),
-                'expenses': format_currency(record.get('expenses', 0)),
-                'debt': format_currency(record.get('debt', 0)),
+                'income': format_currency(record.get('income', 0), currency=record.get('currency', 'NGN')),
+                'expenses': format_currency(record.get('expenses', 0), currency=record.get('currency', 'NGN')),
+                'debt': format_currency(record.get('debt', 0), currency=record.get('currency', 'NGN')),
                 'interest_rate': f"{record.get('interest_rate', 0):.2f}%",
                 'debt_to_income': f"{record.get('debt_to_income', 0):.2f}%",
                 'savings_rate': f"{record.get('savings_rate', 0):.2f}%",
@@ -291,9 +290,9 @@ def main():
             'score': 0,
             'status': 'Unknown',
             'savings_rate': '0.00%',
-            'income': format_currency(0),
-            'expenses': format_currency(0),
-            'debt': format_currency(0),
+            'income': format_currency(0, currency='NGN'),
+            'expenses': format_currency(0, currency='NGN'),
+            'debt': format_currency(0, currency='NGN'),
             'interest_rate': '0.00%',
             'debt_to_income': '0.00%',
             'interest_burden': '0.00%',
@@ -311,28 +310,35 @@ def main():
             all_scores_for_comparison.sort(reverse=True)
             user_score = latest_record.get("score", 0)
             rank = sum(1 for s in all_scores_for_comparison if s > user_score) + 1
-            average_score = sum(all_scores_for_comparison) / total_users
+            average_score = sum(all_scores_for_comparison) / total_users if total_users else 0
 
         insights = []
         cross_tool_insights = []
         if latest_record and latest_record['score'] > 0:
-            if float(latest_record['debt_to_income'].replace('%', '')) > 40:
-                insights.append(trans("financial_health_insight_high_debt", default='Your debt-to-income ratio is high. Consider reducing debt.'))
-            if float(latest_record['savings_rate'].replace('%', '')) < 0:
-                insights.append(trans("financial_health_insight_negative_savings", default='Your expenses exceed your income. Review your budget.'))
-            elif float(latest_record['savings_rate'].replace('%', '')) >= 20:
-                insights.append(trans("financial_health_insight_good_savings", default='Great job maintaining a strong savings rate!'))
-            if float(latest_record['interest_burden'].replace('%', '')) > 10:
-                insights.append(trans("financial_health_insight_high_interest", default='High interest burden detected. Consider refinancing.'))
-            if total_users >= 5:
-                if rank <= total_users * 0.1:
-                    insights.append(trans("financial_health_insight_top_10", default='You are in the top 10% of users!'))
-                elif rank <= total_users * 0.3:
-                    insights.append(trans("financial_health_insight_top_30", default='You are in the top 30% of users.'))
+            try:
+                debt_to_income_float = float(clean_currency(latest_record['debt_to_income'].replace('%', '')) or 0)
+                savings_rate_float = float(clean_currency(latest_record['savings_rate'].replace('%', '')) or 0)
+                interest_burden_float = float(clean_currency(latest_record['interest_burden'].replace('%', '')) or 0)
+                
+                if debt_to_income_float > 40:
+                    insights.append(trans("financial_health_insight_high_debt", default='Your debt-to-income ratio is high. Consider reducing debt.'))
+                if savings_rate_float < 0:
+                    insights.append(trans("financial_health_insight_negative_savings", default='Your expenses exceed your income. Review your budget.'))
+                elif savings_rate_float >= 20:
+                    insights.append(trans("financial_health_insight_good_savings", default='Great job maintaining a strong savings rate!'))
+                if interest_burden_float > 10:
+                    insights.append(trans("financial_health_insight_high_interest", default='High interest burden detected. Consider refinancing.'))
+                if total_users >= 5:
+                    if rank <= total_users * 0.1:
+                        insights.append(trans("financial_health_insight_top_10", default='You are in the top 10% of users!'))
+                    elif rank <= total_users * 0.3:
+                        insights.append(trans("financial_health_insight_top_30", default='You are in the top 30% of users.'))
+                    else:
+                        insights.append(trans("financial_health_insight_below_30", default='Your score is below the top 30%. Keep improving!'))
                 else:
-                    insights.append(trans("financial_health_insight_below_30", default='Your score is below the top 30%. Keep improving!'))
-            else:
-                insights.append(trans("financial_health_insight_not_enough_users", default='Not enough users for ranking comparison.'))
+                    insights.append(trans("financial_health_insight_not_enough_users", default='Not enough users for ranking comparison.'))
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error parsing amounts for insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         
         filter_kwargs_budget = {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         budget_data = get_mongo_db().budgets.find(filter_kwargs_budget).sort('created_at', -1)
@@ -342,7 +348,7 @@ def main():
             if latest_budget.get('income') and latest_budget.get('fixed_expenses'):
                 savings_possible = latest_budget['income'] - latest_budget['fixed_expenses']
                 if savings_possible > 0:
-                    cross_tool_insights.append(trans('financial_health_cross_tool_savings_possible', default='Your budget shows {amount} available for savings monthly.', amount=format_currency(savings_possible)))
+                    cross_tool_insights.append(trans('financial_health_cross_tool_savings_possible', default='Your budget shows {amount} available for savings monthly.', amount=format_currency(savings_possible, currency='NGN')))
 
         return render_template(
             'personal/HEALTHSCORE/health_score_main.html',
@@ -374,9 +380,9 @@ def main():
                 'score': 0,
                 'status': 'Unknown',
                 'savings_rate': '0.00%',
-                'income': format_currency(0),
-                'expenses': format_currency(0),
-                'debt': format_currency(0),
+                'income': format_currency(0, currency='NGN'),
+                'expenses': format_currency(0, currency='NGN'),
+                'debt': format_currency(0, currency='NGN'),
                 'interest_rate': '0.00%',
                 'debt_to_income': '0.00%',
                 'interest_burden': '0.00%',
@@ -403,6 +409,12 @@ def main():
 def summary():
     """Return the latest financial health score for the current user."""
     try:
+        log_tool_usage(
+            tool_name='financial_health',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session.get('sid', 'unknown'),
+            action='summary_view'
+        )
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
         collection = get_mongo_collection()
         
@@ -435,18 +447,12 @@ def unsubscribe(email):
     session.modified = True
     
     try:
-        try:
-            log_tool_usage(
-                tool_name='financial_health',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='unsubscribe',
-                mongo=get_mongo_db()
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('financial_health_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
-        
+        log_tool_usage(
+            tool_name='financial_health',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session.get('sid', 'unknown'),
+            action='unsubscribe'
+        )
         filter_kwargs = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session['sid']}
         result = get_mongo_collection().update_many(
             filter_kwargs,
