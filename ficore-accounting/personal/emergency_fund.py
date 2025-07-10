@@ -180,7 +180,7 @@ def main():
                 gap = target_amount - (form.current_savings.data or 0)
                 monthly_savings = gap / months if gap > 0 else 0
                 percent_of_income = None
-                if form.monthlyOld income.data and form.monthly_income.data > 0:
+                if form.monthly_income.data and form.monthly_income.data > 0:
                     percent_of_income = (monthly_savings / form.monthly_income.data) * 100
                 badges = []
                 if form.timeline.data in ['6', '12']:
