@@ -5,6 +5,7 @@ from wtforms import StringField, FloatField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, Email, ValidationError
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
+from personal import get_all_recent_activities
 from datetime import datetime
 import re
 from translations import trans
