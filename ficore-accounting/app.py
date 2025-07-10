@@ -833,7 +833,7 @@ def create_app():
                     return redirect(url_for('general_bp.home'))
             elif current_user.role == 'personal':
                 return redirect(url_for('personal.index'))
-        return redirect(url_for('general.landing'))
+        return redirect(url_for('general_bp.landing'))
         try:
             with app.app_context():
                 courses = app.config.get('COURSES', [])
