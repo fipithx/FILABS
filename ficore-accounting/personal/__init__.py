@@ -44,7 +44,7 @@ def init_app(app):
 # --- HELPER FUNCTION ---
 def get_recent_activities(user_id=None, is_admin_user=False, db=None):
     if db is None:
-        db = utils.get_mongo_db()
+        db = get_mongo_db()
     query = {} if is_admin_user else {'user_id': str(user_id)}
     activities = []
 
