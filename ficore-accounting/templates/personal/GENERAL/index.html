@@ -1,0 +1,442 @@
+{% extends 'personal/base.html' %}
+{% block title %}{{ t('general_welcome', default='Welcome to FiCore Africa') | e }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Financial Overview Cards -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-3" id="budgetStatus">
+                <div class="card-header">
+                    {{ t('budget_budget_status', default='Budget Status') | e }}
+                </div>
+                <div class="card-body">
+                    <h5><span class="amount-value" data-amount="0">₦0</span></h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3" id="upcomingBills">
+                <div class="card-header">
+                    {{ t('bill_upcoming_bills', default='Upcoming Bills') | e }}
+                </div>
+                <div class="card-body">
+                    <h5><span class="amount-value" data-amount="0">₦0</span></h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>{{ t('net_worth_net_worth', default='Net Worth') | e }}: <span id="netWorth" class="net-amount" data-amount="0">₦0</span></h5>
+                    <a href="{{ url_for('personal.net_worth.main') }}" class="btn btn-primary btn-sm">
+                        {{ t('general_view_detailed_summary', default='View Detailed Summary') | e }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Snapshots -->
+    <div class="row">
+        <div class="col-12">
+            <h3>{{ t('general_snapshots', default='Financial Snapshots') | e }}</h3>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>{{ t('financial_health_financial_health_score', default='Financial Health') | e }}</h5>
+                    <p id="financialHealthScore" class="stat-card-value" data-original-text="0%">0%</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>{{ t('emergency_fund_savings', default='Emergency Fund') | e }}</h5>
+                    <p id="emergencyFund" class="stat-card-value" data-original-text="₦0">₦0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Amount Visibility Toggle -->
+    <div class="row mb-3">
+        <div class="col-12 text-end">
+            <button class="btn btn-link" onclick="toggleAmountVisibility()" data-bs-toggle="tooltip" data-bs-title="{{ t('general_toggle_visibility', default='Toggle amount visibility') | e }}">
+                <i id="visibilityIcon" class="bi bi-eye"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="row">
+        <div class="col-12">
+            <h3>{{ t('general_notifications', default='Notifications') | e }}</h3>
+            <a href="{{ url_for('personal.notifications') }}" class="btn btn-link">
+                {{ t('general_view_all', default='View All') | e }}
+            </a>
+        </div>
+        <div class="col-12">
+            <div id="notificationList">
+                <div class="card mb-2">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <div>
+                            <p class="mb-0">{{ t('general_no_notifications', default='No notifications') | e }}</p>
+                            <small>{{ t('general_check_back_later', default='Check back later') | e }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>{{ t('general_recent_activity', default='Recent Activity') | e }}</h3>
+            <a href="{{ url_for('personal.recent_activity') }}" class="btn btn-link">
+                {{ t('general_view_all', default='View All') | e }}
+            </a>
+        </div>
+        <div class="col-12">
+            <div id="recentActivityList">
+                <div class="card mb-2">
+                    <div class="card-body d-flex align-items-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <div>
+                            <p class="mb-0">{{ t('general_no_recent_activity', default='No recent activity') | e }}</p>
+                            <small>{{ t('general_start_by_adding', default='Start by adding a budget or bill') | e }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>{{ t('general_quick_actions', default='Quick Actions') | e }}</h3>
+            {% if tools_for_template %}
+                <div class="row">
+                    {% for tool in tools_for_template %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    {% if tool.badge %}
+                                        <span class="badge bg-primary mb-2">{{ tool.badge }}</span>
+                                    {% endif %}
+                                    <h5>{{ t(tool.get('label_key', ''), default=tool.get('label', '')) | e }}</h5>
+                                    <p>{{ t(tool.get('description_key', ''), default=tool.get('description', tool.get('label', '') + '_desc')) | e }}</p>
+                                    <a href="{{ tool.get('url', '#') }}" class="btn btn-primary btn-sm">
+                                        {{ t('general_access_now', default='Access Now') | e }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>{{ t('general_no_actions_available', default='No quick actions available.') | e }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Explore Our Tools -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>{{ t('general_our_tools', default='Explore Our Tools') | e }}</h3>
+            <p>{{ t('general_tools_desc', default='Powerful tools to manage your finances effectively.') | e }}</p>
+            {% if explore_features_for_template %}
+                {% set categories = [] %}
+                {% if current_user.role == 'personal' %}
+                    {% set categories = ['Personal'] %}
+                {% elif current_user.role == 'trader' %}
+                    {% set categories = ['Business'] %}
+                {% elif current_user.role == 'agent' %}
+                    {% set categories = ['Agent'] %}
+                {% elif current_user.role == 'admin' %}
+                    {% set categories = ['Personal', 'Business', 'Agent', 'Proof of Concept', 'News'] %}
+                {% endif %}
+                {% for category in categories %}
+                    {% set category_tools = explore_features_for_template | selectattr('category', 'equalto', category) | list %}
+                    {% if category_tools %}
+                        <h4>{{ t('general_' + category | lower + '_tools', default=category + ' Tools') | e }}</h4>
+                        <div class="row">
+                            {% for tool in category_tools %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5>{{ t(tool.get('label_key', ''), default=tool.get('label', 'Tool')) | e }}</h5>
+                                            <p>{{ t(tool.get('description_key', ''), default=tool.get('description', 'Description not available')) | e }}</p>
+                                            <a href="{{ tool.get('url', '#') }}" class="btn btn-primary btn-sm">
+                                                {{ t('general_access_now', default='Access Now') | e }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if not categories %}
+                    <p>{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
+                {% endif %}
+            {% else %}
+                <p>{{ t('general_no_tools_available', default='No tools available at the moment.') | e }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <!-- Bootstrap Icons CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Bootstrap JS for Carousel and Tooltips -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(tooltipTriggerEl => {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Debug icons
+            document.querySelectorAll('.bi').forEach(icon => {
+                if (!icon.className.includes('bi-')) {
+                    console.warn('Invalid or missing Bootstrap Icon class:', icon.className);
+                }
+            });
+
+            let amountsVisible = true;
+
+            // Translation strings
+            const translations = {
+                just_now: '{{ t("general_just_now", default="Just now") | e }}',
+                minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
+                hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
+                days_ago: '{{ t("general_days_ago", default="days ago") | e }}',
+                no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
+                start_by_adding: '{{ t("general_start_by_adding", default="Start by adding a budget or bill") | e }}',
+                no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
+                check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
+            };
+
+            // Load financial data, notifications, and recent activity
+            loadFinancialSummary();
+            loadNotifications();
+            loadRecentActivity();
+
+            function loadFinancialSummary() {
+                Promise.all([
+                    fetch('{{ url_for("personal.budget.summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
+                    fetch('{{ url_for("personal.bill.summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
+                    fetch('{{ url_for("personal.net_worth.summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
+                    fetch('{{ url_for("personal.financial_health.summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
+                    fetch('{{ url_for("personal.emergency_fund.summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
+                ]).then(([budgetData, billsData, netWorthData, healthData, emergencyFundData]) => {
+                    updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData);
+                }).catch(error => {
+                    console.error('Error loading financial data:', error);
+                });
+            }
+
+            function updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData) {
+                const budgetStatusEl = document.querySelector('#budgetStatus .amount-value');
+                budgetStatusEl.textContent = format_currency(budgetData.totalBudget || 0);
+                budgetStatusEl.dataset.amount = budgetData.totalBudget || 0;
+
+                const upcomingBillsEl = document.querySelector('#upcomingBills .amount-value');
+                upcomingBillsEl.textContent = format_currency(billsData.totalUpcomingBills || 0);
+                upcomingBillsEl.dataset.amount = billsData.totalUpcomingBills || 0;
+
+                const netWorthEl = document.getElementById('netWorth');
+                netWorthEl.textContent = '₦' + format_currency(Math.abs(netWorthData.netWorth || 0));
+                netWorthEl.dataset.amount = netWorthData.netWorth || 0;
+                netWorthEl.className = 'net-amount ' + (netWorthData.netWorth >= 0 ? 'text-success' : 'text-danger');
+
+                const financialHealthEl = document.getElementById('financialHealthScore');
+                financialHealthEl.textContent = (healthData.score || 0) + '%';
+                financialHealthEl.dataset.originalText = (healthData.score || 0) + '%';
+
+                const emergencyFundEl = document.getElementById('emergencyFund');
+                emergencyFundEl.textContent = '₦' + format_currency(emergencyFundData.totalSavings || 0);
+                emergencyFundEl.dataset.originalText = '₦' + format_currency(emergencyFundData.totalSavings || 0);
+            }
+
+            function loadNotifications() {
+                fetch('{{ url_for("personal.notifications") | e }}')
+                    .then(response => response.json())
+                    .then(notifications => {
+                        const notificationList = document.getElementById('notificationList');
+                        if (notificationList) {
+                            if (notifications && notifications.length > 0) {
+                                notificationList.innerHTML = notifications.map(notification => `
+                                    <div class="notification-item ${notification.read ? '' : 'unread'}">
+                                        <div class="notification-icon">
+                                            <i class="bi ${notification.icon | default('bi-bell') | e} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-description">${notification.message}</div>
+                                            <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                                        </div>
+                                    </div>
+                                `).join('');
+                            } else {
+                                notificationList.innerHTML = `
+                                    <div class="notification-item">
+                                        <div class="notification-icon">
+                                            <i class="bi bi-bell text-muted"></i>
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-description">${translations.no_notifications}</div>
+                                            <div class="notification-time text-muted">${translations.check_back_later}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }).catch(error => {
+                        console.error('Error loading notifications:', error);
+                        const notificationList = document.getElementById('notificationList');
+                        if (notificationList) {
+                            notificationList.innerHTML = `
+                                <div class="notification-item">
+                                    <div class="notification-icon">
+                                        <i class="bi bi-bell text-muted"></i>
+                                    </div>
+                                    <div class="notification-content">
+                                        <div class="notification-description">${translations.no_notifications}</div>
+                                        <div class="notification-time text-muted">${translations.check_back_later}</div>
+                                    </div>
+                                `;
+                            }
+                        });
+            }
+
+            function loadRecentActivity() {
+                fetch('{{ url_for("personal.recent_activity") | e }}')
+                    .then(response => response.json())
+                    .then(activities => {
+                        const activityList = document.getElementById('recentActivityList');
+                        if (activityList) {
+                            if (activities && activities.length > 0) {
+                                activityList.innerHTML = activities.map(activity => `
+                                    <div class="activity-item">
+                                        <div class="activity-icon">
+                                            <i class="bi ${activity.icon | default(getActivityIcon(activity.type)) | e} ${getActivityColor(activity.type)}"></i>
+                                        </div>
+                                        <div class="activity-content">
+                                            <div class="activity-description">${activity.description}</div>
+                                            <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
+                                        </div>
+                                        ${activity.details && activity.details.amount ? `<div class="activity-amount text-nowrap">${format_currency(activity.details.amount)}</div>` : ''}
+                                    </div>
+                                `).join('');
+                            } else {
+                                activityList.innerHTML = `
+                                    <div class="activity-item">
+                                        <div class="activity-icon">
+                                            <i class="bi bi-info-circle text-muted"></i>
+                                        </div>
+                                        <div class="activity-content">
+                                            <div class="activity-description">${translations.no_recent_activity}</div>
+                                            <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }).catch(error => {
+                        console.error('Error loading recent activity:', error);
+                        const activityList = document.getElementById('recentActivityList');
+                        if (activityList) {
+                            activityList.innerHTML = `
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        <i class="bi bi-info-circle text-muted"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <div class="activity-description">${translations.no_recent_activity}</div>
+                                        <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                                    </div>
+                                `;
+                            }
+                        });
+            }
+
+            function getActivityIcon(type) {
+                const icons = {
+                    'budget': 'bi-plus-circle',
+                    'bill': 'bi-receipt',
+                    'bill_paid': 'bi-check-circle',
+                    'emergency_fund': 'bi-piggy-bank',
+                    'net_worth': 'bi-wallet',
+                    'financial_health': 'bi-heart-pulse',
+                    'quiz': 'bi-question-circle',
+                    'learning_hub': 'bi-book'
+                };
+                return icons[type] || 'bi-circle';
+            }
+
+            function getActivityColor(type) {
+                const colors = {
+                    'budget': 'text-primary',
+                    'bill': 'text-warning',
+                    'bill_paid': 'text-success',
+                    'emergency_fund': 'text-info',
+                    'net_worth': 'text-primary',
+                    'financial_health': 'text-success',
+                    'quiz': 'text-info',
+                    'learning_hub': 'text-primary'
+                };
+                return colors[type] || 'text-muted';
+            }
+
+            function formatTimeAgo(timestamp) {
+                const now = new Date();
+                const time = new Date(timestamp);
+                const diffInSeconds = Math.floor((now - time) / 1000);
+                if (diffInSeconds < 60) return translations.just_now;
+                if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' ' + translations.minutes_ago;
+                if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ' + translations.hours_ago;
+                return Math.floor(diffInSeconds / 86400) + ' ' + translations.days_ago;
+            }
+
+            window.toggleAmountVisibility = function() {
+                amountsVisible = !amountsVisible;
+                const icon = document.getElementById('visibilityIcon');
+                const amounts = document.querySelectorAll('.amount-value, .net-amount, .stat-card-value');
+
+                amounts.forEach(el => {
+                    if (amountsVisible) {
+                        if (el.classList.contains('amount-value')) {
+                            el.textContent = format_currency(el.dataset.amount);
+                        } else if (el.classList.contains('net-amount')) {
+                            el.textContent = '₦' + format_currency(Math.abs(el.dataset.amount));
+                        } else {
+                            el.textContent = el.dataset.originalText || el.textContent;
+                        }
+                    } else {
+                        if (!el.dataset.originalText) {
+                            el.dataset.originalText = el.textContent;
+                        }
+                        el.textContent = '****';
+                    }
+                });
+
+                icon.className = 'bi ' + (amountsVisible ? 'bi-eye' : 'bi-eye-slash');
+            };
+
+            function format_currency(value) {
+                if (!value && value !== 0) return '';
+                value = typeof value === "string" ? parseFloat(value) : value;
+                if (isNaN(value)) return '0';
+                return value.toLocaleString('en-NG', {maximumFractionDigits: 0});
+            }
+        });
+    </script>
+{% endblock %}
