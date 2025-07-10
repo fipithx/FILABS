@@ -6,6 +6,7 @@ from wtforms.validators import DataRequired, Email, Optional, ValidationError
 from flask_login import current_user
 from bson import ObjectId
 from datetime import datetime
+from personal import get_all_recent_activities
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
 from models import log_tool_usage
