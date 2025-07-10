@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, FloatField, TextAreaField, SubmitField, validators
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 import logging
 import uuid
@@ -144,7 +144,7 @@ def register_trader():
             
             # Create trader user
             trader_data = {
-                '_没法: username,
+                '_id': username,
                 'email': email,
                 'password': generate_password_hash(temp_password),
                 'role': 'trader',
@@ -161,6 +161,19 @@ def register_trader():
             }
             
             db.users.insert_one(trader_data)
+            
+            # Store temporary credentials with TTL (24 hours)
+            db.temp_credentials.insert_one({
+                'trader_id': username,
+                'email': email,
+                'temp_password': temp_password,
+                'created_by_agent': current_user.id,
+                'created_at': datetime.utcnow(),
+                'expires_at': datetime.utcnow() + timedelta(days=30)
+            })
+            
+            # Ensure TTL index on temp_credentials collection
+            db.temp_credentials.create_index('expires_at', expireAfterSeconds=0)
             
             # Log agent activity
             db.agent_activities.insert_one({
@@ -179,17 +192,21 @@ def register_trader():
                 'user_id': username,
                 'amount': 20,
                 'type': 'credit',
-                'ref': f"AGENT_SIGNUP_BONUS_{datetime.utcnow全世界: datetime.utcnow().isoformat()}",
+                'ref': f"AGENT_SIGNUP_BONUS_{datetime.utcnow().isoformat()}",
                 'facilitated_by_agent': current_user.id,
                 'date': datetime.utcnow()
             })
             
-            # Modified flash message with explicit arguments and error handling
+            # Placeholder for future SMS/Email delivery
+            # TODO: Implement SMS/Email service to send temp_password to trader
+            # Example: send_email(to=email, subject="Your Account Credentials", body=f"Username: {username}\nPassword: {temp_password}")
+            
+            # Modified flash message
             try:
                 flash(
                     trans(
                         'agents_trader_registered_success', 
-                        default='Trader {0} registered successfully. Temporary password: {1}',
+                        default='Trader {0} registered successfully. Temporary password: {1}. View details in Created Traders.',
                         username=username,
                         temp_password=temp_password
                     ), 
@@ -197,7 +214,7 @@ def register_trader():
                 )
             except Exception as e:
                 logger.error(f"Translation formatting error for agents_trader_registered_success: {str(e)}")
-                flash(f"Trader {username} registered successfully. Temporary password: {temp_password}", 'success')
+                flash(f"Trader {username} registered successfully. Temporary password: {temp_password}. View details in Created Traders.", 'success')
                 
             logger.info(f"Agent {current_user.id} registered trader {username} at {datetime.utcnow()}")
             return redirect(url_for('agents_bp.agent_portal'))
@@ -426,6 +443,58 @@ def generate_trader_report(trader_id):
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
         )
 
+@agents_bp.route('/created_traders')
+@login_required
+@utils.requires_role(['agent', 'admin'])
+def created_traders():
+    """Display list of traders created by the agent with their details."""
+    try:
+        db = utils.get_mongo_db()
+        agent_id = current_user.id
+        
+        # Get traders created by this agent
+        traders = list(db.users.find({
+            'role': 'trader',
+            'registered_by_agent': agent_id
+        }).sort('created_at', -1)) or []
+        
+        # Get temporary credentials for these traders
+        trader_ids = [trader['_id'] for trader in traders]
+        temp_credentials = list(db.temp_credentials.find({
+            'trader_id': {'$in': trader_ids},
+            'created_by_agent': agent_id
+        })) or []
+        
+        # Prepare trader details with credentials
+        trader_details = []
+        for trader in traders:
+            trader['_id'] = str(trader['_id'])
+            cred = next((c for c in temp_credentials if c['trader_id'] == trader['_id']), None)
+            trader_details.append({
+                'username': trader['_id'],
+                'email': trader['email'],
+                'business_name': trader.get('business_details', {}).get('name', 'N/A'),
+                'phone_number': trader.get('business_details', {}).get('phone_number', 'N/A'),
+                'industry': trader.get('business_details', {}).get('industry', 'N/A'),
+                'created_at': trader['created_at'],
+                'temp_password': cred['temp_password'] if cred and cred.get('temp_password') else 'Expired or Not Available'
+            })
+        
+        logger.info(f"Agent {agent_id} accessed created traders list at {datetime.utcnow()}")
+        return render_template(
+            'agents/portal.html',
+            trader_details=trader_details,
+            title=trans('agents_created_traders_title', default='Created Traders', lang=session.get('lang', 'en'))
+        )
+        
+    except Exception as e:
+        logger.error(f"Error loading created traders for {current_user.id}: {str(e)}")
+        flash(trans('agents_created_traders_error', default='An error occurred while loading created traders'), 'danger')
+        return render_template(
+            'personal/GENERAL/error.html',
+            title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
+        )
+
 @agents_bp.route('/recent_activity')
 @login_required
 @utils.requires_role('agent')
@@ -453,9 +522,7 @@ def recent_activity():
         activities = list(db.agent_activities.find({
             'agent_id': agent_id
         }).sort('timestamp', -1).limit(50)) or []
-        for
-
- activity in activities:
+        for activity in activities:
             activity['_id'] = str(activity['_id'])
         
         # Calculate performance rating
