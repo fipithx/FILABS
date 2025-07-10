@@ -10,7 +10,7 @@ from bson import ObjectId
 from translations import trans
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter
+from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 
 emergency_fund_bp = Blueprint(
     'emergency_fund',
@@ -134,9 +134,8 @@ def main():
         log_tool_usage(
             tool_name='emergency_fund',
             user_id=current_user.id if current_user.is_authenticated else None,
-            session_id=session['sid'],
-            action='main_view',
-            mongo=get_mongo_db()
+            session_id=session.get('sid', 'unknown'),
+            action='main_view'
         )
     except Exception as e:
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -151,9 +150,8 @@ def main():
                     log_tool_usage(
                         tool_name='emergency_fund',
                         user_id=current_user.id if current_user.is_authenticated else None,
-                        session_id=session['sid'],
-                        action='create_plan',
-                        mongo=get_mongo_db()
+                        session_id=session.get('sid', 'unknown'),
+                        action='create_plan'
                     )
                 except Exception as e:
                     current_app.logger.error(f"Failed to log emergency fund plan creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -207,10 +205,10 @@ def main():
                 }
                 try:
                     get_mongo_db().emergency_funds.insert_one(emergency_fund)
-                    current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session['sid']})
+                    current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
                 except Exception as e:
-                    current_app.logger.error(f"Failed to save emergency fund record to MongoDB: {str(e)}", extra={'session_id': session['sid']})
+                    current_app.logger.error(f"Failed to save emergency fund record to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_storage_error', default='Error saving emergency fund plan.'), 'danger')
                     return render_template(
                         'personal/EMERGENCYFUND/emergency_fund_main.html',
@@ -254,17 +252,17 @@ def main():
                             },
                             lang=session.get('lang', 'en')
                         )
-                        current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session['sid']})
+                        current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session.get('sid', 'unknown')})
                     except Exception as e:
-                        current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session['sid']})
+                        current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
         user_data = get_mongo_db().emergency_funds.find(filter_kwargs).sort('created_at', -1)
         user_data = list(user_data)
-        current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session['sid']})
+        current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'unknown')})
         if not user_data and current_user.is_authenticated and current_user.email:
             user_data = get_mongo_db().emergency_funds.find({'email': current_user.email}).sort('created_at', -1)
             user_data = list(user_data)
-            current_app.logger.info(f"Retrieved {len(user_data)} records for email {current_user.email}", extra={'session_id': session['sid']})
+            current_app.logger.info(f"Retrieved {len(user_data)} records for email {current_user.email}", extra={'session_id': session.get('sid', 'unknown')})
         records = []
         for record in user_data:
             record_data = {
@@ -306,20 +304,27 @@ def main():
             'created_at': 'N/A'
         }
         insights = []
-        if latest_record and float(latest_record['target_amount'].replace(',', '')) > 0:
-            if float(latest_record['savings_gap'].replace(',', '')) <= 0:
-                insights.append(trans('emergency_fund_insight_fully_funded', default='Your emergency fund is fully funded! Great job!'))
-            else:
-                insights.append(trans('emergency_fund_insight_savings_gap', default='You need to save {savings_gap} over {months} months.', savings_gap=latest_record.get('savings_gap'), months=latest_record.get('timeline')))
-                if latest_record.get('percent_of_income') != 'N/A' and float(latest_record['percent_of_income'].replace('%', '')) > 30:
-                    insights.append(trans('emergency_fund_insight_high_income_percentage', default='Your monthly savings goal is over 30% of your income. Consider extending your timeline.'))
-                if latest_record.get('dependents', 0) > 2:
-                    insights.append(trans('emergency_fund_insight_large_family', default='With {dependents} dependents, consider a {recommended_months}-month fund.', dependents=latest_record.get('dependents', 0), recommended_months=latest_record.get('recommended_months', 0)))
+        try:
+            target_amount_float = float(clean_currency(latest_record['target_amount']) or 0)
+            savings_gap_float = float(clean_currency(latest_record['savings_gap']) or 0)
+            if latest_record and target_amount_float > 0:
+                if savings_gap_float <= 0:
+                    insights.append(trans('emergency_fund_insight_fully_funded', default='Your emergency fund is fully funded! Great job!'))
+                else:
+                    insights.append(trans('emergency_fund_insight_savings_gap', default='You need to save {savings_gap} over {months} months.', savings_gap=latest_record.get('savings_gap'), months=latest_record.get('timeline')))
+                    if latest_record.get('percent_of_income') != 'N/A':
+                        percent_float = float(clean_currency(latest_record['percent_of_income'].replace('%', '')) or 0)
+                        if percent_float > 30:
+                            insights.append(trans('emergency_fund_insight_high_income_percentage', default='Your monthly savings goal is over 30% of your income. Consider extending your timeline.'))
+                    if latest_record.get('dependents', 0) > 2:
+                        insights.append(trans('emergency_fund_insight_large_family', default='With {dependents} dependents, consider a {recommended_months}-month fund.', dependents=latest_record.get('dependents', 0), recommended_months=latest_record.get('recommended_months', 0)))
+        except (ValueError, TypeError) as e:
+            current_app.logger.warning(f"Error parsing amounts for insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         cross_tool_insights = []
         filter_kwargs_budget = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         budget_data = get_mongo_db().budgets.find(filter_kwargs_budget).sort('created_at', -1)
         budget_data = list(budget_data)
-        if budget_data and latest_record and float(latest_record['savings_gap'].replace(',', '')) > 0:
+        if budget_data and latest_record and savings_gap_float > 0:
             latest_budget = budget_data[0]
             if latest_budget.get('income') and latest_budget.get('fixed_expenses'):
                 savings_possible = latest_budget['income'] - latest_budget['fixed_expenses']
@@ -341,7 +346,7 @@ def main():
             tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
         )
     except Exception as e:
-        current_app.logger.error(f"Error in emergency_fund.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
+        current_app.logger.error(f"Error in emergency_fund.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('emergency_fund_load_dashboard_error', default='Error loading emergency fund dashboard.'), 'danger')
         return render_template(
             'personal/EMERGENCYFUND/emergency_fund_main.html',
@@ -404,9 +409,8 @@ def unsubscribe(email):
             log_tool_usage(
                 tool_name='emergency_fund',
                 user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='unsubscribe',
-                mongo=get_mongo_db()
+                session_id=session.get('sid', 'unknown'),
+                action='unsubscribe'
             )
         except Exception as e:
             current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -420,14 +424,14 @@ def unsubscribe(email):
             {'$set': {'email_opt_in': False}}
         )
         if result.modified_count > 0:
-            current_app.logger.info(f"Unsubscribed email {email} for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.info(f"Unsubscribed email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("emergency_fund_unsubscribed_success", default='Successfully unsubscribed from email notifications.'), "success")
         else:
-            current_app.logger.warning(f"No records found to unsubscribe email {email} for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.warning(f"No records found to unsubscribe email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("emergency_fund_unsubscribe_error", default='No email notifications found for this email.'), "danger")
         return redirect(url_for('personal.index'))
     except Exception as e:
-        current_app.logger.error(f"Error in emergency_fund.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
+        current_app.logger.error(f"Error in emergency_fund.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("emergency_fund_unsubscribe_error", default='Error unsubscribing from email notifications.'), "danger")
         return redirect(url_for('personal.index'))
 
