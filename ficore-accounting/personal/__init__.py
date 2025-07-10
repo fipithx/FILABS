@@ -189,6 +189,8 @@ def get_notification_icon(notification_type):
     return icons.get(notification_type, 'bi-info-circle')
 
 @personal_bp.route('/')
+@login_required
+@requires_role(['personal', 'admin'])
 def index():
     """Render the personal finance dashboard."""
     try:
