@@ -18,7 +18,7 @@ from io import BytesIO
 import csv
 import re
 from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results, get_learning_progress
-from personal.learning_hub import UploadForm  # Import UploadForm from learning_hub.py
+from personal.learning_hub import UploadForm
 from werkzeug.utils import secure_filename
 import os
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__, template_folder='templates/admin')
 
 # Regular expression for agent ID validation
-AGENT_ID_REGEX = re.compile(r'^[A-Z0-9]{8}$')  # Agent ID: 8 alphanumeric characters
+AGENT_ID_REGEX = re.compile(r'^[A-Z0-9]{8}$')
 
 # Define allowed file extensions and upload folder
 ALLOWED_EXTENSIONS = {'mp4', 'pdf', 'txt', 'md'}
@@ -101,7 +101,7 @@ def log_audit_action(action, details=None):
             'admin_id': str(current_user.id),
             'action': action,
             'details': details or {},
-            'timestamp': datetime.utcnow()
+            'timestamp': datetime.datetime.utcnow()
         })
     except Exception as e:
         logger.error(f"Error logging audit action: {str(e)}")
@@ -140,7 +140,7 @@ def dashboard():
         payment_locations_count = db.payment_locations.count_documents({})
         tax_deadlines_count = db.tax_deadlines.count_documents({})
         
-        # Tool usage statistics
+        # Tool usage statistics, including log tool (audit_logs)
         tool_usage = db.tool_usage.aggregate([
             {'$group': {
                 '_id': '$tool_name',
@@ -211,7 +211,7 @@ def suspend_user(user_id):
             return redirect(url_for('admin.manage_users'))
         result = db.users.update_one(
             user_query,
-            {'$set': {'suspended': True, 'updated_at': datetime.utcnow()}}
+            {'$set': {'suspended': True, 'updated_at': datetime.datetime.utcnow()}}
         )
         if result.modified_count == 0:
             flash(trans('admin_user_not_updated', default='User could not be suspended'), 'danger')
@@ -308,13 +308,13 @@ def credit_coins():
                 user_query,
                 {'$inc': {'coin_balance': amount}}
             )
-            ref = f"ADMIN_CREDIT_{datetime.utcnow().isoformat()}"
+            ref = f"ADMIN_CREDIT_{datetime.datetime.utcnow().isoformat()}"
             db.coin_transactions.insert_one({
                 'user_id': user_id,
                 'amount': amount,
                 'type': 'admin_credit',
                 'ref': ref,
-                'date': datetime.utcnow()
+                'date': datetime.datetime.utcnow()
             })
             flash(trans('admin_credit_success', default='Coins credited successfully'), 'success')
             logger.info(f"Admin {current_user.id} credited {amount} coins to user {user_id}")
@@ -334,6 +334,12 @@ def audit():
     """View audit logs of admin actions."""
     try:
         db = utils.get_mongo_db()
+        # Log access to audit logs as a tool usage event
+        db.tool_usage.insert_one({
+            'tool_name': 'audit_logs',
+            'user_id': str(current_user.id),
+            'timestamp': datetime.datetime.utcnow()
+        })
         logs = list(db.audit_logs.find().sort('timestamp', -1).limit(100))
         for log in logs:
             log['_id'] = str(log['_id'])
@@ -364,7 +370,7 @@ def manage_agents():
             if existing_agent:
                 result = db.agents.update_one(
                     {'_id': agent_id},
-                    {'$set': {'status': status, 'updated_at': datetime.utcnow()}}
+                    {'$set': {'status': status, 'updated_at': datetime.datetime.utcnow()}}
                 )
                 if result.modified_count == 0:
                     flash(trans('agents_not_updated', default='Agent status could not be updated'), 'danger')
@@ -376,8 +382,8 @@ def manage_agents():
                 db.agents.insert_one({
                     '_id': agent_id,
                     'status': status,
-                    'created_at': datetime.utcnow(),
-                    'updated_at': datetime.utcnow()
+                    'created_at': datetime.datetime.utcnow(),
+                    'updated_at': datetime.datetime.utcnow()
                 })
                 flash(trans('agents_added', default='Agent ID added successfully'), 'success')
                 logger.info(f"Admin {current_user.id} added agent {agent_id} with status {status}")
@@ -478,7 +484,7 @@ def admin_mark_bill_paid(bill_id):
         db = utils.get_mongo_db()
         result = db.bills.update_one(
             {'_id': ObjectId(bill_id)},
-            {'$set': {'status': 'paid', 'updated_at': datetime.utcnow()}}
+            {'$set': {'status': 'paid', 'updated_at': datetime.datetime.utcnow()}}
         )
         if result.modified_count == 0:
             flash(trans('admin_item_not_updated', default='Bill could not be updated'), 'danger')
@@ -638,9 +644,9 @@ def manage_courses():
                 '_id': ObjectId(),
                 'title_key': f"learning_hub_course_{course_id}_title",
                 'title_en': form.title.data,
-                'title_ha': form.title.data,  # Placeholder; should support translation
+                'title_ha': form.title.data,
                 'description_en': form.description.data,
-                'description_ha': form.description.data,  # Placeholder
+                'description_ha': form.description.data,
                 'is_premium': form.is_premium.data,
                 'roles': roles,
                 'modules': [{
@@ -657,7 +663,7 @@ def manage_courses():
                         'quiz_id': None
                     }]
                 }],
-                'created_at': datetime.utcnow()
+                'created_at': datetime.datetime.utcnow()
             }
             
             db.learning_materials.update_one(
@@ -710,7 +716,7 @@ def admin_learning_hub():
         progress = list(get_learning_progress(db, {}))
         for p in progress:
             p['_id'] = str(p['_id'])
-        form = UploadForm()  # For compatibility with template
+        form = UploadForm()
         return render_template('admin/learning_hub.html', form=form, progress=progress, courses=[])
     except Exception as e:
         logger.error(f"Error fetching learning progress for admin: {str(e)}")
@@ -933,7 +939,7 @@ def manage_payment_locations():
                 'city': form.city.data,
                 'country': form.country.data,
                 'created_by': current_user.id,
-                'created_at': datetime.utcnow()
+                'created_at': datetime.datetime.utcnow()
             }
             result = db.payment_locations.insert_one(location)
             location_id = str(result.inserted_id)
@@ -1021,7 +1027,7 @@ def manage_tax_deadlines():
                 'deadline_date': form.deadline_date.data,
                 'description': form.description.data,
                 'created_by': current_user.id,
-                'created_at': datetime.utcnow()
+                'created_at': datetime.datetime.utcnow()
             }
             result = db.tax_deadlines.insert_one(deadline)
             deadline_id = str(result.inserted_id)
