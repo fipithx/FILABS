@@ -8,10 +8,9 @@ from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
 from bson import ObjectId
 from translations import trans
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 
 emergency_fund_bp = Blueprint(
     'emergency_fund',
@@ -121,6 +120,7 @@ class EmergencyFundForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main emergency fund interface with tabbed layout."""
+    db = get_mongo_db()  # Initialize database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -151,7 +151,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='emergency_fund',
+                        tool_name='emergencyici_fund',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='create_plan'
@@ -207,7 +207,7 @@ def main():
                     'created_at': datetime.utcnow()
                 }
                 try:
-                    get_mongo_db().emergency_funds.insert_one(emergency_fund)
+                    db.emergency_funds.insert_one(emergency_fund)
                     current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
                 except Exception as e:
@@ -259,11 +259,11 @@ def main():
                     except Exception as e:
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
-        user_data = get_mongo_db().emergency_funds.find(filter_kwargs).sort('created_at', -1)
+        user_data = db.emergency_funds.find(filter_kwargs).sort('created_at', -1)
         user_data = list(user_data)
         current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'unknown')})
         if not user_data and current_user.is_authenticated and current_user.email:
-            user_data = get_mongo_db().emergency_funds.find({'email': current_user.email}).sort('created_at', -1)
+            user_data = db.emergency_funds.find({'email': current_user.email}).sort('created_at', -1)
             user_data = list(user_data)
             current_app.logger.info(f"Retrieved {len(user_data)} records for email {current_user.email}", extra={'session_id': session.get('sid', 'unknown')})
         records = []
@@ -325,7 +325,7 @@ def main():
             current_app.logger.warning(f"Error parsing amounts for insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         cross_tool_insights = []
         filter_kwargs_budget = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
-        budget_data = get_mongo_db().budgets.find(filter_kwargs_budget).sort('created_at', -1)
+        budget_data = db.budgets.find(filter_kwargs_budget).sort('created_at', -1)
         budget_data = list(budget_data)
         if budget_data and latest_record and savings_gap_float > 0:
             latest_budget = budget_data[0]
@@ -381,9 +381,10 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return the latest emergency fund target amount or savings gap for the current user."""
+    db = get_mongo_db()  # Initialize database connection
     try:
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
-        collection = get_mongo_db().emergency_funds
+        collection = db.emergency_funds
         latest_record = collection.find(filter_criteria).sort('created_at', -1).limit(1)
         latest_record = list(latest_record)
         if not latest_record:
@@ -402,6 +403,7 @@ def summary():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from emergency fund emails."""
+    db = get_mongo_db()  # Initialize database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -423,7 +425,7 @@ def unsubscribe(email):
         filter_kwargs = {'email': email}
         if current_user.is_authenticated and not is_admin():
             filter_kwargs['user_id'] = current_user.id
-        result = get_mongo_db().emergency_funds.update_many(
+        result = db.emergency_funds.update_many(
             filter_kwargs,
             {'$set': {'email_opt_in': False}}
         )
