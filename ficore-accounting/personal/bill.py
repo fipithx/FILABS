@@ -113,6 +113,7 @@ def main():
     })
     try:
         log_tool_usage(
+            db=db,
             tool_name='bill',
             user_id=current_user.id,
             session_id=session.get('sid', 'unknown'),
@@ -137,6 +138,7 @@ def main():
             if action == 'add_bill' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        db=db,
                         tool_name='bill',
                         user_id=current_user.id,
                         session_id=session.get('sid', 'unknown'),
@@ -366,6 +368,7 @@ def unsubscribe():
     try:
         try:
             log_tool_usage(
+                db=db,
                 tool_name='bill',
                 user_id=current_user.id,
                 session_id=session.get('sid', 'unknown'),
