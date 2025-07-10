@@ -5,14 +5,13 @@ from wtforms import StringField, FloatField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, Email, ValidationError
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, format_currency, clean_currency
 from datetime import datetime
 import re
 from translations import trans
 from bson import ObjectId
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, limiter, format_currency, clean_currency
 
 budget_bp = Blueprint(
     'budget',
@@ -111,6 +110,7 @@ def main():
         form_data['email'] = current_user.email
         form_data['first_name'] = current_user.get_first_name()
     form = BudgetForm(data=form_data)
+    db = get_mongo_db()
     try:
         log_tool_usage(
             db=db,
@@ -171,7 +171,7 @@ def main():
                     'currency': 'NGN'
                 }
                 try:
-                    get_mongo_db().budgets.insert_one(budget_data)
+                    db.budgets.insert_one(budget_data)
                     current_app.logger.info(f"Budget saved successfully to MongoDB for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("budget_completed_success", default='Budget created successfully!'), "success")
                 except Exception as e:
@@ -229,7 +229,7 @@ def main():
                         session_id=session.get('sid', 'unknown'),
                         action='delete_budget'
                     )
-                    result = get_mongo_db().budgets.delete_one({'_id': ObjectId(budget_id), **filter_criteria})
+                    result = db.budgets.delete_one({'_id': ObjectId(budget_id), **filter_criteria})
                     if result.deleted_count > 0:
                         current_app.logger.info(f"Deleted budget ID {budget_id} for session {session['sid']}", extra={'session_id': session['sid']})
                         flash(trans("budget_deleted_success", default='Budget deleted successfully!'), "success")
@@ -239,7 +239,7 @@ def main():
                 except Exception as e:
                     current_app.logger.error(f"Failed to delete budget ID {budget_id} for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("budget_delete_failed", default='Error deleting budget.'), "danger")
-        budgets = list(get_mongo_db().budgets.find(filter_criteria).sort('created_at', -1))
+        budgets = list(db.budgets.find(filter_criteria).sort('created_at', -1))
         current_app.logger.info(f"Read {len(budgets)} records from MongoDB budgets collection [session: {session['sid']}]", extra={'session_id': session['sid']})
         budgets_dict = {}
         latest_budget = None
@@ -350,6 +350,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return summary of the latest budget for the current user."""
+    db = get_mongo_db()
     try:
         log_tool_usage(
             db=db,
@@ -359,7 +360,7 @@ def summary():
             action='summary_view'
         )
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
-        budgets_collection = get_mongo_db().budgets
+        budgets_collection = db.budgets
         latest_budget = budgets_collection.find(filter_criteria).sort('created_at', -1).limit(1)
         latest_budget = list(latest_budget)
         if not latest_budget:
