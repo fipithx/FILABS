@@ -543,19 +543,20 @@ def create_app():
         except (ValueError, TypeError) as e:
             logger.warning(f'Error formatting number {value}: {str(e)}')
             return str(value)
-    
+
     @app.template_filter('format_currency')
-    def format_currency(value):
+    def format_currency(value, currency='₦'):
         try:
             value = float(value)
             locale = session.get('lang', 'en')
-            symbol = '₦'
             if value.is_integer():
-                return f'{symbol}{int(value):,}'
-            return f'{symbol}{value:,.2f}'
+                return f'{currency}{int(value):,}'
+                return f'{currency}{value:,.2f}'
         except (TypeError, ValueError) as e:
             logger.warning(f'Error formatting currency {value}: {str(e)}')
-            return str(value)
+            return f'{currency}0'
+    
+
     
     @app.template_filter('format_datetime')
     def format_datetime(value):
