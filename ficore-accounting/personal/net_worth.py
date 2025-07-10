@@ -180,7 +180,7 @@ def main():
                         subject = trans(config["subject_key"], default='Your Net Worth Summary')
                         email_data = {
                             "first_name": net_worth_record['first_name'],
-                            "cash_savings": format_currency(net_worth_record['cash_savings'], net_worth_record['currency', 'NGN')),
+                            "cash_savings": format_currency(net_worth_record['cash_savings'], net_worth_record.get('currency', 'NGN')),
                             "investments": format_currency(net_worth_record['investments'], net_worth_record.get('currency', 'NGN')),
                             "property": format_currency(net_worth_record['property'], net_worth_record.get('currency', 'NGN')),
                             "loans": format_currency(net_worth_record['loans'], net_worth_record.get('currency', 'NGN')),
