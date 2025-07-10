@@ -66,6 +66,30 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
             'icon': 'bi-receipt'
         })
 
+    def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
+    if db is None:
+        db = get_mongo_db()
+    query = {} if is_admin_user else {'user_id': str(user_id)}
+    activities = []
+
+    # Fetch recent bills
+    bills = db.bills.find(query).sort('created_at', -1).limit(5)
+    for bill in bills:
+        if not bill.get('created_at') or not bill.get('bill_name'):
+            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+            continue
+        activities.append({
+            'type': 'bill',
+            'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
+            'timestamp': bill.get('created_at', datetime.utcnow()).isoformat(),
+            'details': {
+                'amount': bill.get('amount', 0),
+                'due_date': bill.get('due_date', 'N/A'),
+                'status': bill.get('status', 'Unknown')
+            },
+            'icon': 'bi-receipt'
+        })
+
     # Fetch recent budgets
     budgets = db.budgets.find(query).sort('created_at', -1).limit(5)
     for budget in budgets:
