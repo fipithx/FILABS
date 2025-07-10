@@ -296,133 +296,125 @@
                 </div>
             </div>
 
-            <!-- Why FiCore Africa -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <h3>{{ t('general_why_ficore', default='Why FiCore Africa?') | e }}</h3>
-                    <h4>{{ t('general_ficore_highlight', default='Africa’s #1 Localized Financial Management Platform') | e }}</h4>
-                </div>
-                <div class="col-md-3">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <p>{{ t('general_localized', default='Built for Africa with Naira support and regional insights') | e }}</p>
-                        </div>
+        <!-- Why FiCore -->
+        <section class="section-card why-section">
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-info-circle-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_why_ficore', default='Why FiCore Africa?') | e }}</h2>
+            <p class="text-center text-muted mb-4">{{ t('general_ficore_highlight', default='Africa’s #1 Localized Financial Management Platform') | e }}</p>
+            <div class="row row-cols-1 row-cols-md-4 g-4">
+                <div class="col">
+                    <div class="why-item text-center">
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
+                        <p class="text-muted">{{ t('general_localized', default='Built for Africa with Naira support and regional insights') | e }}</p>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <p>{{ t('general_empowers', default='Empowers individuals, businesses, and agents') | e }}</p>
-                        </div>
+                <div class="col">
+                    <div class="why-item text-center">
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
+                        <p class="text-muted">{{ t('general_empowers', default='Empowers individuals, businesses, and agents') | e }}</p>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <p>{{ t('general_actionable', default='Actionable insights for smarter decisions') | e }}</p>
-                        </div>
+                <div class="col">
+                    <div class="why-item text-center">
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
+                        <p class="text-muted">{{ t('general_actionable', default='Actionable insights for smarter decisions') | e }}</p>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <p>{{ t('general_secure', default='Advisory-only – we don’t access your funds') | e }}</p>
-                        </div>
+                <div class="col">
+                    <div class="why-item text-center">
+                        <i class="bi {{ 'bi-check-circle-fill' | default('bi-circle') | e }} text-success fs-3 mb-2"></i>
+                        <p class="text-muted">{{ t('general_secure', default='Advisory-only – we don’t access your funds') | e }}</p>
                     </div>
-                </div>
-                <div class="col-12 text-center">
-                    <h5><span class="animated-counter" data-count="0">0</span> {{ t('general_users_served', default='Users Served') | e }}</h5>
                 </div>
             </div>
+            <div class="text-center mt-4">
+                <span class="animated-counter display-5 fw-bold text-primary" data-count="10000">0</span>
+                <span class="fs-5">{{ t('general_users_served', default='Users Served') | e }}</span>
+            </div>
+        </section>
 
-            <!-- Testimonials -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <h3>{{ t('general_testimonials', default='What Our Users Say') | e }}</h3>
-                    <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
-                        <div class="carousel-inner">
-                            <div class="carousel-item active">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <p>{{ t('general_impressed_features', default='FiCore’s tools are intuitive and perfect for managing my personal finances!') | e }}</p>
-                                        <p><strong>Maisarata Uqubatu, {{ t('general_personal_user', default='Personal User') | e }}</strong></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="carousel-item">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <p>{{ t('general_ficore_praise', default='Managing my business’s debtors and inventory has never been easier!') | e }}</p>
-                                        <p><strong>Abubakar Abdulkadir, {{ t('general_business_owner', default='Business Owner') | e }}</strong></p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="carousel-item">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <p>{{ t('general_potential_support', default='As an agent, FiCore makes onboarding traders seamless and efficient.') | e }}</p>
-                                        <p><strong>Aminu Sani Usman, {{ t('general_agent', default='Agent') | e }}</strong></p>
-                                    </div>
-                                </div>
-                            </div>
+        <!-- Testimonials -->
+        <section class="section-card testimonials-section">
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-quote' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_testimonials', default='What Our Users Say') | e }}</h2>
+            <div id="testimonialCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="testimonial text-center">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="MU">
+                            <p class="text-muted">{{ t('general_impressed_features', default='FiCore’s tools are intuitive and perfect for managing my personal finances!') | e }}</p>
+                            <p class="name fw-bold">Maisarata Uqubatu, {{ t('general_personal_user', default='Personal User') | e }}</p>
                         </div>
-                        <button class="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">{{ t('general_previous', default='Previous') | e }}</span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">{{ t('general_next', default='Next') | e }}</span>
-                        </button>
                     </div>
-                    <a href="#" class="btn btn-link">{{ t('general_about_ficore_africa', default='Learn More About Us') | e }}</a>
+                    <div class="carousel-item">
+                        <div class="testimonial text-center">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="AA">
+                            <p class="text-muted">{{ t('general_ficore_praise', default='Managing my business’s debtors and inventory has never been easier!') | e }}</p>
+                            <p class="name fw-bold">Abubakar Abdulkadir, {{ t('general_business_owner', default='Business Owner') | e }}</p>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="testimonial text-center">
+                            <img src="{{ url_for('static', filename='img/default_avatar.png') | e }}" alt="{{ t('general_testimonial_avatar', default='User Avatar') | e }}" class="avatar-circle gradient-bg mx-auto mb-3" data-initials="ASU">
+                            <p class="text-muted">{{ t('general_potential_support', default='As an agent, FiCore makes onboarding traders seamless and efficient.') | e }}</p>
+                            <p class="name fw-bold">Aminu Sani Usman, {{ t('general_agent', default='Agent') | e }}</p>
+                        </div>
+                    </div>
                 </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">{{ t('general_previous', default='Previous') | e }}</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#testimonialCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">{{ t('general_next', default='Next') | e }}</span>
+                </button>
             </div>
+            <div class="text-center mt-4">
+                <a href="{{ url_for('general_bp.about') | e }}" class="btn btn-primary btn-sm">{{ t('general_about_ficore_africa', default='Learn More About Us') | e }}</a>
+            </div>
+        </section>
 
-            <!-- FAQ -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <h3>{{ t('general_faq', default='Frequently Asked Questions') | e }}</h3>
-                    <div class="accordion" id="faqAccordion">
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    {{ t('general_faq_fund_handling', default='Does FiCore store or manage my money?') | e }}
-                                </button>
-                            </h2>
-                            <div id="faq1" class="accordion-collapse collapse show">
-                                <div class="accordion-body">
-                                    {{ t('general_faq_fund_handling_answer', default='No. FiCore provides advisory and tracking tools only. Your money stays with you.') | e }}
-                                </div>
-                            </div>
+        <!-- FAQ Section -->
+        <section class="section-card faq-section">
+            <h2 class="section-title text-center"><i class="bi {{ 'bi-question-circle-fill' | default('bi-circle') | e }} me-2 text-primary"></i>{{ t('general_faq', default='Frequently Asked Questions') | e }}</h2>
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                    <h3 class="accordion-header" id="faqFundHandling">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFundHandling" aria-expanded="true" aria-controls="collapseFundHandling">
+                            {{ t('general_faq_fund_handling', default='Does FiCore store or manage my money?') | e }}
+                        </button>
+                    </h3>
+                    <div id="collapseFundHandling" class="accordion-collapse collapse show" aria-labelledby="faqFundHandling" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            {{ t('general_faq_fund_handling_answer', default='No. FiCore provides advisory and tracking tools only. Your money stays with you.') | e }}
                         </div>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    {{ t('general_faq_roles', default='What types of users can use FiCore?') | e }}
-                                </button>
-                            </h2>
-                            <div id="faq2" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                    {{ t('general_faq_roles_answer', default='FiCore supports personal users with budgeting and financial health tools, business owners with debtor and inventory management, and agents with trader onboarding and token management.') | e }}
-                                </div>
-                            </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header" id="faqRoles">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRoles" aria-expanded="false" aria-controls="collapseRoles">
+                            {{ t('general_faq_roles', default='What types of users can use FiCore?') | e }}
+                        </button>
+                    </h3>
+                    <div id="collapseRoles" class="accordion-collapse collapse" aria-labelledby="faqRoles" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            {{ t('general_faq_roles_answer', default='FiCore supports personal users with budgeting and financial health tools, business owners with debtor and inventory management, and agents with trader onboarding and token management.') | e }}
                         </div>
-                        <div class="accordion-item">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    {{ t('general_faq_business_agent', default='How does FiCore support businesses and agents?') | e }}
-                                </button>
-                            </h2>
-                            <div id="faq3" class="accordion-collapse collapse">
-                                <div class="accordion-body">
-                                    {{ t('general_faq_business_agent_answer', default='Business owners can track debtors, creditors, and inventory, while agents can register traders and manage tokens. Sign up to explore these tools.') | e }}
-                                </div>
-                            </div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <h3 class="accordion-header" id="faqBusinessAgent">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBusinessAgent" aria-expanded="false" aria-controls="collapseBusinessAgent">
+                            {{ t('general_faq_business_agent', default='How does FiCore support businesses and agents?') | e }}
+                        </button>
+                    </h3>
+                    <div id="collapseBusinessAgent" class="accordion-collapse collapse" aria-labelledby="faqBusinessAgent" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            {{ t('general_faq_business_agent_answer', default='Business owners can track debtors, creditors, and inventory, while agents can register traders and manage tokens. Sign up to explore these tools.') | e }}
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
 
             <!-- Call to Action -->
             <div class="row mt-5 text-center">
