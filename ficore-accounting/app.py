@@ -544,20 +544,9 @@ def create_app():
             logger.warning(f'Error formatting number {value}: {str(e)}')
             return str(value)
 
-    @app.template_filter('format_currency')
-    def format_currency(value, currency='₦'):
-        try:
-            value = float(value)
-            locale = session.get('lang', 'en')
-            if value.is_integer():
-                return f'{currency}{int(value):,}'
-            return f'{currency}{value:,.2f}'
-        except (TypeError, ValueError) as e:
-            logger.warning(f'Error formatting currency {value}: {str(e)}')
-            return f'{currency}0'
-    
+    # Register utils.format_currency as the template filter
+    app.jinja_env.filters['format_currency'] = utils.format_currency
 
-    
     @app.template_filter('format_datetime')
     def format_datetime(value):
         try:
