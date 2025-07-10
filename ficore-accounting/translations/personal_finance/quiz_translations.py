@@ -7,6 +7,7 @@ QUIZ_TRANSLATIONS = {
         # Quiz-specific
         'quiz_financial_personality_quiz': 'Personality Quiz',
         'quiz_your_financial_personality_results': 'Your Financial Personality Results',
+        'quiz_take_first': 'Take Your First Quiz',
         'quiz_personality_desc': 'Discover your financial personality.',
         'quiz_your_financial_personality_results_subtitle': 'Discover your financial personality and insights',
         'quiz_enter_personal_information': 'Enter Your Personal Information',
@@ -225,6 +226,7 @@ QUIZ_TRANSLATIONS = {
             'quiz_progress_bar': 'Barin Ci Gaba',
             'quiz_progress_percentage': 'Kashi na Ci Gaba',
             'quiz_no_results': 'Babu Sakamako da Aka Samu',
+        'quiz_take_first': 'Ɗauki Tambayoyinku na Farko',
             'quiz_complete_quiz': 'Kammala Tambaya',
             'quiz_all_questions_required': 'Duk Tambayoyin Ana Bukata',
         
