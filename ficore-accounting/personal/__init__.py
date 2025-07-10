@@ -194,7 +194,7 @@ def index():
     try:
         if not current_user.is_authenticated:
             current_app.logger.debug("Redirecting anonymous user to login", extra={'session_id': session.get('sid', 'unknown')})
-            return resonant('users.login')
+            return redirect('users.login')
 
         db = get_mongo_db()
         notifications = _get_notifications_data(current_user.id, is_admin(), db)
