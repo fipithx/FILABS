@@ -12,6 +12,8 @@ BUDGET_TRANSLATIONS = {
     'budget_tip_ajo_savings': 'Consider ajo savings for consistent group contributions.',
     'budget_tip_data_subscriptions': 'Review data subscriptions to reduce unnecessary costs.',
     'budget_tip_plan_dependents': 'Plan for dependents to ensure financial stability.',
+        'budget_log_error': 'Failed to log budget data',
+            'budget_dashboard_load_error': 'Unable to load budget dashboard',
     'budget_title': 'Budget Overview',
     'budget_manage_finances': 'Manage Your Finances',
     'budget_dashboard': 'Budget Dashboard',
@@ -206,6 +208,8 @@ BUDGET_TRANSLATIONS = {
         'budget_summary': 'Takaitaccen Kasafin Kudi', # "Budget Summary"
         'budget_income_max': 'An kai iyakar kuɗin shiga.',
     'budget_amount_positive': 'Adadin dole ne ya zama mai inganci.',
+        'budget_log_error': 'An kasa yin rajistar bayanan kasafin kuɗi',
+            'budget_dashboard_load_error': 'An kasa loda allon kasafin kuɗi',
         'budget_create_first': 'Ƙirƙiri Kasafin Kuɗin Farko',
     'budget_tip_track_expenses': 'Bincika kashe kuɗin ku yau da kullum don kasancewa cikin kasafin kuɗi.',
     'budget_tip_ajo_savings': 'Yi la’akari da tanadi na ajo don gudummawar ƙungiya mai dorewa.',
