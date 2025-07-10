@@ -122,7 +122,7 @@ def allowed_file(filename):
 @utils.requires_role('admin')
 @utils.limiter.limit("100 per hour")
 def dashboard():
-    """Admin dashboard with system stats."""
+    """Admin dashboard with system stats and tool usage."""
     try:
         db = utils.get_mongo_db()
         user_count = db.users.count_documents({'role': {'$ne': 'admin'}} if not utils.is_admin() else {})
@@ -139,9 +139,20 @@ def dashboard():
         learning_progress_count = db.learning_materials.count_documents({})
         payment_locations_count = db.payment_locations.count_documents({})
         tax_deadlines_count = db.tax_deadlines.count_documents({})
+        
+        # Tool usage statistics
+        tool_usage = db.tool_usage.aggregate([
+            {'$group': {
+                '_id': '$tool_name',
+                'count': {'$sum': 1}
+            }}
+        ])
+        tool_usage_stats = {item['_id']: item['count'] for item in tool_usage}
+        
         recent_users = list(db.users.find({} if utils.is_admin() else {'role': {'$ne': 'admin'}}).sort('created_at', -1).limit(10))
         for user in recent_users:
             user['_id'] = str(user['_id'])
+        
         return render_template(
             'admin/dashboard.html',
             stats={
@@ -160,6 +171,7 @@ def dashboard():
                 'payment_locations': payment_locations_count,
                 'tax_deadlines': tax_deadlines_count
             },
+            tool_usage=tool_usage_stats,
             recent_users=recent_users
         )
     except Exception as e:
