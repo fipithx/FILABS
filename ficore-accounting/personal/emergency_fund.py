@@ -259,7 +259,7 @@ def main():
                                 'badges': badges,
                                 'created_at': emergency_fund['created_at'].strftime('%Y-%m-%d'),
                                 'cta_url': url_for('emergency_fund.main', _external=True),
-                                'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data _external=True)
+                                'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
                             },
                             lang=session.get('lang', 'en')
                         )
