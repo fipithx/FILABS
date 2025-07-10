@@ -5,7 +5,7 @@
     --footer-height: 200px;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
     --background-main: #F2EFEA;
-    --card-bg: #ffffff; /* Updated for cleaner look */
+    --card-bg: #c5d7fa;
     --button-primary-bg: #b88a44;
     --button-primary-hover: #917243;
     --button-secondary-bg: linear-gradient(to bottom, white, #f8faff);
@@ -61,7 +61,7 @@
     --gradient-primary: linear-gradient(135deg, #fef3c7, #fed7aa);
     --gradient-accent: linear-gradient(135deg, #bae6fd, #7dd3fc);
     --gradient-hero: linear-gradient(135deg, #f3e8ff, #bfdbfe); /* Added for hero section */
-    --gradient-card: linear-gradient(135deg, #ffffff, #f8fafc); /* Added for card sections */
+    --gradient-card: linear-gradient(135deg, #c5d7fa, #f8fafc); /* Added for card sections */
     --transition-base: all 0.3s ease;
 }
 
@@ -2340,7 +2340,7 @@ h2.card-title {
     }
 
     body {
-        background: #ffffff;
+        background: #c5d7fa;
         color: #000000;
         padding-bottom: 0;
     }
