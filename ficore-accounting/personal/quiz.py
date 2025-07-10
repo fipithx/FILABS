@@ -6,12 +6,11 @@ from wtforms.validators import DataRequired, Email, Optional, ValidationError
 from flask_login import current_user
 from bson import ObjectId
 from datetime import datetime
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, format_currency
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, limiter, format_currency
 
 quiz_bp = Blueprint(
     'quiz',
@@ -244,6 +243,7 @@ def assign_badges(score, lang='en'):
 @requires_role(['personal', 'admin'])
 def main():
     """Main quiz interface with tabbed layout."""
+    db = get_mongo_db()  # Initialize database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -407,7 +407,7 @@ def main():
         if net_worth_data and latest_record and latest_record.get('score', 0) < 13:
             latest_net_worth = net_worth_data[0]
             try:
-                net_worth_float = float(clean_currency(latest_net_worth.get('net_worth', '0')) or 0)
+                net_worth_float = float(format_currency(latest_net_worth.get('net_worth', '0')) or 0)
                 if net_worth_float > 0:
                     cross_tool_insights.append(trans(
                         'quiz_cross_tool_net_worth',
@@ -543,6 +543,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from quiz emails using MongoDB."""
+    db = get_mongo_db()  # Initialize database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
