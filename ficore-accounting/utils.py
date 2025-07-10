@@ -691,6 +691,16 @@ def get_limiter():
     '''
     return limiter
 
+def log_tool_usage(action, details=None, user_id=None):
+    db = get_mongo_db()
+    db.tool_usage_logs.insert_one({
+        'action': action,
+        'details': details or {},
+        'user_id': user_id,
+        'timestamp': datetime.utcnow()
+    })
+    logger.info(f"Logged tool usage: {action}", extra={'user_id': user_id})
+
 def create_anonymous_session():
     '''
     Create a guest session for anonymous access.
@@ -1316,7 +1326,7 @@ def to_dict_tax_reminder(record):
 
 # Export all functions and variables
 __all__ = [
-    'login_manager', 'clean_currency', 'flask_session', 'csrf', 'babel', 'compress', 'limiter',
+    'login_manager', 'clean_currency', 'log_tool_usage', 'flask_session', 'csrf', 'babel', 'compress', 'limiter',
     'get_limiter', 'create_anonymous_session', 'trans_function', 'is_valid_email',
     'get_mongo_db', 'close_mongo_db', 'get_mail', 'requires_role', 'check_coin_balance',
     'get_user_query', 'is_admin', 'format_currency', 'format_date', 'sanitize_input',
