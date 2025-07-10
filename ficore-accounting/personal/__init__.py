@@ -194,18 +194,13 @@ def get_notification_icon(notification_type):
 def index():
     """Render the personal finance dashboard."""
     try:
-        if not current_user.is_authenticated:
-            current_app.logger.debug("Redirecting anonymous user to login", extra={'session_id': session.get('sid', 'unknown')})
-            return redirect('users.login')
-
+        current_app.logger.info(f"Accessing personal.index - User: {current_user.id}, Authenticated: {current_user.is_authenticated}, Session: {dict(session)}")
         db = get_mongo_db()
         notifications = _get_notifications_data(current_user.id, is_admin(), db)
         activities = _get_recent_activities_data(user_id=current_user.id, is_admin_user=is_admin(), db=db)
-
         notification = notifications[0] if notifications else None
         activity = activities[0] if activities else None
-
-        return render_template(
+        response = make_response(render_template(
             'personal/GENERAL/index.html',
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
             notifications=notifications,
@@ -213,17 +208,23 @@ def index():
             activities=activities,
             activity=activity,
             is_admin=is_admin()
-        )
+        ))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     except Exception as e:
         current_app.logger.error(f"Error rendering personal index: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_error', default='An error occurred'), 'danger')
-        return render_template(
+        response = make_response(render_template(
             'personal/GENERAL/error.html',
             error_message="Unable to load the personal finance dashboard due to an internal error.",
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
             is_admin=is_admin()
-        ), 500
-
+        ), 500)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
+        
 @personal_bp.route('/notification_count')
 @login_required
 @requires_role(['personal', 'admin'])
