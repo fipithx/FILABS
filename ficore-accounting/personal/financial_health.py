@@ -6,12 +6,11 @@ from wtforms.validators import DataRequired, NumberRange, Optional, Email, Valid
 from flask_login import current_user, login_required
 from datetime import datetime
 from bson import ObjectId
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
 
 financial_health_bp = Blueprint(
     'financial_health',
@@ -105,6 +104,7 @@ class FinancialHealthForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main financial health interface with tabbed layout."""
+    db = get_mongo_db()  # Ensure valid database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -223,7 +223,7 @@ def main():
                     current_app.logger.info(f"Financial health data saved to MongoDB with ID {record_data['_id']} for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_completed_success", default='Financial health score calculated successfully!'), "success")
                 except Exception as e:
-                    current_app.logger.error(f"Failed to save financial health data to MongoDB: {str(e)}", extra={'session_id': session['sid']})
+                    current_app.logger.error(f"Failed to save financial health data to MongoDB: (str(e)}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_storage_error", default='Error saving financial health score.'), "danger")
                     return redirect(url_for('financial_health.main'))
 
@@ -411,6 +411,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return the latest financial health score for the current user."""
+    db = get_mongo_db()  # Ensure valid database connection
     try:
         log_tool_usage(
             db=db,
@@ -444,6 +445,7 @@ def summary():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from financial health emails."""
+    db = get_mongo_db()  # Ensure valid database connection
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
