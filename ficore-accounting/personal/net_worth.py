@@ -7,11 +7,10 @@ from flask_login import current_user, login_required
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, format_currency, clean_currency
 from bson import ObjectId
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, limiter, format_currency, clean_currency
 
 net_worth_bp = Blueprint(
     'net_worth',
@@ -94,6 +93,7 @@ class NetWorthForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main net worth interface with tabbed layout."""
+    db = get_mongo_db()
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -169,7 +169,7 @@ def main():
                 }
                 
                 try:
-                    get_mongo_db().net_worth_data.insert_one(net_worth_record)
+                    db.net_worth_data.insert_one(net_worth_record)
                     current_app.logger.info(f"Successfully saved record {net_worth_record['_id']} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans("net_worth_success", default="Net worth calculated successfully"), "success")
                 except Exception as e:
@@ -210,9 +210,9 @@ def main():
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans("general_email_action", default="Failed to send email"), "warning")
 
-        user_records = get_mongo_db().net_worth_data.find(filter_criteria).sort('created_at', -1)
-        if get_mongo_db().net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
-            user_records = get_mongo_db().net_worth_data.find({'email': current_user.email}).sort('created_at', -1)
+        user_records = db.net_worth_data.find(filter_criteria).sort('created_at', -1)
+        if db.net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
+            user_records = db.net_worth_data.find({'email': current_user.email}).sort('created_at', -1)
         
         records_data = []
         for record in user_records:
@@ -249,7 +249,7 @@ def main():
             'currency': 'NGN'
         }
 
-        all_records = list(get_mongo_db().net_worth_data.find({'currency': 'NGN'}))
+        all_records = list(db.net_worth_data.find({'currency': 'NGN'}))
         all_net_worths = [record['net_worth'] for record in all_records if record.get('net_worth') is not None]
         total_users = len(all_net_worths)
         rank = 0
@@ -295,7 +295,7 @@ def main():
 
         cross_tool_insights = []
         filter_kwargs_health = {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session.get('sid', 'unknown')}
-        health_data = get_mongo_db().financial_health_scores.find(filter_kwargs_health).sort('created_at', -1)
+        health_data = db.financial_health_scores.find(filter_kwargs_health).sort('created_at', -1)
         health_data = list(health_data)
         if health_data and latest_record and net_worth_float <= 0:
             latest_health = health_data[0]
@@ -364,6 +364,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return the latest net worth for the current user."""
+    db = get_mongo_db()
     try:
         log_tool_usage(
             db=db,
@@ -374,7 +375,7 @@ def summary():
         )
         
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
-        net_worth_collection = get_mongo_db().net_worth_data
+        net_worth_collection = db.net_worth_data
         
         latest_record = net_worth_collection.find(filter_criteria).sort('created_at', -1).limit(1)
         latest_records = list(latest_record)
@@ -397,6 +398,7 @@ def summary():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from net worth emails using MongoDB."""
+    db = get_mongo_db()
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.info(f"New anonymous session created with sid {session['sid']}", extra={'session_id': session.get('sid', 'unknown')})
@@ -412,7 +414,7 @@ def unsubscribe(email):
         
         filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session.get('sid', 'unknown')}
         
-        net_worth_collection = get_mongo_db().net_worth_data
+        net_worth_collection = db.net_worth_data
         existing_record = net_worth_collection.find_one(filter_criteria)
         if not existing_record:
             current_app.logger.warning(f"No matching email found for {email} to unsubscribe for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
