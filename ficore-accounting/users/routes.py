@@ -757,7 +757,7 @@ def logout():
         log_audit_action('logout', {'user_id': user_id, 'session_id': sid})
         logger.info(f"User {user_id} logged out successfully. After logout - Session: {dict(session)}, Authenticated: {current_user.is_authenticated}")
         # Create response with no-cache headers and clear session cookie
-        response = make_response(redirect(url_for('personal.index')))
+        response = make_response(redirect(url_for('general.landing')))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -767,7 +767,7 @@ def logout():
     except Exception as e:
         logger.error(f"Error during logout for user {user_id}: {str(e)}")
         flash(trans('general_error', default='An error occurred during logout'), 'danger')
-        response = make_response(redirect(url_for('personal.index')))
+        response = make_response(redirect(url_for('general.landing')))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
