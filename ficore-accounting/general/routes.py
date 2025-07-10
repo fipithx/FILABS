@@ -10,6 +10,32 @@ import utils
 
 general_bp = Blueprint('general_bp', __name__, url_prefix='/general')
 
+@general_bp.route('/landing')
+def landing():
+    """Render the public landing page."""
+    try:
+        current_app.logger.info(f"Accessing general.landing - User: {current_user.id if current_user.is_authenticated else 'Anonymous'}, Authenticated: {current_user.is_authenticated}, Session: {dict(session)}")
+        explore_features = utils.get_explore_features()
+        response = make_response(render_template(
+            'general/landingpage.html',
+            title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome'),
+            explore_features_for_template=explore_features
+        ))
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    except Exception as e:
+        current_app.logger.error(f"Error rendering landing page: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('general_error', default='An error occurred'), 'danger')
+        response = make_response(render_template(
+            'general/error.html',
+            error_message="Unable to load the landing page due to an internal error.",
+            title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome')
+        ), 500)
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        return response
+
 @general_bp.route('/home')
 @login_required
 def home():
