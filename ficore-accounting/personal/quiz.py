@@ -10,7 +10,7 @@ from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-from utils import requires_role, is_admin, get_mongo_db, limiter
+from utils import requires_role, is_admin, get_mongo_db, limiter, format_currency
 
 quiz_bp = Blueprint(
     'quiz',
@@ -262,9 +262,8 @@ def main():
         log_tool_usage(
             tool_name='quiz',
             user_id=current_user.id if current_user.is_authenticated else None,
-            session_id=session['sid'],
-            action='main_view',
-            mongo=get_mongo_db()
+            session_id=session.get('sid', 'unknown'),
+            action='main_view'
         )
     except Exception as e:
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -281,9 +280,8 @@ def main():
                     log_tool_usage(
                         tool_name='quiz',
                         user_id=current_user.id if current_user.is_authenticated else None,
-                        session_id=session['sid'],
-                        action='submit_quiz',
-                        mongo=get_mongo_db()
+                        session_id=session.get('sid', 'unknown'),
+                        action='submit_quiz'
                     )
                 except Exception as e:
                     current_app.logger.error(f"Failed to log quiz submission: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -405,12 +403,16 @@ def main():
         net_worth_data = list(net_worth_data)
         if net_worth_data and latest_record and latest_record.get('score', 0) < 13:
             latest_net_worth = net_worth_data[0]
-            if latest_net_worth.get('net_worth', 0) > 0:
-                cross_tool_insights.append(trans(
-                    'quiz_cross_tool_net_worth',
-                    default='Your net worth is positive, indicating good financial health despite lower quiz scores.',
-                    lang=lang
-                ))
+            try:
+                net_worth_float = float(clean_currency(latest_net_worth.get('net_worth', '0')) or 0)
+                if net_worth_float > 0:
+                    cross_tool_insights.append(trans(
+                        'quiz_cross_tool_net_worth',
+                        default='Your net worth is positive, indicating good financial health despite lower quiz scores.',
+                        lang=lang
+                    ))
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Error parsing net_worth for cross-tool insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
 
         questions = [
             {
@@ -546,18 +548,12 @@ def unsubscribe(email):
     lang = session.get('lang', 'en')
     
     try:
-        try:
-            log_tool_usage(
-                tool_name='quiz',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='unsubscribe',
-                mongo=get_mongo_db()
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('quiz_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
-
+        log_tool_usage(
+            tool_name='quiz',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session.get('sid', 'unknown'),
+            action='unsubscribe'
+        )
         filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session['sid']}
         
         existing_record = get_mongo_db().quiz_responses.find_one(filter_criteria)
