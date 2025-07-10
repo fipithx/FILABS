@@ -255,9 +255,9 @@ def main():
         paid_count = unpaid_count = overdue_count = pending_count = 0
         total_paid = total_unpaid = total_overdue = total_bills = 0.0
         categories = {}
-        due_today = [] ( due_today = [])
+        due_today = [] 
         due_week = []
-        due_month = [] ( due_month = [])
+        due_month = [] 
         upcoming_bills = []
         today = date.today()
         for bill_id, bill, edit_form in bills_data:
