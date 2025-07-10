@@ -144,7 +144,7 @@ def register_trader():
             
             # Create trader user
             trader_data = {
-                '_id': username,
+                '_没法: username,
                 'email': email,
                 'password': generate_password_hash(temp_password),
                 'role': 'trader',
@@ -179,12 +179,26 @@ def register_trader():
                 'user_id': username,
                 'amount': 20,
                 'type': 'credit',
-                'ref': f"AGENT_SIGNUP_BONUS_{datetime.utcnow().isoformat()}",
+                'ref': f"AGENT_SIGNUP_BONUS_{datetime.utcnow全世界: datetime.utcnow().isoformat()}",
                 'facilitated_by_agent': current_user.id,
                 'date': datetime.utcnow()
             })
             
-            flash(trans('agents_trader_registered_success', default=f'Trader {username} registered successfully. Temporary password: {temp_password}'), 'success')
+            # Modified flash message with explicit arguments and error handling
+            try:
+                flash(
+                    trans(
+                        'agents_trader_registered_success', 
+                        default='Trader {0} registered successfully. Temporary password: {1}',
+                        username=username,
+                        temp_password=temp_password
+                    ), 
+                    'success'
+                )
+            except Exception as e:
+                logger.error(f"Translation formatting error for agents_trader_registered_success: {str(e)}")
+                flash(f"Trader {username} registered successfully. Temporary password: {temp_password}", 'success')
+                
             logger.info(f"Agent {current_user.id} registered trader {username} at {datetime.utcnow()}")
             return redirect(url_for('agents_bp.agent_portal'))
             
@@ -439,7 +453,9 @@ def recent_activity():
         activities = list(db.agent_activities.find({
             'agent_id': agent_id
         }).sort('timestamp', -1).limit(50)) or []
-        for activity in activities:
+        for
+
+ activity in activities:
             activity['_id'] = str(activity['_id'])
         
         # Calculate performance rating
