@@ -1462,9 +1462,3 @@ def forum():
     lang = session.get('lang', 'en')
     flash(trans('learning_hub_forum_coming_soon', default='Community forum coming soon!'), 'info')
     return redirect(url_for('learning_hub.main'))
-
-# Initialize CSRF protection with the blueprint
-csrf.init_app(learning_hub_bp)
-
-# Register the init_app function with the Flask app
-learning_hub_bp.init_app = init_app
