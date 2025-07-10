@@ -43,19 +43,17 @@ def init_app(app):
 
 # --- NEW HELPER FUNCTION ---
 def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
-    """
-    Helper function to fetch recent activity data.
-    Takes user_id and admin status to apply appropriate filters.
-    """
     if db is None:
-        db = get_mongo_db()  # Get DB connection inside if not provided
-
+        db = get_mongo_db()
     query = {} if is_admin_user else {'user_id': str(user_id)}
     activities = []
 
     # Fetch recent bills
     bills = db.bills.find(query).sort('created_at', -1).limit(5)
     for bill in bills:
+        if not bill.get('created_at') or not bill.get('bill_name'):
+            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+            continue
         activities.append({
             'type': 'bill',
             'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
@@ -65,7 +63,7 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
                 'due_date': bill.get('due_date', 'N/A'),
                 'status': bill.get('status', 'Unknown')
             },
-            'icon': 'bi-receipt'  # Add an icon for the template
+            'icon': 'bi-receipt'
         })
 
     # Fetch recent budgets
