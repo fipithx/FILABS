@@ -1,17 +1,15 @@
-from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app
+from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import StringField, FloatField, SelectField, BooleanField, IntegerField, DateField
-from personal import get_all_recent_activities
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, clean_currency, log_tool_usage
 from wtforms.validators import DataRequired, NumberRange, Email, Optional
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime, date, timedelta
 from translations import trans
 from pymongo.errors import DuplicateKeyError
-from flask import jsonify
 from bson import ObjectId
-from utils import requires_role, is_admin, get_mongo_db, limiter, clean_currency, log_tool_usage
 
 bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL')
 
@@ -111,6 +109,7 @@ def main():
         'email': current_user.email if current_user.is_authenticated else '',
         'first_name': current_user.get_first_name() if current_user.is_authenticated else ''
     })
+    db = get_mongo_db()
     try:
         log_tool_usage(
             db=db,
@@ -132,7 +131,7 @@ def main():
     ]
     try:
         filter_kwargs = {} if is_admin() else {'user_id': current_user.id}
-        bills_collection = get_mongo_db().bills
+        bills_collection = db.bills
         if request.method == 'POST':
             action = request.form.get('action')
             if action == 'add_bill' and form.validate_on_submit():
@@ -253,7 +252,7 @@ def main():
                 current_app.logger.warning(f"Invalid due_date for bill {bill_id}: {bill.get('due_date')}")
                 bill['due_date'] = date.today()
             edit_form = EditBillForm(bill=bill)
-            bills_data.append((bill_id, bill_data, edit_form))
+            bills_data.append((bill_id, bill, edit_form))
             edit_forms[bill_id] = edit_form
         paid_count = unpaid_count = overdue_count = pending_count = 0
         total_paid = total_unpaid = total_overdue = total_bills = 0.0
@@ -365,6 +364,7 @@ def summary():
 @requires_role(['personal', 'admin'])
 def unsubscribe():
     """Unsubscribe user from bill email notifications."""
+    db = get_mongo_db()
     try:
         try:
             log_tool_usage(
@@ -379,7 +379,7 @@ def unsubscribe():
             flash(trans('bill_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
         
         filter_criteria = {'user_email': email, 'user_id': current_user.id} if not is_admin() else {'user_email': email}
-        bills_collection = get_mongo_db().bills
+        bills_collection = db.bills
         result = bills_collection.update_many(filter_criteria, {'$set': {'send_email': False}})
         if result.modified_count > 0:
             current_app.logger.info(f"Successfully unsubscribed email {email}")
