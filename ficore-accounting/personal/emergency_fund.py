@@ -8,6 +8,7 @@ from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
 from bson import ObjectId
 from translations import trans
+from personal import get_all_recent_activities
 from models import log_tool_usage
 from session_utils import create_anonymous_session
 from utils import requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
