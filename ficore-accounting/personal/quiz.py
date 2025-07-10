@@ -244,6 +244,13 @@ def assign_badges(score, lang='en'):
 def main():
     """Main quiz interface with tabbed layout."""
     db = get_mongo_db()  # Initialize database connection
+    try:
+        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -504,6 +511,7 @@ def main():
             rank=rank,
             total_users=total_users,
             average_score=average_score,
+            activities=activities,
             t=trans,
             tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
         )
@@ -534,6 +542,7 @@ def main():
             rank=0,
             total_users=0,
             average_score=0,
+            activities=[],
             t=trans,
             tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
         ), 500
@@ -612,6 +621,7 @@ def handle_csrf_error(e):
         rank=0,
         total_users=0,
         average_score=0,
+        activities=[],
         t=trans,
         tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
     ), 400
