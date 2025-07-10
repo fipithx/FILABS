@@ -246,7 +246,7 @@ def main():
             bill_id = str(bill['_id'])
             try:
                 bill['due_date'] = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
-            except ValueError, TypeError) as e:
+            except (ValueError, TypeError) as e:
                 current_app.logger.warning(f"Invalid due_date for bill {bill_id}: {bill.get('due_date')}")
                 bill['due_date'] = date.today()
             edit_form = EditBillForm(bill=bill)
