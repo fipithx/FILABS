@@ -2,6 +2,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import StringField, FloatField, SelectField, BooleanField, IntegerField, DateField
+from personal import get_all_recent_activities
 from wtforms.validators import DataRequired, NumberRange, Email, Optional
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
