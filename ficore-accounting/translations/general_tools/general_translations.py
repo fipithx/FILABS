@@ -8,6 +8,8 @@ GENERAL_TRANSLATIONS = {
         'payment_locations_title': 'Payment Locations',
             'confirm_delete_news': 'Are you sure you want to delete this news item?',
             'confirm_delete_tax_rate': 'Are you sure you want to delete this tax rate?',
+        'general_testimonial_avatar': 'Testimonial Avatar',
+            'log_tool_usage': 'Log Tool Usage',
             'general_reset_password_subject': 'Reset Your Password',
             'general_reset_password_body': 'Click the link below to reset your password.',
             'general_email_send_error': 'Failed to send email. Please try again later.',
@@ -1415,6 +1417,8 @@ GENERAL_TRANSLATIONS = {
 
         # Role-Specific Keys
         'settings_personal_account': 'Asusun Kai',
+        'general_testimonial_avatar': 'Avatar na Shaida',
+            'log_tool_usage': 'Rikodin Amfani da Kayan Aiki',
         'settings_personal_account_info': 'Gudanar da bayanan asusun ka na kai',
         'settings_explore_personal_tools': 'Bincika Kayan Aikin Kai',
         'settings_explore_personal_description': 'Samun damar kayan aiki don gudanar da kuɗin ka na kai da saituna',
