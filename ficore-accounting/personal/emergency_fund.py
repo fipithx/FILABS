@@ -121,6 +121,13 @@ class EmergencyFundForm(FlaskForm):
 def main():
     """Main emergency fund interface with tabbed layout."""
     db = get_mongo_db()  # Initialize database connection
+    try:
+        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception as e:
+        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
+        activities = []
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -151,7 +158,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='emergencyici_fund',
+                        tool_name='emergency_fund',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='create_plan'
@@ -173,7 +180,7 @@ def main():
                 gap = target_amount - (form.current_savings.data or 0)
                 monthly_savings = gap / months if gap > 0 else 0
                 percent_of_income = None
-                if form.monthly_income.data and form.monthly_income.data > 0:
+                if form.monthlyOld income.data and form.monthly_income.data > 0:
                     percent_of_income = (monthly_savings / form.monthly_income.data) * 100
                 badges = []
                 if form.timeline.data in ['6', '12']:
@@ -208,7 +215,7 @@ def main():
                 }
                 try:
                     db.emergency_funds.insert_one(emergency_fund)
-                    current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
+                    current_app.logger.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
                 except Exception as e:
                     current_app.logger.error(f"Failed to save emergency fund record to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -221,6 +228,7 @@ def main():
                         insights=[],
                         cross_tool_insights=[],
                         tips=[],
+                        activities=activities,
                         tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
                     )
                 if form.email_opt_in.data and form.email.data:
@@ -251,7 +259,7 @@ def main():
                                 'badges': badges,
                                 'created_at': emergency_fund['created_at'].strftime('%Y-%m-%d'),
                                 'cta_url': url_for('emergency_fund.main', _external=True),
-                                'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
+                                'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data _external=True)
                             },
                             lang=session.get('lang', 'en')
                         )
@@ -346,6 +354,7 @@ def main():
                 trans('emergency_fund_tip_track_expenses', default='Track expenses to find extra savings opportunities.'),
                 trans('budget_tip_monthly_savings', default='Set a monthly savings goal to stay on track.')
             ],
+            activities=activities,
             tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
         )
     except Exception as e:
@@ -373,6 +382,7 @@ def main():
             insights=[],
             cross_tool_insights=[],
             tips=[],
+            activities=activities,
             tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
         ), 500
 
