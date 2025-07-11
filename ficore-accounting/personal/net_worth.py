@@ -316,7 +316,7 @@ def main():
 
         current_app.logger.info(f"Rendering net worth main page with {len(records_data)} records for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
         return render_template(
-            'personal/NET_WORTH/net_worth_main.html',
+            'personal/NETWORTH/net_worth_main.html',
             form=form,
             records=records_data,
             latest_record=latest_record,
@@ -339,7 +339,7 @@ def main():
         current_app.logger.error(f"Error in net_worth.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("net_worth_dashboard_load_error", default="Unable to load net worth dashboard. Please try again."), "danger")
         return render_template(
-            'personal/NET_WORTH/net_worth_main.html',
+            'personal/NETWORTH/net_worth_main.html',
             form=form,
             records=[],
             latest_record={
