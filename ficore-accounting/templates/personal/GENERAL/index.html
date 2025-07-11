@@ -71,7 +71,7 @@
         <div class="section-card recent-activity">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="section-title mb-0">{{ t('general_recent_activity', default='Recent Activity') | e }}</h3>
-                <a href="{{ url_for('summaries.recent_activity') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
+                <a href="{{ url_for('personal.summaries.recent_activity') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
                     {{ t('general_view_all', default='View All') | e }}
                 </a>
             </div>
@@ -230,11 +230,11 @@ const translations = {
 // Load financial data
 function loadFinancialSummary() {
     Promise.all([
-        fetch('{{ url_for("summaries.budget_summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
-        fetch('{{ url_for("summaries.bill_summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
-        fetch('{{ url_for("summaries.net_worth_summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
-        fetch('{{ url_for("summaries.financial_health_summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
-        fetch('{{ url_for("summaries.emergency_fund_summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
+        fetch('{{ url_for("personal.summaries.budget_summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
+        fetch('{{ url_for("personal.summaries.bill_summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
+        fetch('{{ url_for("personal.summaries.net_worth_summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
+        fetch('{{ url_for("personal.summaries.financial_health_summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
+        fetch('{{ url_for("personal.summaries.emergency_fund_summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
     ]).then(([budgetData, billsData, netWorthData, healthData, emergencyFundData]) => {
         updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData);
     }).catch(error => {
@@ -244,7 +244,7 @@ function loadFinancialSummary() {
 
 // Load recent activity
 function loadRecentActivity() {
-    fetch('{{ url_for("summaries.recent_activity") | e }}')
+    fetch('{{ url_for("personal.summaries.recent_activity") | e }}')
         .then(response => response.json())
         .then(activities => {
             const activityList = document.getElementById('recentActivityList');
@@ -299,7 +299,7 @@ function loadRecentActivity() {
 // Load notifications
 function loadNotifications() {
     // Update notification count
-    fetch('{{ url_for("summaries.notification_count") | e }}')
+    fetch('{{ url_for("personal.summaries.notification_count") | e }}')
         .then(response => response.json())
         .then(data => {
             const notificationCount = document.getElementById('notificationCount');
@@ -311,7 +311,7 @@ function loadNotifications() {
         });
 
     // Fetch and display notifications
-    fetch('{{ url_for("summaries.notifications") | e }}')
+    fetch('{{ url_for("personal.summaries.notifications") | e }}')
         .then(response => response.json())
         .then(data => {
             const notificationList = document.getElementById('notificationList');
