@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, current_app, session, request
 from flask_login import current_user, login_required
 from datetime import datetime
-from models.global import get_budgets, get_bills, get_net_worth, get_financial_health, get_emergency_funds
+from models import get_budgets, get_bills, get_net_worth, get_financial_health, get_emergency_funds
 from utils import get_mongo_db, trans, requires_role, logger  # Added logger
 from bson import ObjectId
 
