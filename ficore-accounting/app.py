@@ -41,7 +41,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_babel import Babel
 from flask_compress import Compress
 import requests
-from learning_hub import learning_hub_bp, init_storage
+from learning_hub import init_storage
 
 # Load environment variables
 load_dotenv()
@@ -466,6 +466,7 @@ def create_app():
             from admin.routes import admin_bp
             from news.routes import news_bp
             from taxation.routes import taxation_bp
+            from learning_hub import learning_hub_bp
             
             app.register_blueprint(users_bp, url_prefix='/users')
             logger.info('Registered users blueprint')
