@@ -3,7 +3,6 @@ from bson import ObjectId
 from utils import get_mongo_db, trans, format_currency, clean_currency
 from flask import current_app, session
 from flask_login import current_user
-from . import learning_hub_bp
 import logging
 
 logger = logging.getLogger('ficore_app.learning_hub')
