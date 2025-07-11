@@ -1247,145 +1247,167 @@ def send_whatsapp_reminder(recipient, message):
         return False, {'error': str(e)}
 
 # Activity fetching functions
-def get_recent_activities(user_id=None, is_admin_user=False, db=None):
+def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
     '''
-    Fetch recent activities across all personal finance tools for a user.
-
+    Fetch recent activities across all personal finance tools for a user or session.
+    
     Args:
         user_id: ID of the user (optional for admin)
         is_admin_user: Whether the user is an admin (default: False)
         db: MongoDB database instance (optional)
-
+        session_id: Session ID for anonymous users (optional)
+        limit: Maximum number of activities to return (default: 10)
+    
     Returns:
         list: List of recent activity records
     '''
     if db is None:
         db = get_mongo_db()
-    query = {} if is_admin_user else {'user_id': str(user_id)}
-    activities = []
-
-    # Fetch recent bills
-    bills = db.bills.find(query).sort('created_at', -1).limit(5)
-    for bill in bills:
-        if not bill.get('created_at') or not bill.get('bill_name'):
-            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
-            continue
-        activities.append({
-            'type': 'bill',
-            'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
-            'timestamp': bill.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'amount': bill.get('amount', 0),
-                'due_date': bill.get('due_date', 'N/A'),
-                'status': bill.get('status', 'Unknown')
-            },
-            'icon': 'bi-receipt'
-        })
-
-    # Fetch recent budgets
-    budgets = db.budgets.find(query).sort('created_at', -1).limit(5)
-    for budget in budgets:
-        activities.append({
-            'type': 'budget',
-            'description': trans('recent_activity_budget_created', default='Created budget with income: {amount}', amount=budget.get('income', 0)),
-            'timestamp': budget.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'income': budget.get('income', 0),
-                'surplus_deficit': budget.get('surplus_deficit', 0)
-            },
-            'icon': 'bi-cash-coin'
-        })
-
-    # Fetch recent net worth records
-    net_worths = db.net_worth_data.find(query).sort('created_at', -1).limit(5)
-    for nw in net_worths:
-        activities.append({
-            'type': 'net_worth',
-            'description': trans('recent_activity_net_worth_calculated', default='Calculated net worth: {amount}', amount=nw.get('net_worth', 0)),
-            'timestamp': nw.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'net_worth': nw.get('net_worth', 0),
-                'total_assets': nw.get('total_assets', 0),
-                'total_liabilities': nw.get('total_liabilities', 0)
-            },
-            'icon': 'bi-graph-up'
-        })
-
-    # Fetch recent financial health scores
-    health_scores = db.financial_health_scores.find(query).sort('created_at', -1).limit(5)
-    for hs in health_scores:
-        activities.append({
-            'type': 'financial_health',
-            'description': trans('recent_activity_health_score', default='Calculated financial health score: {score}', score=hs.get('score', 0)),
-            'timestamp': hs.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'score': hs.get('score', 0),
-                'status': hs.get('status', 'Unknown')
-            },
-            'icon': 'bi-heart-pulse'
-        })
-
-    # Fetch recent emergency fund plans
-    emergency_funds = db.emergency_funds.find(query).sort('created_at', -1).limit(5)
-    for ef in emergency_funds:
-        activities.append({
-            'type': 'emergency_fund',
-            'description': trans('recent_activity_emergency_fund_created', default='Created emergency fund plan with target: {amount}', amount=ef.get('target_amount', 0)),
-            'timestamp': ef.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'target_amount': ef.get('target_amount', 0),
-                'savings_gap': ef.get('savings_gap', 0),
-                'monthly_savings': ef.get('monthly_savings', 0)
-            },
-            'icon': 'bi-piggy-bank'
-        })
-
-    # Fetch recent quiz results
-    quizzes = db.quiz_responses.find(query).sort('created_at', -1).limit(5)
-    for quiz in quizzes:
-        activities.append({
-            'type': 'quiz',
-            'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get('score', 0)),
-            'timestamp': quiz.get('created_at', datetime.utcnow()).isoformat(),
-            'details': {
-                'score': quiz.get('score', 0),
-                'personality': quiz.get('personality', 'N/A')
-            },
-            'icon': 'bi-question-circle'
-        })
-
-    # Fetch recent learning hub progress
-    learning_hub_progress = db.learning_materials.find(query).sort('updated_at', -1).limit(5)
-    for progress in learning_hub_progress:
-        if progress.get('course_id'):
+    
+    # Build query based on user_id or session_id
+    query = {} if is_admin_user else {'user_id': str(user_id)} if user_id else {'session_id': session_id} if session_id else {}
+    
+    try:
+        activities = []
+        
+        # Fetch recent bills
+        bills = db.bills.find(query).sort('created_at', -1).limit(5)
+        for bill in bills:
+            if not bill.get('created_at') or not bill.get('bill_name'):
+                logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+                continue
             activities.append({
-                'type': 'learning_hub',
-                'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
-                'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
+                'type': 'bill',
+                'description': trans('recent_activity_bill_added', default='Added bill: {name}', name=bill.get('bill_name', 'Unknown')),
+                'timestamp': bill.get('created_at', datetime.utcnow()).isoformat(),
                 'details': {
-                    'course_id': progress.get('course_id', 'N/A'),
-                    'lessons_completed': len(progress.get('lessons_completed', [])),
-                    'current_lesson': progress.get('current_lesson', 'N/A')
+                    'amount': bill.get('amount', 0),
+                    'due_date': bill.get('due_date', 'N/A'),
+                    'status': bill.get('status', 'Unknown')
                 },
-                'icon': 'bi-book'
+                'icon': 'bi-receipt'
             })
 
-    activities.sort(key=lambda x: x['timestamp'], reverse=True)
-    return activities[:10]
+        # Fetch recent budgets
+        budgets = db.budgets.find(query).sort('created_at', -1).limit(5)
+        for budget in budgets:
+            activities.append({
+                'type': 'budget',
+                'description': trans('recent_activity_budget_created', default='Created budget with income: {amount}', amount=budget.get('income', 0)),
+                'timestamp': budget.get('created_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'income': budget.get('income', 0),
+                    'surplus_deficit': budget.get('surplus_deficit', 0)
+                },
+                'icon': 'bi-cash-coin'
+            })
 
-def get_all_recent_activities(user_id=None, is_admin_user=False, db=None):
+        # Fetch recent net worth records
+        net_worths = db.net_worth_data.find(query).sort('created_at', -1).limit(5)
+        for nw in net_worths:
+            activities.append({
+                'type': 'net_worth',
+                'description': trans('recent_activity_net_worth_calculated', default='Calculated net worth: {amount}', amount=nw.get('net_worth', 0)),
+                'timestamp': nw.get('created_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'net_worth': nw.get('net_worth', 0),
+                    'total_assets': nw.get('total_assets', 0),
+                    'total_liabilities': nw.get('total_liabilities', 0)
+                },
+                'icon': 'bi-graph-up'
+            })
+
+        # Fetch recent financial health scores
+        health_scores = db.financial_health_scores.find(query).sort('created_at', -1).limit(5)
+        for hs in health_scores:
+            activities.append({
+                'type': 'financial_health',
+                'description': trans('recent_activity_health_score', default='Calculated financial health score: {score}', score=hs.get('score', 0)),
+                'timestamp': hs.get('created_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'score': hs.get('score', 0),
+                    'status': hs.get('status', 'Unknown')
+                },
+                'icon': 'bi-heart-pulse'
+            })
+
+        # Fetch recent emergency fund plans
+        emergency_funds = db.emergency_funds.find(query).sort('created_at', -1).limit(5)
+        for ef in emergency_funds:
+            activities.append({
+                'type': 'emergency_fund',
+                'description': trans('recent_activity_emergency_fund_created', default='Created emergency fund plan with target: {amount}', amount=ef.get('target_amount', 0)),
+                'timestamp': ef.get('created_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'target_amount': ef.get('target_amount', 0),
+                    'savings_gap': ef.get('savings_gap', 0),
+                    'monthly_savings': ef.get('monthly_savings', 0)
+                },
+                'icon': 'bi-piggy-bank'
+            })
+
+        # Fetch recent quiz results
+        quizzes = db.quiz_responses.find(query).sort('created_at', -1).limit(5)
+        for quiz in quizzes:
+            activities.append({
+                'type': 'quiz',
+                'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get('score', 0)),
+                'timestamp': quiz.get('created_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'score': quiz.get('score', 0),
+                    'personality': quiz.get('personality', 'N/A')
+                },
+                'icon': 'bi-question-circle'
+            })
+
+        # Fetch recent learning hub progress
+        learning_hub_progress = db.learning_materials.find(query).sort('updated_at', -1).limit(5)
+        for progress in learning_hub_progress:
+            if progress.get('course_id'):
+                activities.append({
+                    'type': 'learning_hub',
+                    'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
+                    'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
+                    'details': {
+                        'course_id': progress.get('course_id', 'N/A'),
+                        'lessons_completed': len(progress.get('lessons_completed', [])),
+                        'current_lesson': progress.get('current_lesson', 'N/A')
+                    },
+                    'icon': 'bi-book'
+                })
+
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Log successful fetch
+        logger.debug(
+            f"Fetched {len(activities)} recent activities for {'user ' + str(user_id) if user_id else 'session ' + str(session_id) if session_id else 'all'}",
+            extra={'session_id': session_id or 'unknown', 'ip': request.remote_addr or 'unknown'}
+        )
+        
+        return activities[:limit]
+    except Exception as e:
+        logger.error(
+            f"Failed to fetch recent activities: {str(e)}",
+            exc_info=True,
+            extra={'session_id': session_id or 'unknown', 'ip': request.remote_addr or 'unknown'}
+        )
+        raise
+
+def get_all_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
     '''
-    Fetch recent activities across all personal finance tools for a user.
-
+    Fetch recent activities across all personal finance tools for a user or session.
+    
     Args:
         user_id: ID of the user (optional for admin)
         is_admin_user: Whether the user is an admin (default: False)
         db: MongoDB database instance (optional)
-
+        session_id: Session ID for anonymous users (optional)
+        limit: Maximum number of activities to return (default: 10)
+    
     Returns:
         list: List of recent activity records
     '''
-    return get_recent_activities(user_id, is_admin_user, db)
+    return get_recent_activities(user_id, is_admin_user, db, session_id, limit)
 
 # Data conversion functions for backward compatibility
 def to_dict_financial_health(record):
