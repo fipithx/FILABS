@@ -163,7 +163,7 @@
                         <div class="card bg-success text-white">
                             <div class="card-body text-center">
                                 <h6>{{ t('net_worth_total_assets', default='Total Assets', lang=lang) }}</h6>
-                                <h3>{{ latest_record.total_assets | format_currency(currency=latest_record.currency) }}</h3>
+                                <h3>{{ latest_record.total_assets_formatted }}</h3>
                             </div>
                         </div>
                     </div>
@@ -171,7 +171,7 @@
                         <div class="card bg-danger text-white">
                             <div class="card-body text-center">
                                 <h6>{{ t('net_worth_total_liabilities', default='Total Liabilities', lang=lang) }}</h6>
-                                <h3>{{ latest_record.total_liabilities | format_currency(currency=latest_record.currency) }}</h3>
+                                <h3>{{ latest_record.total_liabilities_formatted }}</h3>
                             </div>
                         </div>
                     </div>
@@ -179,7 +179,7 @@
                         <div class="card bg-{{ 'success' if latest_record.net_worth >= 0 else 'warning' }} text-white">
                             <div class="card-body text-center">
                                 <h6>{{ t('net_worth_net_worth', default='Net Worth', lang=lang) }}</h6>
-                                <h3>{{ latest_record.net_worth | format_currency(currency=latest_record.currency) }}</h3>
+                                <h3>{{ latest_record.net_worth_formatted }}</h3>
                             </div>
                         </div>
                     </div>
@@ -198,7 +198,7 @@
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>{{ t('net_worth_average_net_worth', default='Average Net Worth', lang=lang) }}</span>
-                                <strong>{{ average_net_worth | format_currency(currency=latest_record.currency) }}</strong>
+                                <strong>{{ average_net_worth }}</strong>
                             </li>
                         </ul>
                     </div>
@@ -225,15 +225,15 @@
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('net_worth_cash_and_savings', default='Cash & Savings', lang=lang) }}</span>
-                                        <strong>{{ latest_record.cash_savings | format_currency(currency=latest_record.currency) }}</strong>
+                                        <strong>{{ latest_record.cash_savings_formatted }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('net_worth_investments', default='Investments', lang=lang) }}</span>
-                                        <strong>{{ latest_record.investments | format_currency(currency=latest_record.currency) }}</strong>
+                                        <strong>{{ latest_record.investments_formatted }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('net_worth_physical_property', default='Physical Property', lang=lang) }}</span>
-                                        <strong>{{ latest_record.property | format_currency(currency=latest_record.currency) }}</strong>
+                                        <strong>{{ latest_record.property_formatted }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('net_worth_created_at', default='Created At', lang=lang) }}</span>
@@ -317,10 +317,10 @@
                                             <tr>
                                                 <td>{{ record.created_at | format_datetime }}</td>
                                                 <td class="{% if record.net_worth >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                    {{ record.net_worth | format_currency(currency=record.currency) }}
+                                                    {{ record.net_worth_formatted }}
                                                 </td>
-                                                <td>{{ record.total_assets | format_currency(currency=record.currency) }}</td>
-                                                <td>{{ record.total_liabilities | format_currency(currency=record.currency) }}</td>
+                                                <td>{{ record.total_assets_formatted }}</td>
+                                                <td>{{ record.total_liabilities_formatted }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
