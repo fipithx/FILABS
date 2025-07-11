@@ -57,6 +57,13 @@ EMAIL_CONFIG = {
             "mailersend": "learning_hub_lesson_completed.html",
             "gmail": "learning_hub_lesson_completed.html"
         }
+    },
+    "learning_hub_feedback_received": {
+        "subject_key": "learning_hub_feedback_received_subject",
+        "template": {
+            "mailersend": "learning_hub_feedback_received.html",
+            "gmail": "learning_hub_feedback_received.html"
+        }
     }
 }
 
