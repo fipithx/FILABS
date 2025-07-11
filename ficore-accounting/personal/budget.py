@@ -128,7 +128,7 @@ def main():
     try:
         log_tool_usage(
             db=db,
-            tool_name='budget',
+            details='budget',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='main_view'
@@ -159,7 +159,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='budget',
+                        details='budget',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='create_budget'
@@ -256,7 +256,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='budget',
+                        details='budget',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='delete_budget'
@@ -431,7 +431,7 @@ def summary():
     try:
         log_tool_usage(
             db=db,
-            tool_name='budget',
+            details='budget',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='summary_view'
