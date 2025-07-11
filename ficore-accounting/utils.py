@@ -293,6 +293,41 @@ _BUSINESS_TOOLS = [
     },
 ]
 
+_BUSINESS_NAV = [
+    {
+        "endpoint": "general_bp.home",
+        "label": "Home",
+        "label_key": "general_business_home",
+        "description_key": "general_business_home_desc",
+        "tooltip_key": "general_business_home_tooltip",
+        "icon": "bi-house"
+    },
+    {
+        "endpoint": "debtors.index",
+        "label": "They Owe",
+        "label_key": "debtors_dashboard",
+        "description_key": "debtors_dashboard_desc",
+        "tooltip_key": "debtors_tooltip",
+        "icon": "bi-person-plus"
+    },
+    {
+        "endpoint": "inventory.index",
+        "label": "Inventory",
+        "label_key": "inventory_dashboard",
+        "description_key": "inventory_dashboard_desc",
+        "tooltip_key": "inventory_tooltip",
+        "icon": "bi-box"
+    },
+    {
+        "endpoint": "settings.profile",
+        "label": "Profile",
+        "label_key": "profile_settings",
+        "description_key": "profile_settings_desc",
+        "tooltip_key": "profile_tooltip",
+        "icon": "bi-person"
+    },
+]
+
 _BUSINESS_EXPLORE_FEATURES = [
     {
         "endpoint": "inventory.index",
@@ -365,41 +400,6 @@ _BUSINESS_EXPLORE_FEATURES = [
         "description_key": "learning_hub_desc",
         "tooltip_key": "learning_hub_tooltip",
         "icon": "bi-book"
-    },
-]
-
-_BUSINESS_NAV = [
-    {
-        "endpoint": "general_bp.home",
-        "label": "Home",
-        "label_key": "general_business_home",
-        "description_key": "general_business_home_desc",
-        "tooltip_key": "general_business_home_tooltip",
-        "icon": "bi-house"
-    },
-    {
-        "endpoint": "debtors.index",
-        "label": "They Owe",
-        "label_key": "debtors_dashboard",
-        "description_key": "debtors_dashboard_desc",
-        "tooltip_key": "debtors_tooltip",
-        "icon": "bi-person-plus"
-    },
-    {
-        "endpoint": "inventory.index",
-        "label": "Inventory",
-        "label_key": "inventory_dashboard",
-        "description_key": "inventory_dashboard_desc",
-        "tooltip_key": "inventory_tooltip",
-        "icon": "bi-box"
-    },
-    {
-        "endpoint": "settings.profile",
-        "label": "Profile",
-        "label_key": "profile_settings",
-        "description_key": "profile_settings_desc",
-        "tooltip_key": "profile_tooltip",
-        "icon": "bi-person"
     },
 ]
 
@@ -646,10 +646,10 @@ _ADMIN_EXPLORE_FEATURES = [
 ]
 
 def get_explore_features():
-    """Return explore features for unauthenticated users on the landing page."""
+    """Return explore features for unauthenticated users on the landing page with resolved URLs and ensured title_key."""
     try:
         with current_app.app_context():
-            return generate_tools_with_urls([
+            features = [
                 {
                     "endpoint": "personal.budget.main",
                     "label": "Budget Planner",
@@ -739,8 +739,62 @@ def get_explore_features():
                     "tooltip_key": "learning_hub_tooltip",
                     "icon": "bi-book",
                     "category": "Learning"
+                },
+                {
+                    "endpoint": "learning_hub.personal",
+                    "label": "Personal Finance Learning",
+                    "label_key": "learning_hub_personal_title",
+                    "description_key": "learning_hub_personal_desc",
+                    "tooltip_key": "learning_hub_personal_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
+                },
+                {
+                    "endpoint": "learning_hub.business",
+                    "label": "Business Learning",
+                    "label_key": "learning_hub_business_title",
+                    "description_key": "learning_hub_business_desc",
+                    "tooltip_key": "learning_hub_business_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
+                },
+                {
+                    "endpoint": "learning_hub.agents",
+                    "label": "Agent Learning",
+                    "label_key": "learning_hub_agents_title",
+                    "description_key": "learning_hub_agents_desc",
+                    "tooltip_key": "learning_hub_agents_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
+                },
+                {
+                    "endpoint": "learning_hub.compliance",
+                    "label": "Compliance Learning",
+                    "label_key": "learning_hub_compliance_title",
+                    "description_key": "learning_hub_compliance_desc",
+                    "tooltip_key": "learning_hub_compliance_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
+                },
+                {
+                    "endpoint": "learning_hub.tool_tutorials",
+                    "label": "Tool Tutorials",
+                    "label_key": "learning_hub_tool_tutorials_title",
+                    "description_key": "learning_hub_tool_tutorials_desc",
+                    "tooltip_key": "learning_hub_tool_tutorials_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
                 }
-            ])
+            ]
+            # Ensure every feature has a title_key
+            for feature in features:
+                if 'title_key' not in feature:
+                    feature['title_key'] = feature.get('label', 'default_feature').lower().replace(' ', '_') + '_title'
+                    logger.warning(
+                        f"Missing title_key for feature {feature.get('label', 'unknown')}, assigned default: {feature['title_key']}",
+                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+                    )
+            return generate_tools_with_urls(features)
     except Exception as e:
         logger.error(f"Error generating explore features: {str(e)}", exc_info=True)
         return []
