@@ -31,7 +31,7 @@ def allowed_file(filename):
 
 learning_hub_bp = Blueprint('learning_hub', __name__, template_folder='templates', static_folder='static')
 
-@learning_hub_bp.route('/main')
+@learning_hub_bp.route('/')
 def main():
     """Render the main Learning Hub landing page."""
     if 'sid' not in session:
