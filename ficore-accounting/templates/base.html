@@ -33,7 +33,7 @@
             <div class="header-actions">
                 <button class="notification-bell" id="notificationBell" data-bs-toggle="modal" data-bs-target="#notificationModal" data-bs-toggle="tooltip" data-bs-title="{{ t('general_notifications_tooltip', default='View notifications') | e }}" aria-label="{{ t('general_notifications', default='Notifications') | e }}">
                     <i class="bi bi-bell"></i>
-                    <span class="notification-badge d-none" id="notificationBadge"></span>
+                    <span class="notification-badge badge bg-primary rounded-pill d-none" id="notificationBadge">0</span>
                 </button>
                 <div class="dropdown header-toggles">
                     <button class="btn btn-link dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" data-bs-title="{{ t('general_language', default='Language') | e }}">
@@ -169,14 +169,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') | e }}"></button>
                 </div>
                 <div class="modal-body" id="notificationBody">
-                    <div class="notification-list" id="notificationList">
-                        <div class="notification-item">
-                            <div class="notification-icon">
-                                <i class="bi bi-bell text-muted"></i>
-                            </div>
-                            <div class="notification-content">
-                                <div class="notification-description">{{ t('general_loading_notifications', default='Loading notifications...') | e }}</div>
-                                <div class="notification-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                    <div id="notificationList">
+                        <div class="notification-card">
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="bi bi-info-circle text-muted"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-description fw-semibold">{{ t('general_loading_notifications', default='Loading notifications...') | e }}</div>
+                                    <div class="notification-time text-muted">{{ t('general_just_now', default='Just now') | e }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -184,6 +186,31 @@
             </div>
         </div>
     </div>
+
+    <style>
+        .notification-card {
+            border-bottom: 1px solid #e9ecef;
+            padding: 0.75rem 0;
+        }
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .notification-icon {
+            font-size: 1.25rem;
+        }
+        .notification-content {
+            flex-grow: 1;
+        }
+        .notification-description {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .notification-time {
+            font-size: 0.8rem;
+        }
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='js/interactivity.js') | e }}"></script>
@@ -247,17 +274,24 @@
 
         async function loadNotificationCount() {
             try {
-                const response = await fetch('{{ url_for("notification_count") | e }}');
+                const endpoint = {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'personal' %}
+                        '{{ url_for("summaries.notification_count") | e }}'
+                    {% else %}
+                        '{{ url_for("business.notification_count") | e }}'
+                    {% endif %}
+                {% else %}
+                    '';
+                {% endif %};
+                if (!endpoint) return;
+                const response = await fetch(endpoint);
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 const badge = document.getElementById('notificationBadge');
                 if (badge) {
-                    if (data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.classList.remove('d-none');
-                    } else {
-                        badge.classList.add('d-none');
-                    }
+                    badge.textContent = data.count || 0;
+                    badge.className = `notification-badge badge bg-${data.count > 0 ? 'danger' : 'primary'} rounded-pill`;
+                    badge.classList.toggle('d-none', data.count === 0);
                 }
             } catch (error) {
                 console.error('Failed to load notification count:', error);
@@ -271,7 +305,32 @@
                 return;
             }
             try {
-                const response = await fetch('{{ url_for("notifications") | e }}');
+                const endpoint = {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'personal' %}
+                        '{{ url_for("summaries.notifications") | e }}'
+                    {% else %}
+                        '{{ url_for("business.notifications") | e }}'
+                    {% endif %}
+                {% else %}
+                    '';
+                {% endif %};
+                if (!endpoint) {
+                    body.innerHTML = `
+                        <div class="notification-card">
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="bi bi-info-circle text-muted"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-description fw-semibold">{{ t('general_no_notifications', default='No notifications') | e }}</div>
+                                    <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+                const response = await fetch(endpoint);
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 if (data.error) {
@@ -279,24 +338,63 @@
                     return;
                 }
                 if (data.length === 0) {
-                    body.innerHTML = `<p class="text-muted text-center">{{ t('general_no_notifications_yet', default='No new notifications.') | e }}</p>`;
+                    body.innerHTML = `
+                        <div class="notification-card">
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="bi bi-info-circle text-muted"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-description fw-semibold">{{ t('general_no_notifications', default='No notifications') | e }}</div>
+                                    <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 } else {
                     body.innerHTML = data.map(notification => `
-                        <div class="notification-item ${notification.read ? '' : 'unread'}">
-                            <div class="notification-icon">
-                                <i class="bi bi-bell ${notification.read ? 'text-muted' : 'text-primary'}"></i>
-                            </div>
-                            <div class="notification-content">
-                                <div class="notification-description">${notification.message}</div>
-                                <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                        <div class="notification-card">
+                            <div class="notification-item">
+                                <div class="notification-icon">
+                                    <i class="bi ${getNotificationIcon(notification.type)} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-description fw-semibold">${notification.message}</div>
+                                    <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                                </div>
                             </div>
                         </div>
                     `).join('');
                 }
             } catch (error) {
-                body.innerHTML = `<p class="text-danger">{{ t('general_notification_load_error', default='Failed to load notifications') | e }}</p>`;
+                body.innerHTML = `
+                    <div class="notification-card">
+                        <div class="notification-item">
+                            <div class="notification-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-description fw-semibold">{{ t('general_notification_load_error', default='Failed to load notifications') | e }}</div>
+                                <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 console.error('Failed to load notifications:', error);
             }
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'email': 'bi-envelope',
+                'sms': 'bi-chat',
+                'whatsapp': 'bi-whatsapp',
+                'info': 'bi-info-circle',
+                'warning': 'bi-exclamation-triangle',
+                'error': 'bi-x-circle',
+                'success': 'bi-check-circle'
+            };
+            return icons[type] || 'bi-info-circle';
         }
 
         function formatTimeAgo(timestamp) {
@@ -304,7 +402,9 @@
                 just_now: '{{ t("general_just_now", default="Just now") | e }}',
                 minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
                 hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
-                days_ago: '{{ t("general_days_ago", default="d ago") | e }}'
+                days_ago: '{{ t("general_days_ago", default="d ago") | e }}',
+                no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
+                check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
             };
             const now = new Date();
             const time = new Date(timestamp);
