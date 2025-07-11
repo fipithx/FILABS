@@ -2,15 +2,10 @@ from flask import Blueprint, jsonify, current_app, session, request
 from flask_login import current_user, login_required
 from datetime import datetime
 from models.global import get_budgets, get_bills, get_net_worth, get_financial_health, get_emergency_funds
-from utils import get_mongo_db, trans, requires_role
+from utils import get_mongo_db, trans, requires_role, logger  # Added logger
 from bson import ObjectId
-import logging
 
 summaries_bp = Blueprint('summaries', __name__, url_prefix='/summaries')
-
-# Configure logging
-logger = logging.getLogger('ficore_app')
-logger.setLevel(logging.INFO)
 
 # --- HELPER FUNCTION ---
 def get_recent_activities(user_id=None, is_admin_user=False, db=None):
@@ -23,7 +18,8 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
     bills = db.bills.find(query).sort('created_at', -1).limit(5)
     for bill in bills:
         if not bill.get('created_at') or not bill.get('bill_name'):
-            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+            logger.warning(f"Skipping invalid bill record: {bill.get('_id')}", 
+                           extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
             continue
         activities.append({
             'type': 'bill',
@@ -275,11 +271,13 @@ def emergency_fund_summary():
 def recent_activity():
     """Return recent activity across all personal finance tools for the current user."""
     try:
-        activities = _get_recent_activities_data(user_id=current_user.id, is_admin_user=requires_role(['admin']))
-        logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        activities = _get_recent_activities_data(user_id=current_user.id, is_admin_user=current_user.role == 'admin')  # Fixed admin check
+        logger.info(f"Fetched {len(activities)} recent activities for user {current_user.id}", 
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Changed to info and fixed fallback
         return jsonify(activities), 200
     except Exception as e:
-        logger.error(f"Error in summaries.recent_activity: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        logger.error(f"Error in summaries.recent_activity: {str(e)}", 
+                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Fixed fallback
         return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch recent activity')}), 500
 
 @summaries_bp.route('/notification_count')
@@ -289,12 +287,14 @@ def notification_count():
     """Return the count of unread notifications for the current user."""
     try:
         db = get_mongo_db()
-        query = {'read_status': False} if requires_role(['admin']) else {'user_id': str(current_user.id), 'read_status': False}
+        query = {} if current_user.role == 'admin' else {'user_id': str(current_user.id), 'read_status': False}  # Fixed admin check
         count = db.bill_reminders.count_documents(query)
-        logger.debug(f"Fetched notification count {count} for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        logger.info(f"Fetched notification count {count} for user {current_user.id}", 
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Changed to info and fixed fallback
         return jsonify({'count': count}), 200
     except Exception as e:
-        logger.error(f"Error fetching notification count: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        logger.error(f"Error fetching notification count: {str(e)}", 
+                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Fixed fallback
         return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch notification count')}), 500
 
 @summaries_bp.route('/notifications')
@@ -304,7 +304,7 @@ def notifications():
     """Return the list of recent notifications for the current user."""
     try:
         db = get_mongo_db()
-        query = {} if requires_role(['admin']) else {'user_id': str(current_user.id)}
+        query = {} if current_user.role == 'admin' else {'user_id': str(current_user.id)}  # Fixed admin check
         notifications = list(db.bill_reminders.find(query).sort('sent_at', -1).limit(10))
 
         # Handle cases where notification_id or sent_at might be missing
@@ -331,11 +331,14 @@ def notifications():
                     'icon': get_notification_icon(n.get('type', 'info'))
                 })
             except Exception as e:
-                logger.warning(f"Skipping invalid notification: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                logger.warning(f"Skipping invalid notification: {str(e)}", 
+                               extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Fixed fallback
                 continue
 
-        logger.debug(f"Fetched {len(result)} notifications for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        logger.info(f"Fetched {len(result)} notifications for user {current_user.id}", 
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Changed to info and fixed fallback
         return jsonify(result), 200
     except Exception as e:
-        logger.error(f"Error fetching notifications: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        logger.error(f"Error fetching notifications: {str(e)}", 
+                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})  # Fixed fallback
         return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch notifications')}), 500
