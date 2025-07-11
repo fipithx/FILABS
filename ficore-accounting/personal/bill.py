@@ -113,7 +113,7 @@ def main():
     try:
         log_tool_usage(
             db=db,
-            tool_name='bill',
+            details='bill',
             user_id=current_user.id,
             session_id=session.get('sid', 'unknown'),
             action='main_view'
@@ -147,7 +147,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='bill',
+                        details='bill',
                         user_id=current_user.id,
                         session_id=session.get('sid', 'unknown'),
                         action='add_bill'
@@ -381,7 +381,7 @@ def unsubscribe():
         try:
             log_tool_usage(
                 db=db,
-                tool_name='bill',
+                details='bill',
                 user_id=current_user.id,
                 session_id=session.get('sid', 'unknown'),
                 action='unsubscribe'
