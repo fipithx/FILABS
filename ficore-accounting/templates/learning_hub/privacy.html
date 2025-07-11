@@ -1,0 +1,89 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script>{% extends "learning_hub/base.html" %}
+
+{% block title %}{{ t('learning_hub_privacy_title', default='Privacy Policy') | e }} - FiCore Africa{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">{{ t('learning_hub_privacy_title', default='Privacy Policy') | e }}</h1>
+    <p class="text-muted">{{ t('learning_hub_privacy_updated', default='Last updated: July 11, 2025') | e }}</p>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_intro_title', default='Introduction') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_intro', default='FiCore Africa Learning Hub is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your personal information when you use our learning platform.') | e }}</p>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_data_collection_title', default='Information We Collect') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_data_collection', default='We collect information you provide, such as your name, email address, and course progress, to enhance your learning experience. We also collect usage data, such as session IDs and activity logs, to improve our services.') | e }}</p>
+        <ul>
+            <li>{{ t('learning_hub_privacy_personal_data', default='Personal Data: Name, email, and profile information provided during registration or profile updates.') | e }}</li>
+            <li>{{ t('learning_hub_privacy_usage_data', default='Usage Data: Course progress, quiz scores, and interaction logs.') | e }}</li>
+            <li>{{ t('learning_hub_privacy_anonymous_data', default='Anonymous Data: Aggregated usage statistics for analytics.') | e }}</li>
+        </ul>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_data_usage_title', default='How We Use Your Information') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_data_usage', default='We use your information to provide personalized learning experiences, send notifications, and improve platform functionality. Your data is never sold to third parties.') | e }}</p>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_data_sharing_title', default='Data Sharing') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_data_sharing', default='We do not share your personal information with third parties, except as required by law or to provide services (e.g., email notifications via trusted providers).') | e }}</p>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_data_security_title', default='Data Security') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_data_security', default='We implement industry-standard security measures, including encryption and secure storage, to protect your data. However, no system is completely secure, and we encourage you to use strong passwords.') | e }}</p>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_user_rights_title', default='Your Rights') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_user_rights', default='You can access, update, or delete your personal information via your profile. To unsubscribe from emails, use the link in any email or contact us.') | e }}</p>
+    </section>
+    
+    <section class="mb-4">
+        <h2>{{ t('learning_hub_privacy_contact_title', default='Contact Us') | e }}</h2>
+        <p>{{ t('learning_hub_privacy_contact', default='For questions about this Privacy Policy, contact us at ') | e }}<a href="mailto:support@ficoreafrica.com">support@ficoreafrica.com</a>.</p>
+    </section>
+</div>
+{% endblock %}
