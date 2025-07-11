@@ -31,7 +31,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=['200 per day', '5
 
 # Set up logging with session support
 root_logger = logging.getLogger('ficore_app.utils')
-root_logger.setLevel(logging.DEBUG)  # Changed to DEBUG for better deployment diagnostics
+root_logger.setLevel(logging.DEBUG)
 
 class SessionFormatter(logging.Formatter):
     def format(self, record):
@@ -59,7 +59,7 @@ class SessionAdapter(logging.LoggerAdapter):
 
 logger = SessionAdapter(root_logger, {})
 
-# Tool/navigation lists with endpoints
+# Tool/navigation lists with endpoints (unchanged)
 _PERSONAL_TOOLS = [
     {
         "endpoint": "personal.budget.main",
@@ -782,15 +782,75 @@ def get_limiter():
     '''
     return limiter
 
-def log_tool_usage(action, details=None, user_id=None):
-    db = get_mongo_db()
-    db.tool_usage_logs.insert_one({
-        'action': action,
-        'details': details or {},
-        'user_id': user_id,
-        'timestamp': datetime.utcnow()
-    })
-    logger.info(f"Logged tool usage: {action}", extra={'user_id': user_id})
+def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None):
+    '''
+    Log tool usage to MongoDB with improved error handling and session support.
+    
+    Args:
+        action (str): The action performed (e.g., 'main_view', 'add_bill').
+        details (dict, optional): Additional details about the action.
+        user_id (str, optional): ID of the user performing the action.
+        db (MongoDB database, optional): MongoDB database instance. If None, fetched via get_mongo_db().
+        session_id (str, optional): Session ID for the action.
+    
+    Raises:
+        RuntimeError: If database connection fails or insertion fails.
+    '''
+    try:
+        # Fetch database instance if not provided
+        if db is None:
+            db = get_mongo_db()
+        
+        # Validate inputs
+        if not action or not isinstance(action, str):
+            raise ValueError("Action must be a non-empty string")
+        
+        # Use provided session_id or fetch from session
+        effective_session_id = session_id or session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'
+        
+        # Prepare log entry
+        log_entry = {
+            'action': action,
+            'details': details or {},
+            'user_id': str(user_id) if user_id else None,
+            'session_id': effective_session_id,
+            'timestamp': datetime.utcnow(),
+            'ip_address': request.remote_addr if has_request_context() else 'unknown',
+            'user_agent': request.headers.get('User-Agent') if has_request_context() else 'unknown'
+        }
+        
+        # Insert log entry into MongoDB
+        db.tool_usage_logs.insert_one(log_entry)
+        logger.info(
+            f"Logged tool usage: {action}",
+            extra={
+                'user_id': user_id or 'unknown',
+                'session_id': effective_session_id,
+                'ip_address': request.remote_addr if has_request_context() else 'unknown'
+            }
+        )
+    except ValueError as e:
+        logger.error(
+            f"Invalid input for log_tool_usage: {str(e)}",
+            exc_info=True,
+            extra={
+                'user_id': user_id or 'unknown',
+                'session_id': session_id or session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id',
+                'ip_address': request.remote_addr if has_request_context() else 'unknown'
+            }
+        )
+        raise
+    except Exception as e:
+        logger.error(
+            f"Failed to log tool usage for action {action}: {str(e)}",
+            exc_info=True,
+            extra={
+                'user_id': user_id or 'unknown',
+                'session_id': session_id or session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id',
+                'ip_address': request.remote_addr if has_request_context() else 'unknown'
+            }
+        )
+        raise RuntimeError(f"Failed to log tool usage: {str(e)}")
 
 def create_anonymous_session():
     '''
