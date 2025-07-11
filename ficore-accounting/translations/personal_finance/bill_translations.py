@@ -6,6 +6,7 @@ BILL_TRANSLATIONS = {
     'en': {
         'bill_bill_planner': 'Bills',
         'bill_add_first': 'Add Your First Bill',
+        'bill_log_error': 'Bill Log Error',
         'bill_tooltip': 'Manage your upcoming and paid bills.',
         'bill_bill_planner_tab': 'Bill',
         'bill_bill_dashboard': 'Bill Dashboard',
@@ -454,6 +455,7 @@ BILL_TRANSLATIONS = {
         'bill_unsubscribe': 'Cire Rajista daga Kuɗin Bili',
         'bill_add_first': 'Ƙara Kuɗin Kuɗi na Farko',
         'bill_tooltip': 'Sarrafa kuɗaɗenka masu zuwa da waɗanda aka biya.',
+        'bill_log_error': 'Kuskuren Log na Kuɗi',
         'bill_manage_track_bills': 'Sarrafa da bin diddigin duk kuɗin ka a wuri ɗaya',
         'bill_email_preferences': 'Zaɓin Imel',
         'bill_unsubscribe_description': 'Danna ƙasa don cire rajista daga imel ɗin tunatar da kuɗi.',
