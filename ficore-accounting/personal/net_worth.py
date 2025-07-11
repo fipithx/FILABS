@@ -138,10 +138,10 @@ def main():
                     action='calculate_net_worth'
                 )
                 
-                cash_savings = form.cash_savings.data
-                investments = form.investments.data
-                property = form.property.data
-                loans = form.loans.data or 0
+                cash_savings = float(form.cash_savings.data)
+                investments = float(form.investments.data)
+                property = float(form.property.data)
+                loans = float(form.loans.data or 0)
 
                 total_assets = cash_savings + investments + property
                 total_liabilities = loans
@@ -231,20 +231,20 @@ def main():
                 'first_name': record.get('first_name'),
                 'email': record.get('email'),
                 'send_email': record.get('send_email', False),
-                'cash_savings': record.get('cash_savings', 0),
-                'cash_savings_formatted': format_currency(record.get('cash_savings', 0), record.get('currency', 'NGN')),
-                'investments': record.get('investments', 0),
-                'investments_formatted': format_currency(record.get('investments', 0), record.get('currency', 'NGN')),
-                'property': record.get('property', 0),
-                'property_formatted': format_currency(record.get('property', 0), record.get('currency', 'NGN')),
-                'loans': record.get('loans', 0),
-                'loans_formatted': format_currency(record.get('loans', 0), record.get('currency', 'NGN')),
-                'total_assets': record.get('total_assets', 0),
-                'total_assets_formatted': format_currency(record.get('total_assets', 0), record.get('currency', 'NGN')),
-                'total_liabilities': record.get('total_liabilities', 0),
-                'total_liabilities_formatted': format_currency(record.get('total_liabilities', 0), record.get('currency', 'NGN')),
-                'net_worth': record.get('net_worth', 0),
-                'net_worth_formatted': format_currency(record.get('net_worth', 0), record.get('currency', 'NGN')),
+                'cash_savings': float(record.get('cash_savings', 0)),
+                'cash_savings_formatted': format_currency(float(record.get('cash_savings', 0)), record.get('currency', 'NGN')),
+                'investments': float(record.get('investments', 0)),
+                'investments_formatted': format_currency(float(record.get('investments', 0)), record.get('currency', 'NGN')),
+                'property': float(record.get('property', 0)),
+                'property_formatted': format_currency(float(record.get('property', 0)), record.get('currency', 'NGN')),
+                'loans': float(record.get('loans', 0)),
+                'loans_formatted': format_currency(float(record.get('loans', 0)), record.get('currency', 'NGN')),
+                'total_assets': float(record.get('total_assets', 0)),
+                'total_assets_formatted': format_currency(float(record.get('total_assets', 0)), record.get('currency', 'NGN')),
+                'total_liabilities': float(record.get('total_liabilities', 0)),
+                'total_liabilities_formatted': format_currency(float(record.get('total_liabilities', 0)), record.get('currency', 'NGN')),
+                'net_worth': float(record.get('net_worth', 0)),
+                'net_worth_formatted': format_currency(float(record.get('net_worth', 0)), record.get('currency', 'NGN')),
                 'badges': record.get('badges', []),
                 'created_at': record.get('created_at').strftime('%b %d, %Y') if record.get('created_at') else None,
                 'currency': record.get('currency', 'NGN')
@@ -252,39 +252,35 @@ def main():
             records_data.append((record_data['id'], record_data))
         
         latest_record = records_data[0][1] if records_data else {
-            'cash_savings': 0,
-            'cash_savings_formatted': format_currency(0, 'NGN'),
-            'investments': 0,
-            'investments_formatted': format_currency(0, 'NGN'),
-            'property': 0,
-            'property_formatted': format_currency(0, 'NGN'),
-            'loans': 0,
-            'loans_formatted': format_currency(0, 'NGN'),
-            'total_assets': 0,
-            'total_assets_formatted': format_currency(0, 'NGN'),
-            'total_liabilities': 0,
-            'total_liabilities_formatted': format_currency(0, 'NGN'),
-            'net_worth': 0,
-            'net_worth_formatted': format_currency(0, 'NGN'),
+            'cash_savings': 0.0,
+            'cash_savings_formatted': format_currency(0.0, 'NGN'),
+            'investments': 0.0,
+            'investments_formatted': format_currency(0.0, 'NGN'),
+            'property': 0.0,
+            'property_formatted': format_currency(0.0, 'NGN'),
+            'loans': 0.0,
+            'loans_formatted': format_currency(0.0, 'NGN'),
+            'total_assets': 0.0,
+            'total_assets_formatted': format_currency(0.0, 'NGN'),
+            'total_liabilities': 0.0,
+            'total_liabilities_formatted': format_currency(0.0, 'NGN'),
+            'net_worth': 0.0,
+            'net_worth_formatted': format_currency(0.0, 'NGN'),
             'badges': [],
             'created_at': None,
             'currency': 'NGN'
         }
 
         all_records = list(db.net_worth_data.find({'currency': 'NGN'}))
-        all_net_worths = [record['net_worth'] for record in all_records if record.get('net_worth') is not None]
+        all_net_worths = [float(record['net_worth']) for record in all_records if record.get('net_worth') is not None]
         total_users = len(all_net_worths)
         rank = 0
-        average_net_worth = 0
+        average_net_worth = 0.0
         if all_net_worths:
             all_net_worths.sort(reverse=True)
-            try:
-                user_net_worth = float(latest_record['net_worth'])
-            except (ValueError, TypeError) as e:
-                current_app.logger.warning(f"Error parsing net_worth: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                user_net_worth = 0
+            user_net_worth = float(latest_record['net_worth'])
             rank = sum(1 for nw in all_net_worths if nw > user_net_worth) + 1
-            average_net_worth = sum(all_net_worths) / total_users if total_users else 0
+            average_net_worth = sum(all_net_worths) / total_users if total_users else 0.0
 
         insights = []
         try:
@@ -357,22 +353,22 @@ def main():
             form=form,
             records=[],
             latest_record={
-                'cash_savings': 0,
-                'cash_savings_formatted': format_currency(0, 'NGN'),
-                'investments': 0,
-                'investments_formatted': format_currency(0, 'NGN'),
-                'property': 0,
-                'property_formatted': format_currency(0, 'NGN'),
-                'loans': 0,
-                'loans_formatted': format_currency(0, 'NGN'),
-                'total_assets': 0,
-                'total_assets_formatted': format_currency(0, 'NGN'),
-                'total_liabilities': 0,
-                'total_liabilities_formatted': format_currency(0, 'NGN'),
-                'net_worth': 0,
-                'net_worth_formatted': format_currency(0, 'NGN'),
+                'cash_savings': 0.0,
+                'cash_savings_formatted': format_currency(0.0, 'NGN'),
+                'investments': 0.0,
+                'investments_formatted': format_currency(0.0, 'NGN'),
+                'property': 0.0,
+                'property_formatted': format_currency(0.0, 'NGN'),
+                'loans': 0.0,
+                'loans_formatted': format_currency(0.0, 'NGN'),
+                'total_assets': 0.0,
+                'total_assets_formatted': format_currency(0.0, 'NGN'),
+                'total_liabilities': 0.0,
+                'total_liabilities_formatted': format_currency(0.0, 'NGN'),
+                'net_worth': 0.0,
+                'net_worth_formatted': format_currency(0.0, 'NGN'),
                 'badges': [],
-                'created_at': 'None',
+                'created_at': None,
                 'currency': 'NGN'
             },
             activities=activities,
@@ -386,7 +382,7 @@ def main():
             ],
             rank=0,
             total_users=0,
-            average_net_worth=format_currency(0, 'NGN'),
+            average_net_worth=format_currency(0.0, 'NGN'),
             tool_title=trans('net_worth_title', default='Net Worth Calculator')
         )
 
@@ -415,7 +411,7 @@ def summary():
             current_app.logger.info(f"No net worth found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
             return jsonify({'net_worth': format_currency(0.0, 'NGN'), 'currency': 'NGN'})
         
-        net_worth = latest_records[0].get('net_worth', 0.0)
+        net_worth = float(latest_records[0].get('net_worth', 0.0))
         currency = latest_records[0].get('currency', 'NGN')
         current_app.logger.info(f"Fetched net worth summary for user {current_user.id}: {net_worth} {currency}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'net_worth': format_currency(net_worth, currency=currency), 'currency': currency})
