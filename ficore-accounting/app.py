@@ -392,6 +392,8 @@ def create_app():
                 db.learning_materials.create_index([('session_id', 1), ('course_id', 1)])
                 db.bill_reminders.create_index([('user_id', 1), ('sent_at', -1)])
                 db.bill_reminders.create_index([('notification_id', 1)])
+                db.records.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
+                db.cashflows.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
                 logger.info('Created indexes for personal finance collections')
             except Exception as e:
                 logger.warning(f'Some indexes may already exist: {str(e)}')
