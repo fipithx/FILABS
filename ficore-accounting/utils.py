@@ -115,7 +115,7 @@ _PERSONAL_TOOLS = [
         "icon": "bi-question-circle"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -159,7 +159,7 @@ _PERSONAL_NAV = [
     },
     
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -250,7 +250,7 @@ _PERSONAL_EXPLORE_FEATURES = [
         "icon": "bi-receipt"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -293,7 +293,7 @@ _BUSINESS_TOOLS = [
         "icon": "bi-coin"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -403,7 +403,7 @@ _BUSINESS_EXPLORE_FEATURES = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -430,7 +430,7 @@ _AGENT_TOOLS = [
         "icon": "bi-coin"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -449,7 +449,7 @@ _AGENT_NAV = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -492,7 +492,7 @@ _AGENT_EXPLORE_FEATURES = [
         "icon": "bi-newspaper"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -527,7 +527,7 @@ _ADMIN_TOOLS = [
         "icon": "bi-coin"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -645,7 +645,7 @@ _ADMIN_EXPLORE_FEATURES = [
         "icon": "bi-book"
     },
     {
-        "endpoint": "learning_hub.index",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -741,7 +741,7 @@ def get_explore_features():
                     "category": "News"
                 },
                 {
-                    "endpoint": "learning_hub.index",
+                    "endpoint": "learning_hub.main",
                     "label": "Learning Hub",
                     "label_key": "learning_hub_main",
                     "description_key": "learning_hub_desc",
@@ -901,7 +901,7 @@ def generate_tools_with_urls(tools):
         except BuildError as e:
             logger.error(f"Failed to generate URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
             logger.debug(f"Available endpoints: {[rule.endpoint for rule in current_app.url_map.iter_rules()]}")
-            fallback_url = url_for('learning_hub.index', _external=True) if tool['endpoint'].startswith('learning_hub.') else '#'
+            fallback_url = url_for('learning_hub.main', _external=True) if tool['endpoint'].startswith('learning_hub.') else '#'
             result.append({**tool, 'url': fallback_url, 'icon': tool.get('icon', 'bi-question-circle')})
         except RuntimeError as e:
             logger.error(f"Runtime error generating URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
@@ -1600,7 +1600,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
                     'badges_earned': progress.get('badges_earned', [])
                 },
                 'icon': 'bi-book',
-                'url': url_for('learning_hub.index', _external=True) if has_request_context() else '#'
+                'url': url_for('learning_hub.main', _external=True) if has_request_context() else '#'
             })
 
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
