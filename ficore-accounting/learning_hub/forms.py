@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, BooleanField, SubmitField, FileField, SelectField
+from wtforms import StringField, BooleanField, SubmitField, FileField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, Email, Optional
+from flask import session
 from .utils import trans
 
 class LearningHubProfileForm(FlaskForm):
@@ -19,7 +20,7 @@ class LearningHubProfileForm(FlaskForm):
 class UploadForm(FlaskForm):
     title = StringField(trans('learning_hub_course_title', default='Course Title'), validators=[DataRequired()])
     course_id = StringField(trans('learning_hub_course_id', default='Course ID'), validators=[DataRequired()])
-    description = StringField(trans('learning_hub_description', default='Description'), validators=[DataRequired()])
+    description = TextAreaField(trans('learning_hub_description', default='Description'), validators=[DataRequired()])
     content_type = SelectField(trans('learning_hub_content_type', default='Content Type'), choices=[
         ('video', 'Video'), ('text', 'Text'), ('pdf', 'PDF')
     ], validators=[DataRequired()])
