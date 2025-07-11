@@ -42,6 +42,7 @@ from flask_babel import Babel
 from flask_compress import Compress
 import requests
 from learning_hub import init_storage
+from business_finance import business  # Added import for business_finance blueprint
 
 # Load environment variables
 load_dotenv()
@@ -355,8 +356,7 @@ def create_app():
             
             def shutdown_scheduler():
                 try:
-                    scheduler = app.config.get('SCHEDULER')
-                    if scheduler and getattr(scheduler, 'running', False):
+                   If scheduler and getattr(scheduler, 'running', False):
                         scheduler.shutdown(wait=True)
                         logger.info('Scheduler shutdown successfully')
                 except Exception as e:
@@ -508,6 +508,8 @@ def create_app():
             logger.info('Registered general blueprint')
             app.register_blueprint(learning_hub_bp, url_prefix='/learning_hub')
             logger.info('Registered learning hub blueprint with url_prefix="/learning_hub"')
+            app.register_blueprint(business, url_prefix='/business')
+            logger.info('Registered business blueprint with url_prefix="/business"')
 
             # Initialize tools with URLs after blueprint registration
             utils.initialize_tools_with_urls(app)
@@ -935,134 +937,6 @@ def create_app():
             )
             flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
             return redirect(url_for('index'))
-    
-    # Accounting API routes
-    @app.route('/api/debt-summary')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def debt_summary():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                creditors_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'creditor'}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-                ]
-                creditors_result = list(db.records.aggregate(creditors_pipeline))
-                total_i_owe = creditors_result[0]['total'] if creditors_result else 0
-                debtors_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'debtor'}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-                ]
-                debtors_result = list(db.records.aggregate(debtors_pipeline))
-                total_i_am_owed = debtors_result[0]['total'] if debtors_result else 0
-                return jsonify({
-                    'totalIOwe': total_i_owe,
-                    'totalIAmOwed': total_i_am_owed
-                })
-        except Exception as e:
-            logger.error(f'Debt summary error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('debt_summary_error')}), 500
-    
-    @app.route('/api/cashflow')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def cashflow_summary():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                now = datetime.now()
-                month_start = datetime(now.year, now.month, 1)
-                next_month_end = datetime(now.year, now.month + 1, 1) if now.month < 12 else datetime(now.year + 1, 1, 1)
-                receipts_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'receipt', 'created_at': {'$gte': month_start, '$lte': next_month_end}}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-                ]
-                receipts_result = list(db.cashflows.aggregate(receipts_pipeline))
-                total_receipts = receipts_result[0]['total'] if receipts_result else 0
-                payments_pipeline = [
-                    {'$match': {'user_id': user_id, 'type': 'payment', 'created_at': {'$gte': month_start, '$lte': next_month_end}}},
-                    {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-                ]
-                payments_result = list(db.cashflows.aggregate(payments_pipeline))
-                total_payments = payments_result[0]['total'] if payments_result else 0
-                net_cashflow = total_receipts - total_payments
-                return jsonify({
-                    'netCashflow': net_cashflow,
-                    'totalReceipts': total_receipts,
-                    'totalPayments': total_payments
-                })
-        except Exception as e:
-            logger.error(f'Cashflow summary error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('cashflow_error')}), 500
-    
-    @app.route('/api/inventory-summary')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def inventory_summary():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                pipeline = [
-                    {'$match': {'user_id': user_id}},
-                    {'$addFields': {
-                        'item_total': {
-                            '$multiply': ['$item_qty', '$default_price']
-                        }
-                    }},
-                    {'$group': {'_id': None, 'totalValue': {'$sum': '$item_total'}}}
-                ]
-                result = list(db.inventory.aggregate(pipeline))
-                total_value = result[0]['totalValue'] if result else 0
-                return jsonify({
-                    'totalValue': total_value
-                })
-        except Exception as e:
-            logger.error(f'Inventory summary error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('inventory_error')}), 500
-    
-    @app.route('/api/recent-activity')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def recent_activity():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                activities = []
-                recent_records = list(db.records.find({'user_id': user_id}).sort('created_at', -1).limit(3))
-                for record in recent_records:
-                    activity_type = 'debt_added'
-                    description = f'Added {record["type"]}: {record["name"]}'
-                    activities.append({
-                        'type': activity_type,
-                        'description': description,
-                        'amount': record['amount_owed'],
-                        'timestamp': record['created_at']
-                    })
-                recent_cashflows = list(db.cashflows.find({'user_id': user_id}).sort('created_at', -1).limit(3))
-                for cashflow in recent_cashflows:
-                    activity_type = 'money_in' if cashflow['type'] == 'receipt' else 'money_out'
-                    description = f'{"Received" if cashflow["type"] == "receipt" else "Paid"} {cashflow["party_name"]}'
-                    activities.append({
-                        'type': activity_type,
-                        'description': description,
-                        'amount': cashflow['amount'],
-                        'timestamp': cashflow['created_at']
-                    })
-                activities.sort(key=lambda x: x['timestamp'], reverse=True)
-                activities = activities[:5]
-                activities = utils.get_recent_activities(user_id=user_id, db=db)
-                activity = activities[0] if activities else None
-                for activity in activities:
-                    activity['timestamp'] = activity['timestamp'].isoformat()
-                return jsonify(activities)
-        except Exception as e:
-            logger.error(f'Recent activity error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('activity_error')}), 500
     
     @app.route('/api/notifications/count')
     @login_required
