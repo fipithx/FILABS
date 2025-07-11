@@ -145,6 +145,35 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
         db = get_mongo_db()
     return get_recent_activities(user_id, is_admin_user, db)
 
+# --- HELPER FUNCTION FOR NOTIFICATIONS ---
+def _get_notifications_data(user_id, is_admin_user, db):
+    """
+    Helper function to fetch recent notifications for a user from bill_reminders collection.
+    """
+    query = {} if is_admin_user else {'user_id': str(user_id)}
+    notifications = db.bill_reminders.find(query).sort('sent_at', -1).limit(10)
+    return [{
+        'id': str(n.get('notification_id', ObjectId())),
+        'message': n.get('message', 'No message'),
+        'type': n.get('type', 'info'),
+        'timestamp': n.get('sent_at', datetime.utcnow()).isoformat(),
+        'read': n.get('read_status', False),
+        'icon': get_notification_icon(n.get('type', 'info'))
+    } for n in notifications]
+
+# --- HELPER FUNCTION FOR NOTIFICATION ICONS ---
+def get_notification_icon(notification_type):
+    """
+    Map notification types to Bootstrap Icons.
+    """
+    icons = {
+        'info': 'bi-info-circle',
+        'warning': 'bi-exclamation-triangle',
+        'error': 'bi-x-circle',
+        'success': 'bi-check-circle'
+    }
+    return icons.get(notification_type, 'bi-info-circle')
+
 @summaries_bp.route('/budget/summary')
 @login_required
 @requires_role(['personal', 'admin'])
@@ -252,3 +281,61 @@ def recent_activity():
     except Exception as e:
         logger.error(f"Error in summaries.recent_activity: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch recent activity')}), 500
+
+@summaries_bp.route('/notification_count')
+@login_required
+@requires_role(['personal', 'admin'])
+def notification_count():
+    """Return the count of unread notifications for the current user."""
+    try:
+        db = get_mongo_db()
+        query = {'read_status': False} if requires_role(['admin']) else {'user_id': str(current_user.id), 'read_status': False}
+        count = db.bill_reminders.count_documents(query)
+        logger.debug(f"Fetched notification count {count} for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'count': count}), 200
+    except Exception as e:
+        logger.error(f"Error fetching notification count: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch notification count')}), 500
+
+@summaries_bp.route('/notifications')
+@login_required
+@requires_role(['personal', 'admin'])
+def notifications():
+    """Return the list of recent notifications for the current user."""
+    try:
+        db = get_mongo_db()
+        query = {} if requires_role(['admin']) else {'user_id': str(current_user.id)}
+        notifications = list(db.bill_reminders.find(query).sort('sent_at', -1).limit(10))
+
+        # Handle cases where notification_id or sent_at might be missing
+        notification_ids = []
+        for n in notifications:
+            if 'notification_id' in n and not n.get('read_status', False):
+                notification_ids.append(n['notification_id'])
+
+        if notification_ids:
+            db.bill_reminders.update_many(
+                {'notification_id': {'$in': notification_ids}},
+                {'$set': {'read_status': True}}
+            )
+
+        result = []
+        for n in notifications:
+            try:
+                result.append({
+                    'id': str(n.get('notification_id', ObjectId())),
+                    'message': n.get('message', 'No message'),
+                    'type': n.get('type', 'info'),
+                    'timestamp': n.get('sent_at', datetime.utcnow()).isoformat(),
+                    'read': n.get('read_status', False),
+                    'icon': get_notification_icon(n.get('type', 'info'))
+                })
+            except Exception as e:
+                logger.warning(f"Skipping invalid notification: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                continue
+
+        logger.debug(f"Fetched {len(result)} notifications for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'error': trans('general_something_went_wrong', default='Failed to fetch notifications')}), 500
