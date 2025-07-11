@@ -184,3 +184,5 @@ def feedback():
             except TemplateNotFound as e:
                 current_app.logger.error(f'Template not found: {str(e)}', exc_info=True)
                 return render_template('personal/GENERAL/error.html', error=str(e), title=trans('general_feedback', lang=lang)), 500
+    # Handle GET request
+    return render_template('general/feedback.html', tool_options=tool_options, title=trans('general_feedback', lang=lang))
