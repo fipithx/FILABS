@@ -17,7 +17,6 @@ from personal.bill import bill_bp
 from personal.budget import budget_bp
 from personal.emergency_fund import emergency_fund_bp
 from personal.financial_health import financial_health_bp
-from personal.learning_hub import learning_hub_bp
 from personal.net_worth import net_worth_bp
 from personal.quiz import quiz_bp
 
@@ -25,14 +24,13 @@ personal_bp.register_blueprint(bill_bp)
 personal_bp.register_blueprint(budget_bp)
 personal_bp.register_blueprint(emergency_fund_bp)
 personal_bp.register_blueprint(financial_health_bp)
-personal_bp.register_blueprint(learning_hub_bp)
 personal_bp.register_blueprint(net_worth_bp)
 personal_bp.register_blueprint(quiz_bp)
 
 def init_app(app):
     """Initialize all personal finance sub-blueprints."""
     try:
-        for blueprint in [bill_bp, budget_bp, emergency_fund_bp, financial_health_bp, learning_hub_bp, net_worth_bp, quiz_bp]:
+        for blueprint in [bill_bp, budget_bp, emergency_fund_bp, financial_health_bp, net_worth_bp, quiz_bp]:
             if hasattr(blueprint, 'init_app'):
                 blueprint.init_app(app)
                 current_app.logger.info(f"Initialized {blueprint.name} blueprint", extra={'session_id': 'no-request-context'})
@@ -129,7 +127,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
     for quiz in quizzes:
         activities.append({
             'type': 'quiz',
-            'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get( 'score', 0)),
+            'description': trans('recent_activity_quiz_completed', default='Completed financial quiz with score: {score}', score=quiz.get('score', 0)),
             'timestamp': quiz.get('created_at', datetime.utcnow()).isoformat(),
             'details': {
                 'score': quiz.get('score', 0),
@@ -137,22 +135,6 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
             },
             'icon': 'bi-question-circle'
         })
-
-    # Fetch recent learning hub progress
-    learning_hub_progress = db.learning_materials.find(query).sort('updated_at', -1).limit(5)
-    for progress in learning_hub_progress:
-        if progress.get('course_id'):
-            activities.append({
-                'type': 'learning_hub',
-                'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
-                'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
-                'details': {
-                    'course_id': progress.get('course_id', 'N/A'),
-                    'lessons_completed': len(progress.get('lessons_completed', [])),
-                    'current_lesson': progress.get('current_lesson', 'N/A')
-                },
-                'icon': 'bi-book'
-            })
 
     activities.sort(key=lambda x: x['timestamp'], reverse=True)
     return activities[:10]
@@ -173,7 +155,6 @@ def _get_recent_activities_data(user_id=None, is_admin_user=False, db=None):
     if db is None:
         db = get_mongo_db()
     return get_recent_activities(user_id, is_admin_user, db)
-
 
 # --- HELPER FUNCTION FOR NOTIFICATIONS ---
 def _get_notifications_data(user_id, is_admin_user, db):
