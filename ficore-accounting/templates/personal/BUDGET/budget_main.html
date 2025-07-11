@@ -188,10 +188,10 @@
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="card bg-{{ 'success' if latest_budget['surplus_deficit'] >= 0 else 'warning' }} text-white">
+                                <div class="card bg-{{ 'success' if latest_budget['surplus_deficit']|float >= 0 else 'warning' }} text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_surplus_deficit', default='Surplus/Deficit') }}</h6>
-                                        <h4>{{ latest_budget['surplus_deficit'] | format_currency }}</h4>
+                                        <h4>{{ latest_budget['surplus_deficit_formatted'] | format_currency }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -233,8 +233,8 @@
                                                         <td>{{ budget.get('created_at', 'N/A') | format_datetime }}</td>
                                                         <td>{{ budget.get('income', 0) | format_currency }}</td>
                                                         <td>{{ budget.get('fixed_expenses', 0) | format_currency }}</td>
-                                                        <td class="{% if budget.get('surplus_deficit', 0) >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                            {{ budget.get('surplus_deficit', 0) | format_currency }}
+                                                        <td class="{% if budget.get('surplus_deficit', 0)|float >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                            {{ budget.get('surplus_deficit_formatted', 0) | format_currency }}
                                                         </td>
                                                         <td>
                                                             <form method="POST" action="{{ url_for('personal.budget.main') }}" style="display: inline;">
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatNumberInput(input) {
         const format = (val) => {
             let clean = val.replace(/[^0-9.]/g, '');
-            if !clean) return '';
+            if (!clean) return '';
             let parts = clean.split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             return parts.length > 1 ? `${parts[0]}.${parts[1].slice(0, 2)}` : parts[0];
