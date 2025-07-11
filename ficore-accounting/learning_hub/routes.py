@@ -9,7 +9,7 @@ from .models import (
     get_progress, save_course_progress, course_lookup, lesson_lookup,
     calculate_progress_summary, init_storage, get_mongo_db
 )
-from utils import requires_role, is_admin, trans, format_currency, clean_currency, get_all_recent_activities, log_tool_usage
+from utils import requires_role, is_admin, trans, format_currency, clean_currency, get_all_recent_activities, log_tool_usage, get_explore_features
 from session_utils import create_anonymous_session
 from mailersend_email import send_email, EMAIL_CONFIG
 from werkzeug.utils import secure_filename
@@ -41,6 +41,7 @@ def main():
             'learning_hub/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang)
         )
     except Exception as e:
@@ -62,6 +63,7 @@ def personal():
             'learning_hub/personal/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_personal_title', default='Personal Finance Learning', lang=lang)
         )
     except Exception as e:
@@ -83,6 +85,7 @@ def business():
             'learning_hub/business/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_business_title', default='Business Learning', lang=lang)
         )
     except Exception as e:
@@ -104,6 +107,7 @@ def agents():
             'learning_hub/agents/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_agents_title', default='Agent Learning', lang=lang)
         )
     except Exception as e:
@@ -125,6 +129,7 @@ def compliance():
             'learning_hub/compliance/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_compliance_title', default='Compliance Learning', lang=lang)
         )
     except Exception as e:
@@ -146,6 +151,7 @@ def tool_tutorials():
             'learning_hub/tool_tutorials/index.html',
             t=trans,
             lang=lang,
+            get_explore_features=get_explore_features,
             tool_title=trans('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang)
         )
     except Exception as e:
@@ -270,6 +276,7 @@ def learning_hub_main():
             lang=lang,
             tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
             tools=tools,
+            get_explore_features=get_explore_features,
             bottom_nav_items=bottom_nav_items,
             role_filter=role_filter,
             activities=activities
@@ -298,6 +305,7 @@ def learning_hub_main():
             lang=lang,
             tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
             tools=tools,
+            get_explore_features=get_explore_features,
             bottom_nav_items=bottom_nav_items,
             role_filter='all',
             activities=[],
@@ -815,6 +823,7 @@ def handle_not_found(e):
         lang=lang,
         tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
         tools=tools,
+        get_explore_features=get_explore_features,
         bottom_nav_items=bottom_nav_items,
         role_filter='all',
         activities=[],
@@ -852,6 +861,7 @@ def handle_csrf_error(e):
         lang=lang,
         tool_title=trans('learning_hub_title', default='Learning Hub', lang=lang),
         tools=tools,
+        get_explore_features=get_explore_features,
         bottom_nav_items=bottom_nav_items,
         role_filter='all',
         activities=[],
