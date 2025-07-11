@@ -13,8 +13,10 @@ from utils import requires_role, is_admin, trans, format_currency, clean_currenc
 from session_utils import create_anonymous_session
 from mailersend_email import send_email, EMAIL_CONFIG
 from werkzeug.utils import secure_filename
+from datetime import datetime
+from bson.objectid import ObjectId
 import logging
-from . import learning_hub_bp
+import os
 
 # Configure logging
 logger = logging.getLogger('ficore_app.learning_hub')
@@ -26,6 +28,8 @@ UPLOAD_FOLDER = 'learning_hub/static/uploads'
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+learning_hub_bp = Blueprint('learning_hub', __name__, template_folder='templates', static_folder='static')
 
 @learning_hub_bp.route('/')
 def main():
@@ -158,6 +162,209 @@ def tool_tutorials():
         logger.error(f"Error rendering tool tutorials page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans('learning_hub_error_loading', default='Error loading Tool Tutorials'), 'danger')
         return render_template('personal/GENERAL/error.html', error=str(e), title=trans('error', lang=lang)), 500
+
+@learning_hub_bp.route('/about')
+def about():
+    """Render the About page."""
+    if 'sid' not in session:
+        create_anonymous_session()
+        session.permanent = True
+        session.modified = True
+    
+    lang = session.get('lang', 'en')
+    try:
+        return render_template(
+            'learning_hub/about.html',
+            t=trans,
+            lang=lang,
+            tool_title=trans('learning_hub_about_title', default='About', lang=lang)
+        )
+    except Exception as e:
+        logger.error(f"Error rendering about page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error loading About page'), 'danger')
+        return render_template('personal/GENERAL/error.html', error=str(e), title=trans('error', lang=lang)), 500
+
+@learning_hub_bp.route('/privacy')
+def privacy():
+    """Render the Privacy Policy page."""
+    if 'sid' not in session:
+        create_anonymous_session()
+        session.permanent = True
+        session.modified = True
+    
+    lang = session.get('lang', 'en')
+    try:
+        return render_template(
+            'learning_hub/privacy.html',
+            t=trans,
+            lang=lang,
+            tool_title=trans('learning_hub_privacy_title', default='Privacy Policy', lang=lang)
+        )
+    except Exception as e:
+        logger.error(f"Error rendering privacy page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error loading Privacy Policy'), 'danger')
+        return render_template('personal/GENERAL/error.html', error=str(e), title=trans('error', lang=lang)), 500
+
+@learning_hub_bp.route('/terms')
+def terms():
+    """Render the Terms of Service page."""
+    if 'sid' not in session:
+        create_anonymous_session()
+        session.permanent = True
+        session.modified = True
+    
+    lang = session.get('lang', 'en')
+    try:
+        return render_template(
+            'learning_hub/terms.html',
+            t=trans,
+            lang=lang,
+            tool_title=trans('learning_hub_terms_title', default='Terms of Service', lang=lang)
+        )
+    except Exception as e:
+        logger.error(f"Error rendering terms page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error loading Terms of Service'), 'danger')
+        return render_template('personal/GENERAL/error.html', error=str(e), title=trans('error', lang=lang)), 500
+
+@learning_hub_bp.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+    """Handle user feedback submission."""
+    if 'sid' not in session:
+        create_anonymous_session()
+        session.permanent = True
+        session.modified = True
+    
+    lang = session.get('lang', 'en')
+    db = get_mongo_db()
+    
+    try:
+        log_tool_usage(
+            db=db,
+            tool_name='learning_hub',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session['sid'],
+            action='feedback_submit' if request.method == 'POST' else 'feedback_view'
+        )
+        
+        if request.method == 'POST':
+            name = request.form.get('name', '')
+            email = request.form.get('email', '')
+            feedback_text = request.form.get('feedback')
+            
+            if not feedback_text:
+                flash(trans('learning_hub_feedback_required', default='Please provide your feedback.'), 'danger')
+                return render_template(
+                    'learning_hub/feedback.html',
+                    t=trans,
+                    lang=lang,
+                    tool_title=trans('learning_hub_feedback_title', default='Feedback', lang=lang)
+                )
+            
+            # Save feedback to MongoDB
+            db.feedback.insert_one({
+                'name': name,
+                'email': email,
+                'feedback': feedback_text,
+                'user_id': current_user.id if current_user.is_authenticated else None,
+                'session_id': session['sid'],
+                'submitted_at': datetime.utcnow()
+            })
+            
+            # Send confirmation email if email provided
+            if email:
+                try:
+                    config = EMAIL_CONFIG.get("learning_hub_feedback_received", {})
+                    subject = trans(config.get("subject_key", "learning_hub_feedback_received_subject"), default="Thank You for Your Feedback", lang=lang)
+                    template = config.get("template", "learning_hub_feedback_received.html")
+                    
+                    send_email(
+                        app=current_app,
+                        logger=logger,
+                        to_email=email,
+                        subject=subject,
+                        template_name=template,
+                        data={
+                            "name": name or 'User',
+                            "feedback": feedback_text,
+                            "submitted_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+                            "cta_url": url_for('learning_hub.main', _external=True),
+                            "unsubscribe_url": url_for('learning_hub.unsubscribe', email=email, _external=True)
+                        },
+                        lang=lang
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send feedback confirmation email: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+            
+            flash(trans('learning_hub_feedback_success', default='Thank you for your feedback!'), 'success')
+            logger.info(f"Feedback submitted by {email or 'anonymous'}", extra={'session_id': session.get('sid', 'no-session-id')})
+            return redirect(url_for('learning_hub.main'))
+        
+        return render_template(
+            'learning_hub/feedback.html',
+            t=trans,
+            lang=lang,
+            tool_title=trans('learning_hub_feedback_title', default='Feedback', lang=lang)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in feedback page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        flash(trans('learning_hub_error_loading', default='Error processing feedback'), 'danger')
+        return render_template(
+            'learning_hub/feedback.html',
+            t=trans,
+            lang=lang,
+            tool_title=trans('learning_hub_feedback_title', default='Feedback', lang=lang),
+            error=str(e)
+        ), 500
+
+@learning_hub_bp.route('/notification_count')
+@requires_role(['personal', 'admin'])
+def notification_count():
+    """Return the count of unread notifications."""
+    try:
+        db = get_mongo_db()
+        user_id = current_user.id if current_user.is_authenticated else None
+        if not user_id:
+            return jsonify({'count': 0})
+        
+        count = db.notifications.count_documents({
+            'user_id': user_id,
+            'read': False
+        })
+        return jsonify({'count': count})
+    except Exception as e:
+        logger.error(f"Error fetching notification count: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        return jsonify({'count': 0}), 500
+
+@learning_hub_bp.route('/notifications')
+@requires_role(['personal', 'admin'])
+def notifications():
+    """Return a list of notifications."""
+    try:
+        db = get_mongo_db()
+        user_id = current_user.id if current_user.is_authenticated else None
+        if not user_id:
+            return jsonify([])
+        
+        notifications = list(db.notifications.find({
+            'user_id': user_id
+        }).sort('timestamp', -1).limit(10))
+        
+        # Mark notifications as read
+        db.notifications.update_many(
+            {'user_id': user_id, 'read': False},
+            {'$set': {'read': True}}
+        )
+        
+        return jsonify([{
+            'type': n.get('type', 'info'),
+            'message': n.get('message_en', trans('general_notification_default', default='New notification')),
+            'timestamp': n.get('timestamp', datetime.utcnow()).isoformat(),
+            'read': n.get('read', False)
+        } for n in notifications])
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
+        return jsonify({'error': trans('general_notification_load_error', default='Failed to load notifications')}), 500
 
 @learning_hub_bp.route('/main', methods=['GET', 'POST'])
 @requires_role(['personal', 'admin'])
@@ -470,6 +677,16 @@ def lesson_action():
                     except Exception as e:
                         logger.error(f"Failed to send email for lesson {lesson_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
                 
+                # Add notification
+                db = get_mongo_db()
+                db.notifications.insert_one({
+                    'user_id': current_user.id,
+                    'type': 'success',
+                    'message_en': f"Completed lesson: {lesson.get('title_en', 'Lesson')}",
+                    'timestamp': datetime.utcnow(),
+                    'read': False
+                })
+                
                 return jsonify({
                     'success': True,
                     'message': trans('learning_hub_lesson_completed', default='Lesson marked as complete'),
@@ -574,6 +791,16 @@ def quiz_action():
                 except Exception as e:
                     logger.error(f"Failed to send email for quiz {quiz_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
             
+            # Add notification
+            db = get_mongo_db()
+            db.notifications.insert_one({
+                'user_id': current_user.id,
+                'type': 'success',
+                'message_en': f"Completed quiz: {quiz.get('id', 'Quiz')} (Score: {score}/{len(quiz['questions'])})",
+                'timestamp': datetime.utcnow(),
+                'read': False
+            })
+            
             message = trans('learning_hub_quiz_submitted', default='Quiz submitted successfully')
             if quiz_id == 'reality_check_quiz':
                 message = trans('learning_hub_quiz_submitted', default='Quiz submitted successfully') + '. '
@@ -649,6 +876,16 @@ def register_webinar():
             lang=session.get('lang', 'en')
         )
         
+        # Add notification
+        db = get_mongo_db()
+        db.notifications.insert_one({
+            'user_id': current_user.id,
+            'type': 'info',
+            'message_en': "Successfully registered for the upcoming webinar",
+            'timestamp': datetime.utcnow(),
+            'read': False
+        })
+        
         flash(trans('learning_hub_webinar_registered', default='Successfully registered for the webinar!'), 'success')
         logger.info(f"Registered email {email} for webinar", extra={'session_id': session['sid']})
         return redirect(url_for('learning_hub.main'))
@@ -687,6 +924,15 @@ def profile():
             }
             session.permanent = True
             session.modified = True
+            
+            # Add notification
+            db.notifications.insert_one({
+                'user_id': current_user.id,
+                'type': 'info',
+                'message_en': "Profile updated successfully",
+                'timestamp': datetime.utcnow(),
+                'read': False
+            })
             
             logger.info(f"Profile saved for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'no-session-id')})
             flash(trans('learning_hub_profile_saved', default='Profile saved successfully', lang=lang), 'success')
@@ -750,6 +996,16 @@ def unsubscribe(email):
             session['learning_hub_profile'] = profile
             session.permanent = True
             session.modified = True
+            
+            # Add notification
+            db.notifications.insert_one({
+                'user_id': current_user.id,
+                'type': 'info',
+                'message_en': "Unsubscribed from Learning Hub emails",
+                'timestamp': datetime.utcnow(),
+                'read': False
+            })
+            
             logger.info(f"Unsubscribed email {email}", extra={'session_id': session.get('sid', 'no-session-id')})
             flash(trans("learning_hub_unsubscribed_success", default="Successfully unsubscribed from emails", lang=lang), "success")
         else:
