@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger('ficore_app.learning_hub')
 logger.setLevel(logging.INFO)
 
-# Course and quiz data
+# Course and quiz data (unchanged from provided code)
 courses_data = {
     "budgeting_101": {
         "id": "budgeting_101",
@@ -430,16 +430,17 @@ quizzes_data = {
 }
 
 def init_storage(app):
-    """Initialize storage with app context and logger."""
+    """Initialize storage with app context and logger for courses, quizzes, notifications, and feedback."""
     with app.app_context():
-        logger.info("Initializing courses storage.", extra={'session_id': 'no-request-context'})
+        logger.info("Initializing storage for learning materials, notifications, and feedback.", extra={'session_id': 'no-request-context'})
         try:
             db = get_mongo_db()
+
+            # Initialize courses
             existing_courses = list(db.learning_materials.find({'type': 'course'}))
             existing_course_ids = {course['id'] for course in existing_courses}
             logger.info(f"Found {len(existing_courses)} existing courses: {existing_course_ids}", extra={'session_id': 'no-request-context'})
-            
-            # Prepare default courses, skipping duplicates
+
             default_courses = [
                 {
                     'type': 'course',
@@ -456,7 +457,13 @@ def init_storage(app):
                     'created_at': datetime.utcnow()
                 } for course in courses_data.values() if course['id'] not in existing_course_ids
             ]
-            
+
+            if default_courses:
+                db.learning_materials.insert_many(default_courses)
+                logger.info(f"Initialized courses collection with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
+            else:
+                logger.info("No new courses to initialize; all default courses already exist", extra={'session_id': 'no-request-context'})
+
             # Initialize quizzes
             existing_quizzes = list(db.learning_materials.find({'type': 'quiz'}))
             existing_quiz_ids = {quiz['id'] for quiz in existing_quizzes}
@@ -469,20 +476,27 @@ def init_storage(app):
                     'created_at': datetime.utcnow()
                 } for quiz in quizzes_data.values() if quiz['id'] not in existing_quiz_ids
             ]
-            
-            if default_courses:
-                db.learning_materials.insert_many(default_courses)
-                logger.info(f"Initialized courses collection with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
-            else:
-                logger.info("No new courses to initialize; all default courses already exist", extra={'session_id': 'no-request-context'})
-                
+
             if default_quizzes:
                 db.learning_materials.insert_many(default_quizzes)
                 logger.info(f"Initialized quizzes collection with {len(default_quizzes)} default quizzes", extra={'session_id': 'no-request-context'})
             else:
                 logger.info("No new quizzes to initialize; all default quizzes already exist", extra={'session_id': 'no-request-context'})
+
+            # Initialize notifications collection
+            db.notifications.create_index([("user_id", 1), ("read", 1)], name="user_read_idx")
+            db.notifications.create_index([("session_id", 1)], name="session_idx")
+            db.notifications.create_index([("timestamp", -1)], name="timestamp_idx")
+            logger.info("Initialized notifications collection with indexes", extra={'session_id': 'no-request-context'})
+
+            # Initialize feedback collection
+            db.feedback.create_index([("user_id", 1)], name="user_idx")
+            db.feedback.create_index([("session_id", 1)], name="session_idx")
+            db.feedback.create_index([("submitted_at", -1)], name="submitted_at_idx")
+            logger.info("Initialized feedback collection with indexes", extra={'session_id': 'no-request-context'})
+
         except Exception as e:
-            logger.error(f"Error initializing courses: {str(e)}", exc_info=True, extra={'session_id': 'no-request-context'})
+            logger.error(f"Error initializing storage: {str(e)}", exc_info=True, extra={'session_id': 'no-request-context'})
             raise
 
 def get_progress():
