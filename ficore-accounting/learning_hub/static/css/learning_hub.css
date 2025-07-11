@@ -154,8 +154,8 @@ body {
 
 /* Header */
 header {
-    background: var(--navbar-bg);
-    color: var(--navbar-text-color);
+    background: transparent;
+    color: transparent;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--card-border);
     box-shadow: var(--navbar-shadow);
@@ -177,7 +177,7 @@ header h1 {
 
 /* Navigation */
 nav {
-    background: var(--gradient-primary);
+    background: transparent;
     padding: 0.5rem;
     margin-top: var(--navbar-height);
 }
