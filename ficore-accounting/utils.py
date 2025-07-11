@@ -157,15 +157,6 @@ _PERSONAL_NAV = [
         "tooltip_key": "bill_tooltip",
         "icon": "bi-receipt"
     },
-    
-    {
-        "endpoint": "learning_hub.main",
-        "label": "Learning Hub",
-        "label_key": "learning_hub_main",
-        "description_key": "learning_hub_desc",
-        "tooltip_key": "learning_hub_tooltip",
-        "icon": "bi-book"
-    },
     {
         "endpoint": "settings.profile",
         "label": "Profile",
@@ -449,12 +440,12 @@ _AGENT_NAV = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "learning_hub.main",
-        "label": "Learning Hub",
-        "label_key": "learning_hub_main",
-        "description_key": "learning_hub_desc",
-        "tooltip_key": "learning_hub_tooltip",
-        "icon": "bi-book"
+        "endpoint": "agents_bp.agent_portal",
+        "label": "My Activity",
+        "label_key": "agents_my_activity",
+        "description_key": "agents_my_activity_desc",
+        "tooltip_key": "agents_my_activity_tooltip",
+        "icon": "bi-person-workspace"
     },
     {
         "endpoint": "settings.profile",
@@ -826,7 +817,7 @@ ALL_TOOLS = []
 # Pre-generate tools/navigation with URLs at startup
 def initialize_tools_with_urls(app):
     '''
-    Initialize all tool/navigation lists with resolved URLs, excluding learning_hub endpoints.
+    Initialize all tool/navigation lists with resolved URLs.
     
     Args:
         app: Flask application instance
@@ -839,37 +830,33 @@ def initialize_tools_with_urls(app):
     
     try:
         with app.app_context():
-            # Filter out learning_hub endpoints for startup initialization
-            def filter_tools(tools):
-                return [t for t in tools if not t['endpoint'].startswith('learning_hub.')]
-            
-            PERSONAL_TOOLS = generate_tools_with_urls(filter_tools(_PERSONAL_TOOLS))
-            PERSONAL_NAV = generate_tools_with_urls(filter_tools(_PERSONAL_NAV))
-            PERSONAL_EXPLORE_FEATURES = generate_tools_with_urls(filter_tools(_PERSONAL_EXPLORE_FEATURES))
-            BUSINESS_TOOLS = generate_tools_with_urls(filter_tools(_BUSINESS_TOOLS))
-            BUSINESS_NAV = generate_tools_with_urls(filter_tools(_BUSINESS_NAV))
-            BUSINESS_EXPLORE_FEATURES = generate_tools_with_urls(filter_tools(_BUSINESS_EXPLORE_FEATURES))
-            AGENT_TOOLS = generate_tools_with_urls(filter_tools(_AGENT_TOOLS))
-            AGENT_NAV = generate_tools_with_urls(filter_tools(_AGENT_NAV))
-            AGENT_EXPLORE_FEATURES = generate_tools_with_urls(filter_tools(_AGENT_EXPLORE_FEATURES))
-            ADMIN_TOOLS = generate_tools_with_urls(filter_tools(_ADMIN_TOOLS))
-            ADMIN_NAV = generate_tools_with_urls(filter_tools(_ADMIN_NAV))
-            ADMIN_EXPLORE_FEATURES = generate_tools_with_urls(filter_tools(_ADMIN_EXPLORE_FEATURES))
+            PERSONAL_TOOLS = generate_tools_with_urls(_PERSONAL_TOOLS)
+            PERSONAL_NAV = generate_tools_with_urls(_PERSONAL_NAV)
+            PERSONAL_EXPLORE_FEATURES = generate_tools_with_urls(_PERSONAL_EXPLORE_FEATURES)
+            BUSINESS_TOOLS = generate_tools_with_urls(_BUSINESS_TOOLS)
+            BUSINESS_NAV = generate_tools_with_urls(_BUSINESS_NAV)
+            BUSINESS_EXPLORE_FEATURES = generate_tools_with_urls(_BUSINESS_EXPLORE_FEATURES)
+            AGENT_TOOLS = generate_tools_with_urls(_AGENT_TOOLS)
+            AGENT_NAV = generate_tools_with_urls(_AGENT_NAV)
+            AGENT_EXPLORE_FEATURES = generate_tools_with_urls(_AGENT_EXPLORE_FEATURES)
+            ADMIN_TOOLS = generate_tools_with_urls(_ADMIN_TOOLS)
+            ADMIN_NAV = generate_tools_with_urls(_ADMIN_NAV)
+            ADMIN_EXPLORE_FEATURES = generate_tools_with_urls(_ADMIN_EXPLORE_FEATURES)
             ALL_TOOLS = (
                 PERSONAL_TOOLS +
                 BUSINESS_TOOLS +
                 AGENT_TOOLS +
                 ADMIN_TOOLS +
-                generate_tools_with_urls(filter_tools([{
+                generate_tools_with_urls([{
                     "endpoint": "admin.dashboard",
                     "label": "Management",
                     "label_key": "admin_dashboard",
                     "description_key": "admin_dashboard_desc",
                     "tooltip_key": "admin_dashboard_tooltip",
                     "icon": "bi-speedometer"
-                }]))
+                }])
             )
-            logger.info('Initialized tools and navigation with resolved URLs (excluding learning_hub endpoints)')
+            logger.info('Initialized tools and navigation with resolved URLs')
     except Exception as e:
         logger.error(f'Error initializing tools with URLs: {str(e)}', exc_info=True)
         raise
@@ -887,24 +874,18 @@ def generate_tools_with_urls(tools):
     result = []
     for tool in tools:
         try:
-            logger.debug(f"Attempting to generate URL for endpoint {tool['endpoint']}")
-            if has_request_context():
-                url = url_for(tool['endpoint'], _external=True)
-            else:
-                with current_app.test_request_context(base_url=current_app.config.get('BASE_URL', 'http://localhost:5000')):
-                    url = url_for(tool['endpoint'], _external=True)
+            url = url_for(tool['endpoint'], _external=True)
+            # Validate icon field; use fallback if missing or invalid
             icon = tool.get('icon', 'bi-question-circle')
             if not icon or not icon.startswith('bi-'):
                 logger.warning(f"Invalid or missing icon for tool {tool.get('label', 'unknown')}: {icon}. Using fallback 'bi-question-circle'.")
                 icon = 'bi-question-circle'
             result.append({**tool, 'url': url, 'icon': icon})
         except BuildError as e:
-            logger.error(f"Failed to generate URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
-            logger.debug(f"Available endpoints: {[rule.endpoint for rule in current_app.url_map.iter_rules()]}")
-            fallback_url = url_for('learning_hub.main', _external=True) if tool['endpoint'].startswith('learning_hub.') else '#'
-            result.append({**tool, 'url': fallback_url, 'icon': tool.get('icon', 'bi-question-circle')})
+            logger.warning(f"Failed to generate URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}. Ensure endpoint is defined in blueprint.")
+            result.append({**tool, 'url': '#', 'icon': tool.get('icon', 'bi-question-circle')})
         except RuntimeError as e:
-            logger.error(f"Runtime error generating URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
+            logger.warning(f"Runtime error generating URL for endpoint {tool.get('endpoint', 'unknown')}: {str(e)}")
             result.append({**tool, 'url': '#', 'icon': tool.get('icon', 'bi-question-circle')})
     return result
 
