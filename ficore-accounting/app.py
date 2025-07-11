@@ -365,7 +365,7 @@ def create_app():
             # Initialize personal finance collections
             personal_finance_collections = [
                 'budgets', 'bills', 'emergency_funds', 'financial_health_scores', 
-                'net_worth_data', 'quiz_responses', 'learning_materials'
+                'net_worth_data', 'quiz_responses', 'learning_materials', 'bill_reminders'
             ]
             db = app.extensions['mongo']['ficodb']
             for collection_name in personal_finance_collections:
@@ -390,6 +390,8 @@ def create_app():
                 db.quiz_responses.create_index([('session_id', 1), ('created_at', -1)])
                 db.learning_materials.create_index([('user_id', 1), ('course_id', 1)])
                 db.learning_materials.create_index([('session_id', 1), ('course_id', 1)])
+                db.bill_reminders.create_index([('user_id', 1), ('sent_at', -1)])
+                db.bill_reminders.create_index([('notification_id', 1)])
                 logger.info('Created indexes for personal finance collections')
             except Exception as e:
                 logger.warning(f'Some indexes may already exist: {str(e)}')
