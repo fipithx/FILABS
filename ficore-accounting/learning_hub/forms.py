@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField, SubmitField, FileField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, Email, Optional
 from flask import session
-from .utils import trans
+from utils import trans
 
 class LearningHubProfileForm(FlaskForm):
     first_name = StringField(trans('general_first_name', default='First Name'), validators=[DataRequired()])
