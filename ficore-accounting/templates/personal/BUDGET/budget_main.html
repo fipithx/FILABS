@@ -21,12 +21,12 @@
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="budgetTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="create-budget-tab" data-bs-toggle="tab" data-bs-target="#create-budget" type="button" role="tab" aria-controls="create-budget" aria-selected="true">
+            <button class="nav-link {{ 'active' if active_tab == 'create-budget' else '' }}" id="create-budget-tab" data-bs-toggle="tab" data-bs-target="#create-budget" type="button" role="tab" aria-controls="create-budget" aria-selected="{{ 'true' if active_tab == 'create-budget' else 'false' }}">
                 <i class="fas fa-plus"></i> {{ t('budget_create_budget', default='Create Budget') }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="false">
+            <button class="nav-link {{ 'active' if active_tab == 'dashboard' else '' }}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}">
                 <i class="fas fa-chart-line"></i> {{ t('budget_dashboard', default='Dashboard') }}
             </button>
         </li>
@@ -35,8 +35,8 @@
     <!-- Tab Content -->
     <div class="tab-content" id="budgetTabContent">
         <!-- Create Budget Tab -->
-        <div class="tab-pane fade show active" id="create-budget" role="tabpanel" aria-labelledby="create-budget-tab">
-            <form method="POST" action="{{ url_for('personal.budget.main') }}" id="budgetForm" class="validate-form">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'create-budget' else '' }}" id="create-budget" role="tabpanel" aria-labelledby="create-budget-tab">
+            <form method="POST" action="{{ url_for('personal.budget.main', tab='create-budget') }}" id="budgetForm" class="validate-form">
                 {{ form.csrf_token }}
                 <input type="hidden" name="action" value="create_budget">
 
@@ -163,7 +163,7 @@
         </div>
 
         <!-- Dashboard Tab -->
-        <div class="tab-pane fade" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'dashboard' else '' }}" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-chart-pie"></i> {{ t('budget_summary', default='Financial Summary') }}</h5>
@@ -237,7 +237,8 @@
                                                             {{ budget.get('surplus_deficit_formatted', 0) | format_currency }}
                                                         </td>
                                                         <td>
-                                                            <form method="POST" action="{{ url_for('personal.budget.main') }}" style="display: inline;">
+                                                            <form method="POST" action="{{ url_for('personal.budget.main', tab='dashboard') }}" style="display: inline;">
+                                                                {{ form.csrf_token }}
                                                                 <input type="hidden" name="budget_id" value="{{ budget_id }}">
                                                                 <input type="hidden" name="action" value="delete">
                                                                 <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('budget_confirm_delete', default='Are you sure you want to delete this budget?') }}');">
@@ -286,6 +287,22 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore active tab from session storage
+    const activeTab = sessionStorage.getItem('activeBudgetTab') || '{{ active_tab }}';
+    const tabElement = document.querySelector(`#${activeTab}-tab`);
+    if (tabElement) {
+        const bsTab = new bootstrap.Tab(tabElement);
+        bsTab.show();
+    }
+
+    // Save active tab on click
+    document.querySelectorAll('#budgetTabs .nav-link').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const tabId = e.target.id.replace('-tab', '');
+            sessionStorage.setItem('activeBudgetTab', tabId);
+        });
+    });
+
     // Number formatting
     function formatNumberInput(input) {
         const format = (val) => {
@@ -316,36 +333,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Chart rendering
     {% if categories %}
-    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
-    new Chart(expenseCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ categories.keys() | list | tojson }},
-            datasets: [{
-                data: {{ categories.values() | list | tojson }},
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                ],
-                borderColor: '#fff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            let value = context.raw || 0;
-                            return `${label}: ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(value)}`;
+    try {
+        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+        new Chart(expenseCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ categories.keys() | list | tojson }},
+                datasets: [{
+                    data: {{ categories.values() | list | tojson | safe }},
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw || 0;
+                                return `${label}: ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(value)}`;
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error rendering chart:', error);
+    }
     {% endif %}
 
     // Copy referral link
