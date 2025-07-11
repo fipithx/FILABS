@@ -1,0 +1,98 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ trans('learning_hub_feedback_received_subject', lang=lang) }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>{{ trans('learning_hub_feedback_received_subject', lang=lang) }}</h2>
+        </div>
+        <div class="content">
+            {% if name %}
+                <p>{{ trans('learning_hub_feedback_received_greeting', lang=lang, default='Dear {name},', name=name) }}</p>
+            {% else %}
+                <p>{{ trans('learning_hub_feedback_received_greeting_anonymous', lang=lang, default='Dear User,') }}</p>
+            {% endif %}
+            <p>{{ trans('learning_hub_feedback_received_message', lang=lang, default='Thank you for your feedback! We have received your submission and value your input to improve FiCore Africa.') }}</p>
+            <p>{{ trans('learning_hub_feedback_received_closing', lang=lang, default='Best regards,') }}</p>
+            <p>{{ trans('learning_hub_feedback_received_team', lang=lang, default='The FiCore Africa Team') }}</p>
+        </div>
+        <div class="footer">
+            <p>{{ trans('general_email_footer', lang=lang, default='This is an automated message. Please do not reply directly to this email.') }}</p>
+        </div>
+    </div>
+</body>
+</html>
