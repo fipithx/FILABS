@@ -1,14 +1,10 @@
 from flask import Blueprint, jsonify, render_template, session, request
 from flask_login import current_user, login_required
 from datetime import datetime
-from utils import get_mongo_db, trans, format_currency
-import logging
+import utils  # Entire module imported
+from utils import logger  # Import SessionAdapter logger
 
 business = Blueprint('business', __name__, url_prefix='/business')
-
-# Configure logging
-logger = logging.getLogger('ficore_app')
-logger.setLevel(logging.INFO)
 
 def get_notification_icon(notification_type):
     """Return appropriate icon for notification type."""
@@ -25,7 +21,7 @@ def get_notification_icon(notification_type):
 def home():
     """Render the Business Finance homepage with wallet balance and summaries."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         lang = session.get('lang', 'en')
 
@@ -89,16 +85,16 @@ def home():
             total_receipts=total_receipts,
             total_payments=total_payments,
             total_inventory_value=total_inventory_value,
-            title=trans('business_home', lang=lang),
-            format_currency=format_currency
+            title=utils.trans('business_home', lang=lang),  # Added utils prefix
+            format_currency=utils.format_currency  # Added utils prefix
         )
     except Exception as e:
         logger.error(f"Error rendering business homepage for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
         return render_template(
             'personal/GENERAL/error.html',
-            error=trans('dashboard_error', lang=lang),
-            title=trans('error', lang=lang)
+            error=utils.trans('dashboard_error', lang=lang),  # Added utils prefix
+            title=utils.trans('error', lang=lang)  # Added utils prefix
         ), 500
 
 @business.route('/notifications/count')
@@ -108,7 +104,7 @@ def home():
 def notification_count():
     """Fetch the count of unread notifications for the authenticated business user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         count = db.bill_reminders.count_documents({'user_id': user_id, 'read_status': False})
         logger.info(f"Fetched notification count for user {user_id}: {count}", 
@@ -117,7 +113,7 @@ def notification_count():
     except Exception as e:
         logger.error(f"Notification count error for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('notification_count_error')}), 500
+        return jsonify({'error': utils.trans('notification_count_error')}), 500  # Added utils prefix
 
 @business.route('/notifications')
 @login_required
@@ -126,7 +122,7 @@ def notification_count():
 def notifications():
     """Fetch notifications for the authenticated business user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         lang = session.get('lang', 'en')
         notifications = list(db.bill_reminders.find({'user_id': user_id}).sort('sent_at', -1).limit(10))
@@ -134,7 +130,7 @@ def notifications():
                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
         result = [{
             'id': str(n['notification_id']),
-            'message': trans(n['message'], lang=lang),
+            'message': utils.trans(n['message'], lang=lang),  # Added utils prefix
             'type': n['type'],
             'timestamp': n['sent_at'].isoformat(),
             'read': n.get('read_status', False)
@@ -152,7 +148,7 @@ def notifications():
     except Exception as e:
         logger.error(f"Notifications error for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('notifications_error')}), 500
+        return jsonify({'error': utils.trans('notifications_error')}), 500  # Added utils prefix
 
 @business.route('/recent_notifications')
 @login_required
@@ -160,7 +156,7 @@ def notifications():
 def recent_notifications():
     """Fetch recent notifications for the authenticated business user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         reminders = db.bill_reminders.find({
             'user_id': current_user.id,
             'sent_at': {'$exists': True}
@@ -179,7 +175,7 @@ def recent_notifications():
     except Exception as e:
         logger.error(f"Error fetching recent notifications for user {current_user.id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('notifications_error')}), 500
+        return jsonify({'error': utils.trans('notifications_error')}), 500  # Added utils prefix
 
 @business.route('/debt/summary')
 @login_required
@@ -187,7 +183,7 @@ def recent_notifications():
 def debt_summary():
     """Fetch debt summary (I Owe, I Am Owed) for the authenticated user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         creditors_pipeline = [
             {'$match': {'user_id': user_id, 'type': 'creditor'}},
@@ -210,7 +206,7 @@ def debt_summary():
     except Exception as e:
         logger.error(f"Error fetching debt summary for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('debt_summary_error')}), 500
+        return jsonify({'error': utils.trans('debt_summary_error')}), 500  # Added utils prefix
 
 @business.route('/coins/get_balance')
 @login_required
@@ -218,7 +214,7 @@ def debt_summary():
 def get_balance():
     """Fetch the wallet balance for the authenticated user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user = db.users.find_one({'_id': current_user.id})
         coin_balance = user.get('coin_balance', 0) if user else 0
         logger.info(f"Fetched coin balance for user {current_user.id}: {coin_balance}", 
@@ -227,7 +223,7 @@ def get_balance():
     except Exception as e:
         logger.error(f"Error fetching coin balance for user {current_user.id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('coin_balance_error')}), 500
+        return jsonify({'error': utils.trans('coin_balance_error')}), 500  # Added utils prefix
 
 @business.route('/cashflow/summary')
 @login_required
@@ -235,7 +231,7 @@ def get_balance():
 def cashflow_summary():
     """Fetch the net cashflow (month-to-date) for the authenticated user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         today = datetime.utcnow()
         start_of_month = datetime(today.year, today.month, 1)
@@ -262,7 +258,7 @@ def cashflow_summary():
     except Exception as e:
         logger.error(f"Error fetching cashflow summary for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('cashflow_error')}), 500
+        return jsonify({'error': utils.trans('cashflow_error')}), 500  # Added utils prefix
 
 @business.route('/inventory/summary')
 @login_required
@@ -270,7 +266,7 @@ def cashflow_summary():
 def inventory_summary():
     """Fetch the total inventory value for the authenticated user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         pipeline = [
             {'$match': {'user_id': user_id}},
@@ -289,7 +285,7 @@ def inventory_summary():
     except Exception as e:
         logger.error(f"Error fetching inventory summary for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('inventory_error')}), 500
+        return jsonify({'error': utils.trans('inventory_error')}), 500  # Added utils prefix
 
 @business.route('/recent_activity')
 @login_required
@@ -297,7 +293,7 @@ def inventory_summary():
 def recent_activity():
     """Fetch recent activities (debts, cashflows) for the authenticated user."""
     try:
-        db = get_mongo_db()
+        db = utils.get_mongo_db()  # Added utils prefix
         user_id = current_user.id
         activities = []
         
@@ -335,4 +331,4 @@ def recent_activity():
     except Exception as e:
         logger.error(f"Error fetching recent activity for user {user_id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
-        return jsonify({'error': trans('activity_error')}), 500
+        return jsonify({'error': utils.trans('activity_error')}), 500  # Added utils prefix
