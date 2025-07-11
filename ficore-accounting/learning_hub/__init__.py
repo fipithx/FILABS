@@ -10,8 +10,8 @@ def init_storage(app):
     Initialize storage for the Learning Hub (e.g., MongoDB collections).
     Called by the main app during initialization.
     """
-    from .routes import setup_storage
-    try:
+from .models import init_storage  # Correct: init_storage is defined in models.py
+try:
         with app.app_context():
             setup_storage(app)
     except Exception as e:
