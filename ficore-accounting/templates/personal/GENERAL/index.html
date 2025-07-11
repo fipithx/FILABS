@@ -71,7 +71,7 @@
         <div class="section-card recent-activity">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="section-title mb-0">{{ t('general_recent_activity', default='Recent Activity') | e }}</h3>
-                <a href="{{ url_for('personal.recent_activity') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
+                <a href="{{ url_for('summaries.recent_activity') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
                     {{ t('general_view_all', default='View All') | e }}
                 </a>
             </div>
@@ -94,19 +94,17 @@
         <div class="section-card notifications">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="section-title mb-0">{{ t('general_notifications', default='Notifications') | e }}</h3>
-                <a href="{{ url_for('personal.notifications') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
-                    {{ t('general_view_all', default='View All') | e }}
-                </a>
+                <span class="badge bg-primary rounded-pill" id="notificationCount">0</span>
             </div>
             <div id="notificationList">
-                <div class="recent-activity-card">
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-bell text-muted"></i>
+                <div class="notification-card">
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="bi bi-info-circle text-muted"></i>
                         </div>
-                        <div class="activity-content">
-                            <div class="activity-description fw-semibold">{{ t('general_no_notifications', default='No notifications') | e }}</div>
-                            <div class="activity-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                        <div class="notification-content">
+                            <div class="notification-description fw-semibold">{{ t('general_no_notifications', default='No notifications') | e }}</div>
+                            <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
                         </div>
                     </div>
                 </div>
@@ -151,6 +149,28 @@
 .spacer {
     margin: 1.5rem 0;
 }
+.notification-card {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 0;
+}
+.notification-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.notification-icon {
+    font-size: 1.25rem;
+}
+.notification-content {
+    flex-grow: 1;
+}
+.notification-description {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.notification-time {
+    font-size: 0.8rem;
+}
 </style>
 {% endblock %}
 
@@ -182,171 +202,68 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     {% if current_user.is_authenticated %}
-    let amountsVisible = true;
-
-    // Translation strings
-    const translations = {
-        just_now: '{{ t("general_just_now", default="Just now") | e }}',
-        minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
-        hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
-        days_ago: '{{ t("general_days_ago", default="d ago") | e }}',
-        positive_net_worth: '{{ t("general_positive_net_worth", default="Positive") | e }}',
-        negative_net_worth: '{{ t("general_negative_net_worth", default="Negative") | e }}',
-        balanced: '{{ t("general_balanced", default="Balanced") | e }}',
-        no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
-        start_by_adding: '{{ t("general_start_by_adding", default="Start by adding a budget or bill") | e }}',
-        no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
-        check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
-    };
-
     // Load financial data, notifications, and recent activity
     loadFinancialSummary();
-    loadNotifications();
     loadRecentActivity();
+    loadNotifications();
+    {% endif %}
+});
 
-    function loadFinancialSummary() {
-        Promise.all([
-            fetch('{{ url_for("personal.budget.summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
-            fetch('{{ url_for("personal.bill.summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
-            fetch('{{ url_for("personal.net_worth.summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
-            fetch('{{ url_for("personal.financial_health.summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
-            fetch('{{ url_for("personal.emergency_fund.summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
-        ]).then(([budgetData, billsData, netWorthData, healthData, emergencyFundData]) => {
-            updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData);
-        }).catch(error => {
-            console.error('Error loading financial data:', error);
-        });
-    }
+{% if current_user.is_authenticated %}
+let amountsVisible = true;
 
-    function updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData) {
-        const budgetStatusEl = document.querySelector('#budgetStatus .amount-value');
-        budgetStatusEl.textContent = format_currency(budgetData.totalBudget || 0);
-        budgetStatusEl.dataset.amount = budgetData.totalBudget || 0;
+// Translation strings
+const translations = {
+    just_now: '{{ t("general_just_now", default="Just now") | e }}',
+    minutes_ago: '{{ t("general_minutes_ago", default="m ago") | e }}',
+    hours_ago: '{{ t("general_hours_ago", default="h ago") | e }}',
+    days_ago: '{{ t("general_days_ago", default="d ago") | e }}',
+    positive_net_worth: '{{ t("general_positive_net_worth", default="Positive") | e }}',
+    negative_net_worth: '{{ t("general_negative_net_worth", default="Negative") | e }}',
+    balanced: '{{ t("general_balanced", default="Balanced") | e }}',
+    no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
+    start_by_adding: '{{ t("general_start_by_adding", default="Start by adding a budget or bill") | e }}',
+    no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
+    check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
+};
 
-        const upcomingBillsEl = document.querySelector('#upcomingBills .amount-value');
-        upcomingBillsEl.textContent = format_currency(billsData.totalUpcomingBills || 0);
-        upcomingBillsEl.dataset.amount = billsData.totalUpcomingBills || 0;
+// Load financial data
+function loadFinancialSummary() {
+    Promise.all([
+        fetch('{{ url_for("summaries.budget_summary") | e }}').then(r => r.json()).catch(() => ({totalBudget: 0})),
+        fetch('{{ url_for("summaries.bill_summary") | e }}').then(r => r.json()).catch(() => ({totalUpcomingBills: 0})),
+        fetch('{{ url_for("summaries.net_worth_summary") | e }}').then(r => r.json()).catch(() => ({netWorth: 0})),
+        fetch('{{ url_for("summaries.financial_health_summary") | e }}').then(r => r.json()).catch(() => ({score: 0})),
+        fetch('{{ url_for("summaries.emergency_fund_summary") | e }}').then(r => r.json()).catch(() => ({totalSavings: 0}))
+    ]).then(([budgetData, billsData, netWorthData, healthData, emergencyFundData]) => {
+        updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData);
+    }).catch(error => {
+        console.error('Error loading financial data:', error);
+    });
+}
 
-        const netWorth = netWorthData.netWorth || 0;
-        const netWorthEl = document.getElementById('netWorth');
-        const netWorthStatusEl = document.getElementById('netWorthStatus');
-
-        netWorthEl.textContent = '₦' + format_currency(Math.abs(netWorth));
-        netWorthEl.dataset.amount = netWorth;
-
-        if (netWorth > 0) {
-            netWorthEl.className = 'net-amount text-success';
-            netWorthStatusEl.textContent = `(${translations.positive_net_worth})`;
-            netWorthStatusEl.className = 'net-status text-success';
-        } else if (netWorth < 0) {
-            netWorthEl.className = 'net-amount text-danger';
-            netWorthStatusEl.textContent = `(${translations.negative_net_worth})`;
-            netWorthStatusEl.className = 'net-status text-danger';
-        } else {
-            netWorthEl.className = 'net-amount text-muted';
-            netWorthStatusEl.textContent = `(${translations.balanced})`;
-            netWorthStatusEl.className = 'net-status text-muted';
-        }
-
-        const financialHealthEl = document.getElementById('financialHealthScore');
-        financialHealthEl.textContent = (healthData.score || 0) + '%';
-        financialHealthEl.dataset.originalText = (healthData.score || 0) + '%';
-
-        const emergencyFundEl = document.getElementById('emergencyFund');
-        emergencyFundEl.textContent = '₦' + format_currency(emergencyFundData.totalSavings || 0);
-        emergencyFundEl.dataset.originalText = '₦' + format_currency(emergencyFundData.totalSavings || 0);
-    }
-
-    function loadNotifications() {
-        fetch('{{ url_for("personal.notifications") | e }}')
-            .then(response => response.json())
-            .then(notifications => {
-                const notificationList = document.getElementById('notificationList');
-                if (notifications && notifications.length > 0) {
-                    notificationList.innerHTML = notifications.map(notification => `
-                        <div class="recent-activity-card ${notification.read ? '' : 'unread'}">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="bi ${notification.icon || 'bi-bell'} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-description fw-semibold">${notification.message}</div>
-                                    <div class="activity-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    notificationList.innerHTML = `
-                        <div class="recent-activity-card">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="bi bi-bell text-muted"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-description fw-semibold">${translations.no_notifications}</div>
-                                    <div class="activity-time text-muted">${translations.check_back_later}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            }).catch(error => {
-                console.error('Error loading notifications:', error);
-                const notificationList = document.getElementById('notificationList');
-                notificationList.innerHTML = `
+// Load recent activity
+function loadRecentActivity() {
+    fetch('{{ url_for("summaries.recent_activity") | e }}')
+        .then(response => response.json())
+        .then(activities => {
+            const activityList = document.getElementById('recentActivityList');
+            if (activities && activities.length > 0) {
+                activityList.innerHTML = activities.map(activity => `
                     <div class="recent-activity-card">
                         <div class="activity-item">
                             <div class="activity-icon">
-                                <i class="bi bi-bell text-muted"></i>
+                                <i class="bi ${activity.icon || getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
                             </div>
                             <div class="activity-content">
-                                <div class="activity-description fw-semibold">${translations.no_notifications}</div>
-                                <div class="activity-time text-muted">${translations.check_back_later}</div>
+                                <div class="activity-description fw-semibold">${activity.description}</div>
+                                <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
                             </div>
+                            ${activity.details && activity.details.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.details.amount)}</div>` : ''}
                         </div>
-                    `;
-                });
-    }
-
-    function loadRecentActivity() {
-        fetch('{{ url_for("personal.recent_activity") | e }}')
-            .then(response => response.json())
-            .then(activities => {
-                const activityList = document.getElementById('recentActivityList');
-                if (activities && activities.length > 0) {
-                    activityList.innerHTML = activities.map(activity => `
-                        <div class="recent-activity-card">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="bi ${activity.icon || getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-description fw-semibold">${activity.description}</div>
-                                    <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
-                                </div>
-                                ${activity.details && activity.details.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.details.amount)}</div>` : ''}
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    activityList.innerHTML = `
-                        <div class="recent-activity-card">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="bi bi-info-circle text-muted"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
-                                    <div class="activity-time text-muted">${translations.start_by_adding}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-            }).catch(error => {
-                console.error('Error loading recent activity:', error);
-                const activityList = document.getElementById('recentActivityList');
+                    </div>
+                `).join('');
+            } else {
                 activityList.innerHTML = `
                     <div class="recent-activity-card">
                         <div class="activity-item">
@@ -358,80 +275,211 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="activity-time text-muted">${translations.start_by_adding}</div>
                             </div>
                         </div>
-                    `;
-                });
-    }
-
-    function getActivityIcon(type) {
-        const icons = {
-            'budget': 'bi-pie-chart',
-            'bill': 'bi-receipt',
-            'bill_paid': 'bi-check-circle',
-            'emergency_fund': 'bi-piggy-bank',
-            'net_worth': 'bi-wallet2',
-            'financial_health': 'bi-heart-pulse',
-            'quiz': 'bi-question-circle',
-            'learning_hub': 'bi-book'
-        };
-        return icons[type] || 'bi-circle';
-    }
-
-    function getActivityColor(type) {
-        const colors = {
-            'budget': 'text-primary',
-            'bill': 'text-warning',
-            'bill_paid': 'text-success',
-            'emergency_fund': 'text-info',
-            'net_worth': 'text-primary',
-            'financial_health': 'text-success',
-            'quiz': 'text-info',
-            'learning_hub': 'text-primary'
-        };
-        return colors[type] || 'text-muted';
-    }
-
-    function formatTimeAgo(timestamp) {
-        const now = new Date();
-        const time = new Date(timestamp);
-        const diffInSeconds = Math.floor((now - time) / 1000);
-        if (diffInSeconds < 60) return translations.just_now;
-        if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' ' + translations.minutes_ago;
-        if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ' + translations.hours_ago;
-        return Math.floor(diffInSeconds / 86400) + ' ' + translations.days_ago;
-    }
-
-    window.toggleAmountVisibility = function() {
-        amountsVisible = !amountsVisible;
-        const icon = document.getElementById('visibilityIcon');
-        const amounts = document.querySelectorAll('.amount-value, .net-amount, .stat-card-value');
-
-        amounts.forEach(el => {
-            if (amountsVisible) {
-                if (el.classList.contains('amount-value')) {
-                    el.textContent = format_currency(el.dataset.amount);
-                } else if (el.classList.contains('net-amount')) {
-                    el.textContent = '₦' + format_currency(Math.abs(el.dataset.amount));
-                } else {
-                    el.textContent = el.dataset.originalText || el.textContent;
-                }
-            } else {
-                if (!el.dataset.originalText) {
-                    el.dataset.originalText = el.textContent;
-                }
-                el.textContent = '****';
+                    </div>
+                `;
             }
+        }).catch(error => {
+            console.error('Error loading recent activity:', error);
+            const activityList = document.getElementById('recentActivityList');
+            activityList.innerHTML = `
+                <div class="recent-activity-card">
+                    <div class="activity-item">
+                        <div class="activity-icon">
+                            <i class="bi bi-info-circle text-muted"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
+                            <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                        </div>
+                    </div>
+                `;
+            });
+}
+
+// Load notifications
+function loadNotifications() {
+    // Update notification count
+    fetch('{{ url_for("summaries.notification_count") | e }}')
+        .then(response => response.json())
+        .then(data => {
+            const notificationCount = document.getElementById('notificationCount');
+            notificationCount.textContent = data.count || 0;
+            notificationCount.className = `badge bg-${data.count > 0 ? 'danger' : 'primary'} rounded-pill`;
+        })
+        .catch(error => {
+            console.error('Error loading notification count:', error);
         });
 
-        icon.className = 'bi ' + (amountsVisible ? 'bi-eye' : 'bi-eye-slash');
-    };
+    // Fetch and display notifications
+    fetch('{{ url_for("summaries.notifications") | e }}')
+        .then(response => response.json())
+        .then(data => {
+            const notificationList = document.getElementById('notificationList');
+            if (data && data.length > 0) {
+                notificationList.innerHTML = data.map(notification => `
+                    <div class="notification-card">
+                        <div class="notification-item">
+                            <div class="notification-icon">
+                                <i class="bi ${getNotificationIcon(notification.type)} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-description fw-semibold">${notification.message}</div>
+                                <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                notificationList.innerHTML = `
+                    <div class="notification-card">
+                        <div class="notification-item">
+                            <div class="notification-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-description fw-semibold">${translations.no_notifications}</div>
+                                <div class="notification-time text-muted">${translations.check_back_later}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }).catch(error => {
+            console.error('Error loading notifications:', error);
+            const notificationList = document.getElementById('notificationList');
+            notificationList.innerHTML = `
+                <div class="notification-card">
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="bi bi-info-circle text-muted"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-description fw-semibold">${translations.no_notifications}</div>
+                            <div class="notification-time text-muted">${translations.check_back_later}</div>
+                        </div>
+                    </div>
+                `;
+            });
+}
 
-    function format_currency(value) {
-        if (!value && value !== 0) return '';
-        value = typeof value === "string" ? parseFloat(value) : value;
-        if (isNaN(value)) return '0';
-        return value.toLocaleString('en-NG', {maximumFractionDigits: 0});
+function updateFinancialSummary(budgetData, billsData, netWorthData, healthData, emergencyFundData) {
+    const budgetStatusEl = document.querySelector('#budgetStatus .amount-value');
+    budgetStatusEl.textContent = format_currency(budgetData.totalBudget || 0);
+    budgetStatusEl.dataset.amount = budgetData.totalBudget || 0;
+
+    const upcomingBillsEl = document.querySelector('#upcomingBills .amount-value');
+    upcomingBillsEl.textContent = format_currency(billsData.totalUpcomingBills || 0);
+    upcomingBillsEl.dataset.amount = billsData.totalUpcomingBills || 0;
+
+    const netWorth = netWorthData.netWorth || 0;
+    const netWorthEl = document.getElementById('netWorth');
+    const netWorthStatusEl = document.getElementById('netWorthStatus');
+
+    netWorthEl.textContent = '₦' + format_currency(Math.abs(netWorth));
+    netWorthEl.dataset.amount = netWorth;
+
+    if (netWorth > 0) {
+        netWorthEl.className = 'net-amount text-success';
+        netWorthStatusEl.textContent = `(${translations.positive_net_worth})`;
+        netWorthStatusEl.className = 'net-status text-success';
+    } else if (netWorth < 0) {
+        netWorthEl.className = 'net-amount text-danger';
+        netWorthStatusEl.textContent = `(${translations.negative_net_worth})`;
+        netWorthStatusEl.className = 'net-status text-danger';
+    } else {
+        netWorthEl.className = 'net-amount text-muted';
+        netWorthStatusEl.textContent = `(${translations.balanced})`;
+        netWorthStatusEl.className = 'net-status text-muted';
     }
-    {% endif %}
-});
+
+    const financialHealthEl = document.getElementById('financialHealthScore');
+    financialHealthEl.textContent = (healthData.score || 0) + '%';
+    financialHealthEl.dataset.originalText = (healthData.score || 0) + '%';
+
+    const emergencyFundEl = document.getElementById('emergencyFund');
+    emergencyFundEl.textContent = '₦' + format_currency(emergencyFundData.totalSavings || 0);
+    emergencyFundEl.dataset.originalText = '₦' + format_currency(emergencyFundData.totalSavings || 0);
+}
+
+function getActivityIcon(type) {
+    const icons = {
+        'budget': 'bi-pie-chart',
+        'bill': 'bi-receipt',
+        'bill_paid': 'bi-check-circle',
+        'emergency_fund': 'bi-piggy-bank',
+        'net_worth': 'bi-wallet2',
+        'financial_health': 'bi-heart-pulse',
+        'quiz': 'bi-question-circle',
+        'learning_hub': 'bi-book'
+    };
+    return icons[type] || 'bi-circle';
+}
+
+function getActivityColor(type) {
+    const colors = {
+        'budget': 'text-primary',
+        'bill': 'text-warning',
+        'bill_paid': 'text-success',
+        'emergency_fund': 'text-info',
+        'net_worth': 'text-primary',
+        'financial_health': 'text-success',
+        'quiz': 'text-info',
+        'learning_hub': 'text-primary'
+    };
+    return colors[type] || 'text-muted';
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'info': 'bi-info-circle',
+        'warning': 'bi-exclamation-triangle',
+        'error': 'bi-x-circle',
+        'success': 'bi-check-circle'
+    };
+    return icons[type] || 'bi-info-circle';
+}
+
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    if (diffInSeconds < 60) return translations.just_now;
+    if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' ' + translations.minutes_ago;
+    if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' ' + translations.hours_ago;
+    return Math.floor(diffInSeconds / 86400) + ' ' + translations.days_ago;
+}
+
+window.toggleAmountVisibility = function() {
+    amountsVisible = !amountsVisible;
+    const icon = document.getElementById('visibilityIcon');
+    const amounts = document.querySelectorAll('.amount-value, .net-amount, .stat-card-value');
+
+    amounts.forEach(el => {
+        if (amountsVisible) {
+            if (el.classList.contains('amount-value')) {
+                el.textContent = format_currency(el.dataset.amount);
+            } else if (el.classList.contains('net-amount')) {
+                el.textContent = '₦' + format_currency(Math.abs(el.dataset.amount));
+            } else {
+                el.textContent = el.dataset.originalText || el.textContent;
+            }
+        } else {
+            if (!el.dataset.originalText) {
+                el.dataset.originalText = el.textContent;
+            }
+            el.textContent = '****';
+        }
+    });
+
+    icon.className = 'bi ' + (amountsVisible ? 'bi-eye' : 'bi-eye-slash');
+};
+
+function format_currency(value) {
+    if (!value && value !== 0) return '';
+    value = typeof value === "string" ? parseFloat(value) : value;
+    if (isNaN(value)) return '0';
+    return value.toLocaleString('en-NG', {maximumFractionDigits: 0});
+}
+{% endif %}
 </script>
 {% endblock %}
