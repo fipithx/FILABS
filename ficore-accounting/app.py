@@ -70,9 +70,9 @@ class SessionAdapter(logging.LoggerAdapter):
                 user_role = current_user.role if current_user.is_authenticated else 'anonymous'
                 ip_address = request.remote_addr
             else:
-                session_id = 'no-request-context'
+                session_id = f'non-request-{str(uuid.uuid4())[:8]}'
         except Exception as e:
-            session_id = 'session-error'
+            session_id = f'session-error-{str(uuid.uuid4())[:8]}'
             kwargs['extra']['session_error'] = str(e)
         kwargs['extra']['session_id'] = session_id
         kwargs['extra']['user_role'] = user_role
@@ -116,16 +116,20 @@ def ensure_session_id(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            if 'sid' not in session:
+            if 'sid' not in session or not session.get('sid'):
                 if not current_user.is_authenticated:
                     utils.create_anonymous_session()
                     logger.info(f'New anonymous session created: {session["sid"]}', extra={'ip_address': request.remote_addr})
                 else:
+                    user_id = getattr(current_user, 'id', 'unknown-user')
                     session['sid'] = str(uuid.uuid4())
                     session['is_anonymous'] = False
-                    logger.info(f'New session ID generated for authenticated user {current_user.id}: {session["sid"]}', extra={'ip_address': request.remote_addr})
+                    session.modified = True
+                    logger.info(f'New session ID generated for authenticated user {user_id}: {session["sid"]}', extra={'ip_address': request.remote_addr})
         except Exception as e:
             logger.error(f'Session operation failed: {str(e)}', exc_info=True)
+            session['sid'] = f'error-{str(uuid.uuid4())[:8]}'
+            session.modified = True
         return f(*args, **kwargs)
     return decorated_function
 
@@ -177,30 +181,34 @@ def check_mongodb_connection(app):
 def setup_session(app):
     try:
         with app.app_context():
-            if not check_mongodb_connection(app):
-                logger.error('MongoDB client is not available, falling back to filesystem session')
-                app.config['SESSION_TYPE'] = 'filesystem'
-                utils.flask_session.init_app(app)
-                logger.info('Session configured with filesystem fallback')
-                return
-            app.config['SESSION_TYPE'] = 'mongodb'
-            app.config['SESSION_MONGODB'] = app.extensions['mongo']
-            app.config['SESSION_MONGODB_DB'] = 'ficodb'
-            app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
-            app.config['SESSION_PERMANENT'] = True
-            app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-            app.config['SESSION_USE_SIGNER'] = True
-            app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-            app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV', 'development') == 'production'
-            app.config['SESSION_COOKIE_HTTPONLY'] = True
-            app.config['SESSION_COOKIE_NAME'] = 'ficore_session'
+            max_retries = 3
+            for attempt in range(max_retries):
+                if check_mongodb_connection(app):
+                    app.config['SESSION_TYPE'] = 'mongodb'
+                    app.config['SESSION_MONGODB'] = app.extensions['mongo']
+                    app.config['SESSION_MONGODB_DB'] = 'ficodb'
+                    app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
+                    app.config['SESSION_PERMANENT'] = True
+                    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+                    app.config['SESSION_USE_SIGNER'] = True
+                    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+                    app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV', 'development') == 'production'
+                    app.config['SESSION_COOKIE_HTTPONLY'] = True
+                    app.config['SESSION_COOKIE_NAME'] = 'ficore_session'
+                    utils.flask_session.init_app(app)
+                    logger.info(f'Session configured: type={app.config["SESSION_TYPE"]}, db={app.config["SESSION_MONGODB_DB"]}, collection={app.config["SESSION_MONGODB_COLLECT"]}')
+                    return
+                logger.warning(f'MongoDB connection attempt {attempt + 1} failed, retrying...')
+                time.sleep(1)
+            logger.error('MongoDB client is not available after retries, falling back to filesystem session')
+            app.config['SESSION_TYPE'] = 'filesystem'
             utils.flask_session.init_app(app)
-            logger.info(f'Session configured: type={app.config["SESSION_TYPE"]}, db={app.config["SESSION_MONGODB_DB"]}, collection={app.config["SESSION_MONGODB_COLLECT"]}')
+            logger.info('Session configured with filesystem fallback')
     except Exception as e:
-        logger.error(f'Failed to configure session with MongoDB: {str(e)}', exc_info=True)
+        logger.error(f'Failed to configure session: {str(e)}', exc_info=True)
         app.config['SESSION_TYPE'] = 'filesystem'
         utils.flask_session.init_app(app)
-        logger.info('Session configured with filesystem fallback due to MongoDB error')
+        logger.info('Session configured with filesystem fallback due to error')
 
 class User(UserMixin):
     def __init__(self, id, email, display_name=None, role='personal'):
@@ -289,10 +297,8 @@ def create_app():
             maxPoolSize=50,
             minPoolSize=5
         )
-        # Store MongoDB client in app.extensions
         app.extensions = getattr(app, 'extensions', {})
         app.extensions['mongo'] = client
-        # Verify connection
         client.admin.command('ping')
         logger.info('MongoDB client initialized successfully')
         
@@ -342,14 +348,11 @@ def create_app():
     # Initialize MongoDB, session, scheduler, and other components within app context
     try:
         with app.app_context():
-            # Initialize database
             initialize_database(app)
             logger.info('Database initialized successfully')
 
-            # Setup session
             setup_session(app)
 
-            # Initialize scheduler
             scheduler = init_scheduler(app, app.extensions['mongo']['ficodb'])
             app.config['SCHEDULER'] = scheduler
             logger.info('Scheduler initialized successfully')
@@ -362,9 +365,8 @@ def create_app():
                 except Exception as e:
                     logger.error(f'Error shutting down scheduler: {str(e)}', exc_info=True)
 
-            # Initialize personal finance collections
             personal_finance_collections = [
-                'budgets', 'bills', 'emergency_funds', 'financial_health_scores', 
+                'budgets', 'bills', 'emergency_funds', 'financial_health_scores',
                 'net_worth_data', 'quiz_responses', 'learning_materials', 'bill_reminders'
             ]
             db = app.extensions['mongo']['ficodb']
@@ -373,7 +375,6 @@ def create_app():
                     db.create_collection(collection_name)
                     logger.info(f'Created personal finance collection: {collection_name}')
             
-            # Create indexes
             try:
                 db.bills.create_index([('user_id', 1), ('due_date', 1)])
                 db.bills.create_index([('session_id', 1), ('due_date', 1)])
@@ -384,7 +385,7 @@ def create_app():
                 db.emergency_funds.create_index([('session_id', 1), ('created_at', -1)])
                 db.financial_health_scores.create_index([('user_id', 1), ('created_at', -1)])
                 db.financial_health_scores.create_index([('session_id', 1), ('created_at', -1)])
-                db.net_worth_data.create_index([('user_id', 1), ('due_date', 1), ('status', 1)]) 
+                db.net_worth_data.create_index([('user_id', 1), ('due_date', 1), ('status', 1)])
                 db.net_worth_data.create_index([('session_id', 1), ('created_at', -1)])
                 db.quiz_responses.create_index([('user_id', 1), ('created_at', -1)])
                 db.quiz_responses.create_index([('session_id', 1), ('created_at', -1)])
@@ -398,14 +399,12 @@ def create_app():
             except Exception as e:
                 logger.warning(f'Some indexes may already exist: {str(e)}')
             
-            # Initialize Learning Hub storage
             try:
                 init_storage(app)
                 logger.info('Learning Hub storage initialized successfully')
             except Exception as e:
                 logger.error(f'Failed to initialize Learning Hub storage: {str(e)}', exc_info=True)
             
-            # Seed tax and news data
             try:
                 with app.app_context():
                     tax_version = db.tax_rates.find_one({'_id': 'version'})
@@ -429,7 +428,6 @@ def create_app():
             except Exception as e:
                 logger.error(f'Failed to seed tax or news data: {str(e)}', exc_info=True)
             
-            # Initialize admin user
             admin_email = os.getenv('ADMIN_EMAIL', 'ficore@gmail.com')
             admin_password = os.getenv('ADMIN_PASSWORD')
             if not admin_password:
@@ -454,7 +452,6 @@ def create_app():
             else:
                 logger.info(f'Admin user already exists with email: {admin_email}')
 
-            # Register blueprints
             from users.routes import users_bp
             from agents.routes import agents_bp
             from creditors.routes import creditors_bp
@@ -515,7 +512,6 @@ def create_app():
             app.register_blueprint(business, url_prefix='/business')
             logger.info('Registered business blueprint with url_prefix="/business"')
 
-            # Initialize tools with URLs after blueprint registration
             utils.initialize_tools_with_urls(app)
             logger.info('Initialized tools and navigation with resolved URLs')
 
@@ -523,7 +519,6 @@ def create_app():
         logger.error(f'Error in create_app: {str(e)}', exc_info=True)
         raise
 
-    # Jinja2 globals and filters
     app.jinja_env.globals.update(
         FACEBOOK_URL=app.config.get('FACEBOOK_URL', 'https://facebook.com/ficoreafrica'),
         TWITTER_URL=app.config.get('TWITTER_URL', 'https://x.com/ficoreafrica'),
@@ -561,7 +556,6 @@ def create_app():
             logger.warning(f'Error formatting number {value}: {str(e)}')
             return str(value)
 
-    # Register utils.format_currency as the template filter
     app.jinja_env.filters['format_currency'] = utils.format_currency
 
     @app.template_filter('format_datetime')
@@ -609,11 +603,9 @@ def create_app():
         
     @app.context_processor
     def inject_role_nav():
-        """Inject role-based navigation data into all templates."""
         tools_for_template = []
         explore_features_for_template = []
         bottom_nav_items = []
-
         try:
             with app.app_context():
                 if current_user.is_authenticated:
@@ -635,17 +627,14 @@ def create_app():
                         bottom_nav_items = utils.ADMIN_NAV
                 else:
                     explore_features_for_template = utils.get_explore_features()
-
                 for nav_list in [tools_for_template, explore_features_for_template, bottom_nav_items]:
                     for item in nav_list:
                         if not isinstance(item, dict) or 'icon' not in item or not item['icon'].startswith('bi-'):
                             logger.warning(f'Invalid or missing icon in navigation item: {item}')
                             item['icon'] = 'bi-question-circle'
-
                 logger.info('Navigation data injected for template rendering')
         except Exception as e:
             logger.error(f'Error in inject_role_nav: {str(e)}', exc_info=True)
-
         return dict(
             tools_for_template=tools_for_template,
             explore_features_for_template=explore_features_for_template,
@@ -687,7 +676,6 @@ def create_app():
             ]
         }
     
-    # Security headers
     @app.after_request
     def add_security_headers(response):
         if not request.path.startswith('/api'):
@@ -706,7 +694,6 @@ def create_app():
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
         return response
     
-    # Language switching route
     @app.route('/change-language', methods=['POST'])
     @utils.limiter.limit('10 per minute')
     def change_language():
@@ -747,7 +734,6 @@ def create_app():
                 'message': utils.trans('error_general')
             }), 500
     
-    # Routes
     @app.route('/', methods=['GET', 'HEAD'])
     @ensure_session_id
     def index():
@@ -769,42 +755,6 @@ def create_app():
             elif current_user.role == 'personal':
                 return redirect(url_for('personal.index'))
         return redirect(url_for('general_bp.landing'))
-        try:
-            with app.app_context():
-                courses = app.config.get('COURSES', [])
-            logger.info(f'Retrieved {len(courses)} courses')
-            return render_template(
-                'personal/GENERAL/index.html',
-                courses=courses,
-                sample_courses=courses,
-                title=utils.trans('welcome', lang=lang),
-                is_anonymous=True,
-                is_public=True
-            )
-        except TemplateNotFound as e:
-            logger.error(f'Template not found: {str(e)}')
-            flash(utils.trans('template_not_found'), 'danger')
-            return render_template(
-                'personal/GENERAL/error.html',
-                error=str(e),
-                title=utils.trans('error')
-            ), 404
-        except Exception as e:
-            logger.error(f'Error rendering index: {str(e)}')
-            flash(utils.trans(f'error: {str(e)}'), 'danger')
-            try:
-                return render_template(
-                    'personal/GENERAL/error.html',
-                    error=str(e),
-                    title=utils.trans('error')
-                ), 500
-            except TemplateNotFound as e:
-                logger.error(f'Template not found: {str(e)}')
-                return render_template(
-                    'personal/GENERAL/error.html',
-                    error=str(e),
-                    title=utils.trans('error')
-                ), 500
     
     @app.route('/general_dashboard')
     @ensure_session_id
@@ -893,6 +843,44 @@ def create_app():
             logger.error(f'Translate API error: {str(e)}')
             return jsonify({'error': utils.trans('error')}), 500
     
+    @app.route('/set_language/<lang>')
+    @utils.limiter.limit('10 per minute')
+    def set_language(lang):
+        supported_languages = current_app.config.get('SUPPORTED_LANGUAGES', ['en', 'ha'])
+        new_lang = lang if lang in supported_languages else 'en'
+        
+        try:
+            session['lang'] = new_lang
+            if current_user.is_authenticated:
+                try:
+                    current_app.extensions['mongo']['ficodb'].users.update_one(
+                        {'_id': current_user.id},
+                        {'$set': {'lang': new_lang}}
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f'Could not update user language for user {current_user.id}: {str(e)}',
+                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
+                    )
+                    flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
+                    return redirect(url_for('index'))
+                    
+            logger.info(
+                f'Set language to {new_lang} for user {current_user.id if current_user.is_authenticated else "anonymous"}',
+                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
+            )
+            flash(utils.trans('lang_updated', default='Language updated successfully'), 'success')
+            
+            redirect_url = request.referrer if is_safe_referrer(request.referrer, request.host) else url_for('index')
+            return redirect(redirect_url)
+        except Exception as e:
+            logger.error(
+                f'Session error: {str(e)}',
+                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
+            )
+            flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
+            return redirect(url_for('index'))
+    
     @app.route('/setup', methods=['GET'])
     @utils.limiter.limit('10 per minute')
     def setup_database_route():
@@ -942,12 +930,147 @@ def create_app():
             logger.warning(f'Invalid static path: {filename}')
             abort(404)
         try:
-            return send_from_directory(app.static_folder, filename)
-        except Exception as e:
-            logger.error(f'Error serving static file {filename}: {str(e)}')
+            response = send_from_directory('static', filename)
+            if filename.endswith('.woff2'):
+                response.headers['Content-Type'] = 'font/woff2'
+                response.headers['Cache-Control'] = 'public, max-age=604800'
+            else:
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+        except FileNotFoundError:
+            logger.error(f'Static file not found: {filename}')
             abort(404)
     
+    @app.route('/static_personal/<path:filename>')
+    def static_personal(filename):
+        allowed_extensions = {'.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}
+        file_ext = os.path.splitext(filename)[1].lower()
+        if '..' in filename or filename.startswith('/') or file_ext not in allowed_extensions:
+            logger.warning(f'Invalid personal file path or ext: {filename}')
+            abort(404)
+        try:
+            response = send_from_directory('static_personal', filename)
+            if file_ext in {'.css', '.js'}:
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+            elif file_ext in {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}:
+                response.headers['Cache-Control'] = 'public, max-age=604800'
+            return response
+        except FileNotFoundError:
+            logger.error(f'File not found: {filename}')
+            abort(404)
+    
+    @app.route('/favicon.ico')
+    def favicon():
+        try:
+            return send_from_directory(app.static_folder, 'img/favicon.ico')
+        except FileNotFoundError:
+            logger.error('Favicon not found')
+            abort(404)
+    
+    @app.route('/service-worker.js')
+    def service_worker():
+        try:
+            return app.send_static_file('js/service-worker.js')
+        except FileNotFoundError:
+            logger.error('Service worker not found')
+            abort(404)
+    
+    @app.route('/manifest.json')
+    def manifest():
+        manifest_data = {
+            "name": "FiCore App",
+            "short_name": "FiCore",
+            "description": "Financial management for personal and business use",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#007bff",
+            "icons": [
+                {
+                    "src": "/static/img/icon-192x192.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "/static/img/icon-512x512.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ],
+            "lang": session.get('lang', 'en'),
+            "dir": "ltr",
+            "orientation": "portrait",
+            "scope": "/",
+            "related_applications": [],
+            "prefer_related_applications": False
+        }
+        return jsonify(manifest_data)
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        logger.error(f'CSRF error: {str(e)}')
+        try:
+            return render_template(
+                'error/403.html', 
+                error=utils.trans('csrf_error'), 
+                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
+            ), 400
+        except TemplateNotFound:
+            return render_template(
+                'personal/GENERAL/error.html', 
+                error=utils.trans('csrf_error'), 
+                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
+            ), 400
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        logger.error(f'Not found: {request.url}')
+        try:
+            return render_template(
+                'personal/GENERAL/404.html', 
+                error=str(e), 
+                title=utils.trans('not_found', lang=session.get('lang', 'en'))
+            ), 404
+        except TemplateNotFound:
+            return render_template(
+                'personal/GENERAL/error.html', 
+                error=str(e), 
+                title=utils.trans('not_found', lang=session.get('lang', 'en'))
+            ), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        logger.error(f'Server error: {str(e)}')
+        try:
+            return render_template(
+                'personal/GENERAL/error.html', 
+                error=str(e), 
+                title=utils.trans('server_error', lang=session.get('lang', 'en'))
+            ), 500
+        except TemplateNotFound:
+            return render_template(
+                'personal/GENERAL/error.html', 
+                error=str(e), 
+                title=utils.trans('server_error', lang=session.get('lang', 'en'))
+            ), 500
+    
+    scheduler_shutdown_done = False
+    mongo_client_closed = False
+
+    @app.teardown_appcontext
+    def cleanup_scheduler(exception):
+        nonlocal scheduler_shutdown_done
+        scheduler = app.config.get('SCHEDULER')
+        if scheduler and scheduler.running and not scheduler_shutdown_done:
+            try:
+                scheduler.shutdown()
+                logger.info('Scheduler shutdown')
+                scheduler_shutdown_done = True
+            except Exception as e:
+                logger.error(f'Scheduler shutdown error: {str(e)}')
+
     return app
+
 app = create_app()
 
 if __name__ == '__main__':
