@@ -13,6 +13,7 @@ QUIZ_TRANSLATIONS = {
         'quiz_enter_personal_information': 'Enter Your Personal Information',
         'quiz_take_quiz': 'Take the quiz',
         'quiz_log_error': 'Quiz Log Error',
+        'quiz_take_quiz_tooltip': 'Take a quiz to test your financial knowledge',
             'quiz_title': 'Quiz Title',
             'quiz_discover_personality': 'Discover Your Personality',
             'quiz_results': 'Quiz Results',
@@ -239,5 +240,6 @@ QUIZ_TRANSLATIONS = {
         'badge_first_quiz_desc': 'An kammala gwajin halayen kuɗi na farko.',
         'badge_savings_star': 'Tauraron Ajiya',
         'badge_savings_star_desc': 'An gane shi saboda halayen ajiya akai-akai.',
+        'quiz_take_quiz_tooltip': 'Ɗauki tambaya don gwada ilimin kuɗin ku',
     }
 }
