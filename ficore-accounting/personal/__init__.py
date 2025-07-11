@@ -136,6 +136,22 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None):
             'icon': 'bi-question-circle'
         })
 
+    # Fetch recent learning hub progress
+    learning_hub_progress = db.learning_materials.find(query).sort('updated_at', -1).limit(5)
+    for progress in learning_hub_progress:
+        if progress.get('course_id'):
+            activities.append({
+                'type': 'learning_hub',
+                'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
+                'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'course_id': progress.get('course_id', 'N/A'),
+                    'lessons_completed': len(progress.get('lessons_completed', [])),
+                    'current_lesson': progress.get('current_lesson', 'N/A')
+                },
+                'icon': 'bi-book'
+            })
+
     activities.sort(key=lambda x: x['timestamp'], reverse=True)
     return activities[:10]
 
