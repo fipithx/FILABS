@@ -41,6 +41,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_babel import Babel
 from flask_compress import Compress
 import requests
+from learning_hub import learning_hub_bp, init_storage
 
 # Load environment variables
 load_dotenv()
@@ -393,6 +394,13 @@ def create_app():
             except Exception as e:
                 logger.warning(f'Some indexes may already exist: {str(e)}')
             
+            # Initialize Learning Hub storage
+            try:
+                init_storage(app)
+                logger.info('Learning Hub storage initialized successfully')
+            except Exception as e:
+                logger.error(f'Failed to initialize Learning Hub storage: {str(e)}', exc_info=True)
+            
             # Seed tax and news data
             try:
                 with app.app_context():
@@ -497,6 +505,8 @@ def create_app():
             logger.info('Registered personal blueprint with url_prefix="/personal"')
             app.register_blueprint(general_bp, url_prefix='/general')
             logger.info('Registered general blueprint')
+            app.register_blueprint(learning_hub_bp, url_prefix='/learning_hub')
+            logger.info('Registered learning hub blueprint with url_prefix="/learning_hub"')
 
             # Initialize tools with URLs after blueprint registration
             utils.initialize_tools_with_urls(app)
@@ -617,89 +627,7 @@ def create_app():
                         explore_features_for_template = utils.ADMIN_EXPLORE_FEATURES
                         bottom_nav_items = utils.ADMIN_NAV
                 else:
-                    explore_features_for_template = utils.generate_tools_with_urls([
-                        {
-                            "endpoint": "personal.budget.main",
-                            "label": "Budget Planner",
-                            "label_key": "budget_budget_planner",
-                            "description_key": "budget_budget_desc",
-                            "tooltip_key": "budget_tooltip",
-                            "icon": "bi-wallet",
-                            "category": "Personal"
-                        },
-                        {
-                            "endpoint": "personal.financial_health.main",
-                            "label": "Financial Health",
-                            "label_key": "financial_health_calculator",
-                            "description_key": "financial_health_desc",
-                            "tooltip_key": "financial_health_tooltip",
-                            "icon": "bi-heart",
-                            "category": "Personal"
-                        },
-                        {
-                            "endpoint": "personal.quiz.main",
-                            "label": "Financial Personality Quiz",
-                            "label_key": "quiz_personality_quiz",
-                            "description_key": "quiz_personality_desc",
-                            "tooltip_key": "quiz_tooltip",
-                            "icon": "bi-question-circle",
-                            "category": "Personal"
-                        },
-                        {
-                            "endpoint": "inventory.index",
-                            "label": "Inventory",
-                            "label_key": "inventory_dashboard",
-                            "description_key": "inventory_dashboard_desc",
-                            "tooltip_key": "inventory_tooltip",
-                            "icon": "bi-box",
-                            "category": "Business"
-                        },
-                        {
-                            "endpoint": "creditors.index",
-                            "label": "I Owe",
-                            "label_key": "creditors_dashboard",
-                            "description_key": "creditors_dashboard_desc",
-                            "tooltip_key": "creditors_tooltip",
-                            "icon": "bi-person-lines",
-                            "category": "Business"
-                        },
-                        {
-                            "endpoint": "debtors.index",
-                            "label": "They Owe",
-                            "label_key": "debtors_dashboard",
-                            "description_key": "debtors_dashboard_desc",
-                            "tooltip_key": "debtors_tooltip",
-                            "icon": "bi-person-plus",
-                            "category": "Business"
-                        },
-                        {
-                            "endpoint": "agents_bp.agent_portal",
-                            "label": "Agent Portal",
-                            "label_key": "agents_dashboard",
-                            "description_key": "agents_dashboard_desc",
-                            "tooltip_key": "agents_tooltip",
-                            "icon": "bi-person-workspace",
-                            "category": "Agent"
-                        },
-                        {
-                            "endpoint": "coins.history",
-                            "label": "Coins",
-                            "label_key": "proof_coins_dashboard",
-                            "description_key": "proof_coins_desc",
-                            "tooltip_key": "coins_tooltip",
-                            "icon": "bi-coin",
-                            "category": "Proof of Concept"
-                        },
-                        {
-                            "endpoint": "news_bp.news_list",
-                            "label": "News",
-                            "label_key": "news_list",
-                            "description_key": "news_list_desc",
-                            "tooltip_key": "news_tooltip",
-                            "icon": "bi-newspaper",
-                            "category": "News"
-                        }
-                    ])
+                    explore_features_for_template = utils.get_explore_features()
 
                 for nav_list in [tools_for_template, explore_features_for_template, bottom_nav_items]:
                     for item in nav_list:
@@ -1126,7 +1054,7 @@ def create_app():
                     })
                 activities.sort(key=lambda x: x['timestamp'], reverse=True)
                 activities = activities[:5]
-                activities = get_recent_activities()
+                activities = utils.get_recent_activities(user_id=user_id, db=db)
                 activity = activities[0] if activities else None
                 for activity in activities:
                     activity['timestamp'] = activity['timestamp'].isoformat()
