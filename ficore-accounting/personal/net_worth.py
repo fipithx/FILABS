@@ -118,7 +118,7 @@ def main():
     try:
         log_tool_usage(
             db=db,
-            tool_name='net_worth',
+            details='net_worth',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='main_view'
@@ -132,7 +132,7 @@ def main():
             if action == 'calculate_net_worth' and form.validate_on_submit():
                 log_tool_usage(
                     db=db,
-                    tool_name='net_worth',
+                    details='net_worth',
                     user_id=current_user.id if current_user.is_authenticated else None,
                     session_id=session.get('sid', 'unknown'),
                     action='calculate_net_worth'
@@ -395,7 +395,7 @@ def summary():
     try:
         log_tool_usage(
             db=db,
-            tool_name='net_worth',
+            details='net_worth',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='summary_view'
@@ -433,7 +433,7 @@ def unsubscribe(email):
     try:
         log_tool_usage(
             db=db,
-            tool_name='net_worth',
+            details='net_worth',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='unsubscribe'
