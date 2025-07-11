@@ -1,14 +1,19 @@
 from flask import Blueprint
-import os
-from .models import init_storage
 
-learning_hub_bp = Blueprint(
-    'learning_hub',
-    __name__,
-    template_folder='templates/learning_hub',
-    static_folder='static',
-    url_prefix='/learning_hub'
-)
+learning_hub_bp = Blueprint('learning_hub', __name__, url_prefix='/learning_hub', template_folder='templates/learning_hub', static_folder='static')
 
-# Import routes after blueprint definition to avoid circular imports
-from .routes import *
+# Import routes to register them with the blueprint
+from . import routes
+
+def init_storage(app):
+    """
+    Initialize storage for the Learning Hub (e.g., MongoDB collections).
+    Called by the main app during initialization.
+    """
+    from .routes import setup_storage
+    try:
+        with app.app_context():
+            setup_storage(app)
+    except Exception as e:
+        app.logger.error(f"Error initializing Learning Hub storage: {str(e)}")
+        raise
