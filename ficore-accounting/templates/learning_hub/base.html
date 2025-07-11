@@ -21,7 +21,7 @@
     {% if current_user.is_authenticated %}
         <header class="top-header">
             <div class="d-flex align-items-center gap-3" style="min-width:0;">
-                <a class="navbar-brand" href="{{ url_for('learning_hub.main') | e }}" aria-label="{{ t('learning_hub_ficore_africa', default='FiCore Africa Learning Hub') | e }}">
+                <a class="navbar-brand" href="{{ url_for('learning_hub.index') | e }}" aria-label="{{ t('learning_hub_ficore_africa', default='FiCore Africa Learning Hub') | e }}">
                     <img src="{{ current_user.profile_picture if current_user.profile_picture else url_for('learning_hub.static', filename='img/default_profile.png') | e }}" alt="{{ t('general_user_profile_picture', default='User Profile Picture') | e }}" class="logo">
                     <span class="welcome-text">{{ t('general_hello_user', default='Hello') | e }}, {{ current_user.display_name | default(current_user.id) | e }}</span>
                 </a>
@@ -52,7 +52,7 @@
     {% else %}
         <nav class="navbar navbar-expand-lg">
             <div class="container-fluid">
-                <a class="navbar-brand" href="{{ url_for('learning_hub.main') | e }}" aria-label="{{ t('learning_hub_ficore_africa', default='FiCore Africa Learning Hub') | e }}">
+                <a class="navbar-brand" href="{{ url_for('learning_hub.index') | e }}" aria-label="{{ t('learning_hub_ficore_africa', default='FiCore Africa Learning Hub') | e }}">
                     <img src="{{ url_for('learning_hub.static', filename='img/ficore_logo.png') | e }}" alt="{{ t('general_ficore_africa_logo', default='FiCore Africa Logo') | e }}" class="logo">
                     <span>{{ t('learning_hub_ficore_africa', default='FiCore Africa Learning Hub') | e }}</span>
                 </a>
@@ -62,7 +62,7 @@
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'learning_hub.main' %}active{% endif %}" href="{{ url_for('learning_hub.main') | e }}" data-bs-toggle="tooltip" data-bs-title="{{ t('general_home_tooltip', default='Go to homepage') | e }}" aria-current="{% if request.endpoint == 'learning_hub.main' %}page{% endif %}">{{ t('learning_hub_home', default='Home') | e }}</a>
+                            <a class="nav-link {% if request.endpoint == 'learning_hub.index' %}active{% endif %}" href="{{ url_for('learning_hub.index') | e }}" data-bs-toggle="tooltip" data-bs-title="{{ t('general_home_tooltip', default='Go to homepage') | e }}" aria-current="{% if request.endpoint == 'learning_hub.index' %}page{% endif %}">{{ t('learning_hub_home', default='Home') | e }}</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'learning_hub.personal' %}active{% endif %}" href="{{ url_for('learning_hub.personal') | e }}" data-bs-toggle="tooltip" data-bs-title="{{ t('learning_hub_personal_tooltip', default='Personal finance resources') | e }}" aria-current="{% if request.endpoint == 'learning_hub.personal' %}page{% endif %}">{{ t('learning_hub_personal', default='Personal') | e }}</a>
@@ -132,7 +132,7 @@
     {% if current_user.is_authenticated %}
         <nav class="bottom-nav d-md-none" role="navigation" aria-label="{{ t('general_mobile_navigation', default='Mobile navigation') | e }}">
             <div class="nav-container">
-                <a href="{{ url_for('learning_hub.main') | e }}" class="nav-item {% if request.endpoint == 'learning_hub.main' %}active{% endif %}" aria-label="{{ t('learning_hub_home', default='Home') | e }}">
+                <a href="{{ url_for('learning_hub.index') | e }}" class="nav-item {% if request.endpoint == 'learning_hub.index' %}active{% endif %}" aria-label="{{ t('learning_hub_home', default='Home') | e }}">
                     <i class="bi bi-house"></i>
                     <div class="nav-label">{{ t('learning_hub_home', default='Home') | e }}</div>
                 </a>
