@@ -101,11 +101,64 @@ def home():
             title=trans('error', lang=lang)
         ), 500
 
+@business.route('/notifications/count')
+@login_required
+@utils.requires_role(['trader', 'admin'])
+@utils.limiter.limit('10 per minute')
+def notification_count():
+    """Fetch the count of unread notifications for the authenticated business user."""
+    try:
+        db = get_mongo_db()
+        user_id = current_user.id
+        count = db.bill_reminders.count_documents({'user_id': user_id, 'read_status': False})
+        logger.info(f"Fetched notification count for user {user_id}: {count}", 
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        return jsonify({'count': count})
+    except Exception as e:
+        logger.error(f"Notification count error for user {user_id}: {str(e)}", 
+                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        return jsonify({'error': trans('notification_count_error')}), 500
+
 @business.route('/notifications')
 @login_required
 @utils.requires_role(['trader', 'admin'])
+@utils.limiter.limit('10 per minute')
 def notifications():
     """Fetch notifications for the authenticated business user."""
+    try:
+        db = get_mongo_db()
+        user_id = current_user.id
+        lang = session.get('lang', 'en')
+        notifications = list(db.bill_reminders.find({'user_id': user_id}).sort('sent_at', -1).limit(10))
+        logger.info(f"Fetched {len(notifications)} notifications for user {user_id}", 
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        result = [{
+            'id': str(n['notification_id']),
+            'message': trans(n['message'], lang=lang),
+            'type': n['type'],
+            'timestamp': n['sent_at'].isoformat(),
+            'read': n.get('read_status', False)
+        } for n in notifications]
+        notification_ids = [n['notification_id'] for n in notifications if not n.get('read_status', False)]
+        if notification_ids:
+            db.bill_reminders.update_many(
+                {'notification_id': {'$in': notification_ids}, 'user_id': user_id},
+                {'$set': {'read_status': True}}
+            )
+            logger.info(f"Marked {len(notification_ids)} notifications read for user {user_id}", 
+                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        notification = result[0] if result else None
+        return jsonify({'notifications': result, 'notification': notification}), 200
+    except Exception as e:
+        logger.error(f"Notifications error for user {user_id}: {str(e)}", 
+                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
+        return jsonify({'error': trans('notifications_error')}), 500
+
+@business.route('/recent_notifications')
+@login_required
+@utils.requires_role(['trader', 'admin'])
+def recent_notifications():
+    """Fetch recent notifications for the authenticated business user."""
     try:
         db = get_mongo_db()
         reminders = db.bill_reminders.find({
@@ -120,11 +173,11 @@ def notifications():
                 'read': reminder.get('read_status', False)
             } for reminder in reminders
         ]
-        logger.info(f"Fetched notifications for user {current_user.id}", 
+        logger.info(f"Fetched recent notifications for user {current_user.id}", 
                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
         return jsonify(notifications)
     except Exception as e:
-        logger.error(f"Error fetching notifications for user {current_user.id}: {str(e)}", 
+        logger.error(f"Error fetching recent notifications for user {current_user.id}: {str(e)}", 
                      extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
         return jsonify({'error': trans('notifications_error')}), 500
 
