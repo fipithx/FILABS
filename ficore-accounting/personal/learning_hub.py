@@ -580,43 +580,54 @@ def init_storage(app):
     with app.app_context():
         current_app.logger.info("Initializing courses storage.", extra={'session_id': 'no-request-context'})
         try:
-            existing_courses = get_mongo_db().learning_materials.find({'type': 'course'})
-            if get_mongo_db().learning_materials.count_documents({'type': 'course'}) == 0:
-                current_app.logger.info("Courses collection is empty. Initializing with default courses.", extra={'session_id': 'no-request-context'})
-                default_courses = [
-                    {
-                        'type': 'course',
-                        'id': course['id'],
-                        '_id': ObjectId(),
-                        'title_key': course['title_key'],
-                        'title_en': course['title_en'],
-                        'title_ha': course['title_ha'],
-                        'description_en': course['description_en'],
-                        'description_ha': course['description_ha'],
-                        'is_premium': course.get('is_premium', False),
-                        'roles': course.get('roles', []),
-                        'modules': course.get('modules', []),
-                        'created_at': datetime.utcnow()
-                    } for course in courses_data.values()
-                ]
-                if default_courses:
-                    get_mongo_db().learning_materials.insert_many(default_courses)
-                    current_app.logger.info(f"Initialized courses collection with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
+            db = get_mongo_db()
+            existing_courses = list(db.learning_materials.find({'type': 'course'}))
+            existing_course_ids = {course['id'] for course in existing_courses}
+            current_app.logger.info(f"Found {len(existing_courses)} existing courses: {existing_course_ids}", extra={'session_id': 'no-request-context'})
+            
+            # Prepare default courses, skipping duplicates
+            default_courses = [
+                {
+                    'type': 'course',
+                    'id': course['id'],
+                    '_id': ObjectId(),
+                    'title_key': course['title_key'],
+                    'title_en': course['title_en'],
+                    'title_ha': course['title_ha'],
+                    'description_en': course['description_en'],
+                    'description_ha': course['description_ha'],
+                    'is_premium': course.get('is_premium', False),
+                    'roles': course.get('roles', []),
+                    'modules': course.get('modules', []),
+                    'created_at': datetime.utcnow()
+                } for course in courses_data.values() if course['id'] not in existing_course_ids
+            ]
+            
+            if default_courses:
+                db.learning_materials.insert_many(default_courses)
+                current_app.logger.info(f"Initialized courses collection with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
+            else:
+                current_app.logger.info("No new courses to initialize; all default courses already exist", extra={'session_id': 'no-request-context'})
         except Exception as e:
-            current_app.logger.error(f"Error initializing courses: {str(e)}", extra={'session_id': 'no-request-context'})
+            current_app.logger.error(f"Error initializing courses: {str(e)}", exc_info=True, extra={'session_id': 'no-request-context'})
             raise
 
 def course_lookup(course_id):
-    """Retrieve course by ID with validation."""
-    course = get_mongo_db().learning_materials.find_one({'type': 'course', 'id': course_id})
-    if not course or not isinstance(course, dict) or 'modules' not in course or not isinstance(course['modules'], list):
-        current_app.logger.error(f"Invalid course data for course_id {course_id}: {course}", extra={'session_id': session.get('sid', 'no-session-id')})
-        return None
-    for module in course['modules']:
-        if not isinstance(module, dict) or 'lessons' not in module or not isinstance(module['lessons'], list):
-            current_app.logger.error(f"Invalid module data in course {course_id}: {module}", extra={'session_id': session.get('sid', 'no-session-id')})
+    """Retrieve course by ID with validation and fallback to in-memory data."""
+    try:
+        course = get_mongo_db().learning_materials.find_one({'type': 'course', 'id': course_id})
+        if course and isinstance(course, dict) and 'modules' in course and isinstance(course['modules'], list):
+            return course
+        current_app.logger.warning(f"Course {course_id} not found in MongoDB or invalid, falling back to in-memory data", extra={'session_id': session.get('sid', 'no-session-id')})
+        # Fallback to in-memory courses_data
+        course = courses_data.get(course_id)
+        if not course or not isinstance(course, dict) or 'modules' not in course or not isinstance(course['modules'], list):
+            current_app.logger.error(f"Invalid course data for course_id {course_id}: {course}", extra={'session_id': session.get('sid', 'no-session-id')})
             return None
-    return course
+        return course
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving course {course_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        return None
 
 def lesson_lookup(course, lesson_id):
     """Retrieve lesson and its module by lesson ID with validation."""
@@ -647,7 +658,8 @@ def calculate_progress_summary():
     badges_earned = []
     
     for course_id, course in courses_data.items():
-        if not course_lookup(course_id):
+        db_course = course_lookup(course_id)
+        if not db_course:
             continue
         cp = progress.get(course_id, {'lessons_completed': [], 'current_lesson': None, 'quiz_scores': {}, 'coins_earned': 0, 'badges_earned': []})
         lessons_total = sum(len(m.get('lessons', [])) for m in course.get('modules', []))
@@ -689,27 +701,19 @@ def main():
     lang = session.get('lang', 'en')
     db = get_mongo_db()
     
-    # Fetch recent activities
     try:
-        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
-        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-    except Exception as e:
-        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
-        activities = []
-    
-    try:
-        try:
-            log_tool_usage(
-                db=db,
-                tool_name='learning_hub',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='main_view'
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('learning_hub_log_error', default='Error logging learning hub activity. Please try again.'), 'warning')
+        # Fetch recent activities
+        activities = get_all_recent_activities(db=db, user_id=current_user.id if current_user.is_authenticated else None, limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'unknown')})
+        
+        # Log tool usage
+        log_tool_usage(
+            db=db,
+            tool_name='learning_hub',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session['sid'],
+            action='main_view'
+        )
         
         # Get courses filtered by role
         role_filter = session.get('role_filter', 'all')
@@ -723,7 +727,7 @@ def main():
         profile_data = session.get('learning_hub_profile', {})
         if current_user.is_authenticated:
             profile_data['email'] = profile_data.get('email', current_user.email)
-            profile_data['first_name'] = profile_data.get('first_name', current_user.username)
+            profile_data['first_name'] = profile_data.get('first_name', current_user.display_name)
         
         # Create forms
         profile_form = LearningHubProfileForm(data=profile_data)
@@ -809,7 +813,7 @@ def main():
         )
         
     except Exception as e:
-        current_app.logger.error(f"Error rendering main learning hub page: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error rendering main learning hub page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans("learning_hub_error_loading", default="Error loading learning hub", lang=lang), "danger")
         tools = utils.PERSONAL_TOOLS if current_user.role == 'personal' else utils.ALL_TOOLS
         bottom_nav_items = utils.PERSONAL_NAV if current_user.role == 'personal' else utils.ADMIN_NAV
@@ -855,7 +859,7 @@ def get_course_data(course_id):
             'progress': course_progress
         })
     except Exception as e:
-        current_app.logger.error(f"Error getting course data: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error getting course data: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_course_load_error', default='Error loading course')}), 500
 
 @learning_hub_bp.route('/api/lesson')
@@ -899,7 +903,7 @@ def get_lesson_data():
             'next_lesson_id': next_lesson_id
         })
     except Exception as e:
-        current_app.logger.error(f"Error getting lesson data: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error getting lesson data: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_lesson_load_error', default='Error loading lesson')}), 500
 
 @learning_hub_bp.route('/api/quiz')
@@ -929,7 +933,7 @@ def get_quiz_data():
             'progress': course_progress
         })
     except Exception as e:
-        current_app.logger.error(f"Error getting quiz data: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error getting quiz data: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_quiz_load_error', default='Error loading quiz')}), 500
 
 @learning_hub_bp.route('/api/lesson/action', methods=['POST'])
@@ -1014,7 +1018,7 @@ def lesson_action():
         
         return jsonify({'success': False, 'message': trans('learning_hub_invalid_action', default='Invalid action')}), 400
     except Exception as e:
-        current_app.logger.error(f"Error in lesson action: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error in lesson action: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_action_error', default='Error processing action')}), 500
 
 @learning_hub_bp.route('/api/quiz/action', methods=['POST'])
@@ -1120,7 +1124,7 @@ def quiz_action():
         
         return jsonify({'success': False, 'message': trans('learning_hub_invalid_action', default='Invalid action')}), 400
     except Exception as e:
-        current_app.logger.error(f"Error in quiz action: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error in quiz action: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_quiz_error', default='Error processing quiz')}), 500
 
 @learning_hub_bp.route('/api/set_role_filter', methods=['POST'])
@@ -1138,7 +1142,7 @@ def set_role_filter():
         current_app.logger.info(f"Set role filter to {role}", extra={'session_id': session['sid']})
         return jsonify({'success': True, 'message': trans('learning_hub_role_updated', default='Role filter updated')})
     except Exception as e:
-        current_app.logger.error(f"Error setting role filter: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error setting role filter: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return jsonify({'success': False, 'message': trans('learning_hub_role_error', default='Error updating role filter')}), 500
 
 @learning_hub_bp.route('/register_webinar', methods=['POST'])
@@ -1184,7 +1188,7 @@ def register_webinar():
         current_app.logger.info(f"Registered email {email} for webinar", extra={'session_id': session['sid']})
         return redirect(url_for('learning_hub.main'))
     except Exception as e:
-        current_app.logger.error(f"Error registering for webinar: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error registering for webinar: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans('learning_hub_webinar_error', default='Error registering for webinar'), 'danger')
         return redirect(url_for('learning_hub.main')), 500
 
@@ -1202,17 +1206,13 @@ def profile():
     db = get_mongo_db()
     
     try:
-        try:
-            log_tool_usage(
-                db=db,
-                tool_name='learning_hub',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='profile_submit' if request.method == 'POST' else 'profile_view'
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log profile action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('learning_hub_log_error', default='Error logging profile activity. Please try again.'), 'warning')
+        log_tool_usage(
+            db=db,
+            tool_name='learning_hub',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session['sid'],
+            action='profile_submit' if request.method == 'POST' else 'profile_view'
+        )
         
         profile_form = LearningHubProfileForm()
         if request.method == 'POST' and profile_form.validate_on_submit():
@@ -1244,7 +1244,7 @@ def profile():
         )
         
     except Exception as e:
-        current_app.logger.error(f"Error in profile page: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error in profile page: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans("learning_hub_error_loading", default="Error loading profile", lang=lang), "danger")
         tools = utils.PERSONAL_TOOLS if current_user.role == 'personal' else utils.ALL_TOOLS
         bottom_nav_items = utils.PERSONAL_NAV if current_user.role == 'personal' else utils.ADMIN_NAV
@@ -1270,17 +1270,13 @@ def unsubscribe(email):
         db = get_mongo_db()
     
     try:
-        try:
-            log_tool_usage(
-                db=db,
-                tool_name='learning_hub',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='unsubscribe'
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('learning_hub_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
+        log_tool_usage(
+            db=db,
+            tool_name='learning_hub',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session['sid'],
+            action='unsubscribe'
+        )
         
         lang = session.get('lang', 'en')
         profile = session.get('learning_hub_profile', {})
@@ -1299,7 +1295,7 @@ def unsubscribe(email):
         return redirect(url_for('personal.index'))
         
     except Exception as e:
-        current_app.logger.error(f"Error in unsubscribe: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error in unsubscribe: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans("learning_hub_unsubscribe_error", default="Error processing unsubscribe request", lang=lang), "danger")
         return redirect(url_for('personal.index')), 500
 
@@ -1315,17 +1311,13 @@ def serve_uploaded_file(filename):
         db = get_mongo_db()
     
     try:
-        try:
-            log_tool_usage(
-                db=db,
-                tool_name='learning_hub',
-                user_id=current_user.id if current_user.is_authenticated else None,
-                session_id=session['sid'],
-                action='serve_file'
-            )
-        except Exception as e:
-            current_app.logger.error(f"Failed to log file serve action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans('learning_hub_log_error', default='Error logging file access. Continuing with file serving.'), 'warning')
+        log_tool_usage(
+            db=db,
+            tool_name='learning_hub',
+            user_id=current_user.id if current_user.is_authenticated else None,
+            session_id=session['sid'],
+            action='serve_file'
+        )
         
         response = send_from_directory(current_app.config.get('UPLOAD_FOLDER', UPLOAD_FOLDER), filename)
         response.headers['Cache-Control'] = 'public, max-age=31536000'
@@ -1333,7 +1325,7 @@ def serve_uploaded_file(filename):
         return response
         
     except Exception as e:
-        current_app.logger.error(f"Error serving uploaded file {filename}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error serving uploaded file {filename}: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans("learning_hub_file_not_found", default="File not found", lang=session.get('lang', 'en')), "danger")
         return redirect(url_for('personal.index')), 404
 
@@ -1424,7 +1416,7 @@ def legacy_course_redirect(course_id):
         flash(trans('learning_hub_legacy_redirect', default='This course URL has been updated. Redirecting to the main Learning Hub.', lang=session.get('lang', 'en')), 'info')
         return redirect(url_for('learning_hub.main'))
     except Exception as e:
-        current_app.logger.error(f"Error redirecting legacy course {course_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error redirecting legacy course {course_id}: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans('learning_hub_error_loading', default='Error loading course', lang=session.get('lang', 'en')), 'danger')
         return redirect(url_for('personal.index')), 500
 
@@ -1443,7 +1435,7 @@ def legacy_quiz_redirect(quiz_id):
         flash(trans('learning_hub_legacy_redirect', default='This quiz URL has been updated. Redirecting to the main Learning Hub.', lang=session.get('lang', 'en')), 'info')
         return redirect(url_for('learning_hub.main'))
     except Exception as e:
-        current_app.logger.error(f"Error redirecting legacy quiz {quiz_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        current_app.logger.error(f"Error redirecting legacy quiz {quiz_id}: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         flash(trans('learning_hub_error_loading', default='Error loading quiz', lang=session.get('lang', 'en')), 'danger')
         return redirect(url_for('personal.index')), 500
 
@@ -1475,12 +1467,3 @@ def lesson(course_id, lesson_id):
 def quiz(course_id, quiz_id):
     """Redirect to main page and load quiz."""
     return redirect(url_for('learning_hub.main') + f'#quiz-{course_id}-{quiz_id}')
-
-@learning_hub_bp.route('/forum')
-@custom_login_required
-@requires_role(['personal', 'admin'])
-def forum():
-    """Placeholder for community forum."""
-    lang = session.get('lang', 'en')
-    flash(trans('learning_hub_forum_coming_soon', default='Community forum coming soon!'), 'info')
-    return redirect(url_for('learning_hub.main'))
