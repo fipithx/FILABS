@@ -59,7 +59,7 @@ class SessionAdapter(logging.LoggerAdapter):
 
 logger = SessionAdapter(root_logger, {})
 
-# Tool/navigation lists with endpoints (unchanged)
+# Tool/navigation lists with endpoints
 _PERSONAL_TOOLS = [
     {
         "endpoint": "personal.budget.main",
@@ -110,7 +110,7 @@ _PERSONAL_TOOLS = [
         "icon": "bi-question-circle"
     },
     {
-        "endpoint": "personal.learning_hub.main",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -236,7 +236,7 @@ _PERSONAL_EXPLORE_FEATURES = [
         "icon": "bi-receipt"
     },
     {
-        "endpoint": "personal.learning_hub.main",
+        "endpoint": "learning_hub.main",
         "label": "Learning Hub",
         "label_key": "learning_hub_main",
         "description_key": "learning_hub_desc",
@@ -277,6 +277,14 @@ _BUSINESS_TOOLS = [
         "description_key": "coins_dashboard_desc",
         "tooltip_key": "coins_tooltip",
         "icon": "bi-coin"
+    },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
     },
 ]
 
@@ -345,6 +353,14 @@ _BUSINESS_EXPLORE_FEATURES = [
         "tooltip_key": "payments_tooltip",
         "icon": "bi-calculator"
     },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
+    },
 ]
 
 _BUSINESS_NAV = [
@@ -398,6 +414,14 @@ _AGENT_TOOLS = [
         "description_key": "coins_dashboard_desc",
         "tooltip_key": "coins_tooltip",
         "icon": "bi-coin"
+    },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
     },
 ]
 
@@ -453,6 +477,14 @@ _AGENT_EXPLORE_FEATURES = [
         "tooltip_key": "news_tooltip",
         "icon": "bi-newspaper"
     },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
+    },
 ]
 
 _ADMIN_TOOLS = [
@@ -479,6 +511,14 @@ _ADMIN_TOOLS = [
         "description_key": "admin_credit_coins_desc",
         "tooltip_key": "admin_credit_coins_tooltip",
         "icon": "bi-coin"
+    },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
     },
 ]
 
@@ -590,6 +630,14 @@ _ADMIN_EXPLORE_FEATURES = [
         "tooltip_key": "admin_manage_learning_hub_tooltip",
         "icon": "bi-book"
     },
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
+    },
 ]
 
 def get_explore_features():
@@ -677,6 +725,15 @@ def get_explore_features():
                     "tooltip_key": "news_tooltip",
                     "icon": "bi-newspaper",
                     "category": "News"
+                },
+                {
+                    "endpoint": "learning_hub.main",
+                    "label": "Learning Hub",
+                    "label_key": "learning_hub_main",
+                    "description_key": "learning_hub_desc",
+                    "tooltip_key": "learning_hub_tooltip",
+                    "icon": "bi-book",
+                    "category": "Learning"
                 }
             ])
     except Exception as e:
@@ -1309,7 +1366,7 @@ def send_whatsapp_reminder(recipient, message):
 # Activity fetching functions
 def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
     '''
-    Fetch recent activities across all personal finance tools for a user or session.
+    Fetch recent activities across all tools for a user or session.
     
     Args:
         user_id: ID of the user (optional for admin)
@@ -1334,7 +1391,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
         bills = db.bills.find(query).sort('created_at', -1).limit(5)
         for bill in bills:
             if not bill.get('created_at') or not bill.get('bill_name'):
-                logger.warning(f"Skipping invalid bill record: {bill.get('_id')}")
+                logger.warning(f"Skipping invalid bill record: {bill.get('_id')}", extra={'session_id': session_id or 'unknown', 'ip': request.remote_addr or 'unknown'})
                 continue
             activities.append({
                 'type': 'bill',
@@ -1421,20 +1478,31 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
             })
 
         # Fetch recent learning hub progress
-        learning_hub_progress = db.learning_materials.find(query).sort('updated_at', -1).limit(5)
+        learning_hub_progress = db.learning_materials.find({
+            **query,
+            'type': {'$ne': 'course'}  # Exclude course definitions, include progress records
+        }).sort('updated_at', -1).limit(5)
         for progress in learning_hub_progress:
-            if progress.get('course_id'):
-                activities.append({
-                    'type': 'learning_hub',
-                    'description': trans('recent_activity_learning_hub_progress', default='Progress in course: {course_id}', course_id=progress.get('course_id', 'N/A')),
-                    'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
-                    'details': {
-                        'course_id': progress.get('course_id', 'N/A'),
-                        'lessons_completed': len(progress.get('lessons_completed', [])),
-                        'current_lesson': progress.get('current_lesson', 'N/A')
-                    },
-                    'icon': 'bi-book'
-                })
+            if not progress.get('course_id') or not progress.get('updated_at'):
+                logger.warning(f"Skipping invalid learning hub progress record: {progress.get('_id')}", extra={'session_id': session_id or 'unknown', 'ip': request.remote_addr or 'unknown'})
+                continue
+            course = db.learning_materials.find_one({'type': 'course', 'id': progress.get('course_id')})
+            course_title = course.get('title_en', progress.get('course_id', 'Unknown')) if course else progress.get('course_id', 'Unknown')
+            activities.append({
+                'type': 'learning_hub',
+                'description': trans('recent_activity_learning_hub_progress', default='Made progress in course: {course_title}', course_title=course_title),
+                'timestamp': progress.get('updated_at', datetime.utcnow()).isoformat(),
+                'details': {
+                    'course_id': progress.get('course_id', 'N/A'),
+                    'course_title': course_title,
+                    'lessons_completed': len(progress.get('lessons_completed', [])),
+                    'current_lesson': progress.get('current_lesson', 'N/A'),
+                    'coins_earned': progress.get('coins_earned', 0),
+                    'badges_earned': progress.get('badges_earned', [])
+                },
+                'icon': 'bi-book',
+                'url': url_for('learning_hub.main', _external=True) if has_request_context() else '#'
+            })
 
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
         
@@ -1455,7 +1523,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
 
 def get_all_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
     '''
-    Fetch recent activities across all personal finance tools for a user or session.
+    Fetch recent activities across all tools for a user or session.
     
     Args:
         user_id: ID of the user (optional for admin)
@@ -1565,7 +1633,9 @@ def to_dict_learning_progress(record):
         'course_id': record.get('course_id', ''),
         'lessons_completed': record.get('lessons_completed', []),
         'quiz_scores': record.get('quiz_scores', {}),
-        'current_lesson': record.get('current_lesson')
+        'current_lesson': record.get('current_lesson'),
+        'coins_earned': record.get('coins_earned', 0),
+        'badges_earned': record.get('badges_earned', [])
     }
 
 def to_dict_quiz_result(record):
