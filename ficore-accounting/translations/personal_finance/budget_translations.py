@@ -6,6 +6,7 @@ BUDGET_TRANSLATIONS = {
     'en': {
         'budget_budget_planner': 'Budget',
         'budget_planner_title': 'Budget',
+        'budget_completed_success': 'Budget completed successfully!',
         'budget_income_max': 'Maximum income limit reached.',
         'budget_create_first': 'Create Your First Budget',
         'budget_amount_positive': 'Amount must be a positive value.',
@@ -223,6 +224,7 @@ BUDGET_TRANSLATIONS = {
         'budget_tip_monthly_savings': 'Shawara: Ajiye wani ɓangare na kuɗin shigar ka kowane wata',
         'budget_dashboard': 'Dashboard na Kasafin Kuɗi',
         'budget_personal_info': 'Bayanin Kai Tsaye',
+        'budget_completed_success': 'An kammala kasafi cikin nasara!',
         'budget_first_name': 'Sunan Farko',
         'budget_first_name_placeholder': 'Shigar da sunan farko',
         'budget_surplus_deficit': 'Riba/Rashi', # "Surplus/Deficit"
