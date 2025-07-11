@@ -100,8 +100,6 @@ class BudgetForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main budget management interface with tabbed layout."""
-    active_tab = request.args.get('tab', 'create-budget')  # Get tab query parameter, default to 'create-budget'
-    current_app.logger.debug(f"Rendering budget main with active_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -113,73 +111,10 @@ def main():
         form_data['first_name'] = current_user.get_first_name()
     form = BudgetForm(data=form_data)
     db = get_mongo_db()
-    try:
-        log_tool_usage(
-            db=db,
-            tool_name='budget',
-            user_id=current_user.id if current_user.is_authenticated else None,
-            session_id=session.get('sid', 'unknown'),
-            action='main_view'
-        )
-    except Exception as e:
-        current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans('budget_log_error', default='Error logging budget activity. Please try again.'), 'warning')
     
-    # Fetch recent activities for the current user or session
-    try:
-        activities = get_all_recent_activities(
-            db=db,
-            user_id=current_user.id if current_user.is_authenticated else None,
-            session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
-            limit=10
-        )
-        current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
-    except Exception as e:
-        current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans('budget_activities_load_error', default='Error loading recent activities.'), 'warning')
-        activities = []
+    # Get active tab from query parameter (defaults to 'create-budget')
+    active_tab = request.args.get('tab', 'create-budget')
     
-    try:
-        filter_criteria = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
-        if request.method == 'POST':
-            action = request.form.get('action')
-            if action == 'create_budget' and form.validate_on_submit():
-                try:
-                    log_tool_usage(
-                        db=db,
-                        tool_name='budget',
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                        session_id=session.get('sid', 'unknown'),
-                        action='create_budget'
-                    )
-                except Exception as e:
-                    current_app.logger.error(f"Failed to log budget creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                    flash(trans('budget_log_error', default='Error logging budget creation. Continuing with submission.'), 'warning')
-                
-                income = form.income.data
-                expenses = sum([
-                    form.housing.data,
-                    form.food.data,
-                    form.transport.data,
-                    form.dependents.data,
-                    form.miscellaneous.data,
-                    form.others.data
-                ])
-                savings_goal = form.savings_goal.data
-                surplus_deficit = income -Main budget management interface with tabbed layout."""
-    active_tab = request.args.get('tab', 'create-budget')  # Get tab query parameter, default to 'create-budget'
-    current_app.logger.debug(f"Rendering budget main with active_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
-    if 'sid' not in session:
-        create_anonymous_session()
-        current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
-    session.permanent = True
-    session.modified = True
-    form_data = {}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email
-        form_data['first_name'] = current_user.get_first_name()
-    form = BudgetForm(data=form_data)
-    db = get_mongo_db()
     try:
         log_tool_usage(
             db=db,
@@ -258,7 +193,7 @@ def main():
                     current_app.logger.info(f"Budget saved successfully to MongoDB for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("budget_completed_success", default='Budget created successfully!'), "success")
                     # Redirect to dashboard tab after successful budget creation
-                    return redirect(url_for('budget.main', tab='dashboard'))
+                    active_tab = 'dashboard'
                 except Exception as e:
                     current_app.logger.error(f"Failed to save budget to MongoDB for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("budget_storage_error", default='Error saving budget.'), "danger")
