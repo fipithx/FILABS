@@ -199,7 +199,7 @@ def main():
                         categories={},
                         tips=[],
                         insights=[],
-                        activities=[],  # Pass empty activities list on error
+                        activities=[],
                         tool_title=trans('budget_title', default='Budget Planner')
                     )
                 if form.send_email.data and form.email.data:
@@ -268,7 +268,8 @@ def main():
                 'fixed_expenses': format_currency(budget.get('fixed_expenses', 0.0), currency=budget.get('currency', 'NGN')),
                 'variable_expenses': format_currency(budget.get('variable_expenses', 0.0), currency=budget.get('currency', 'NGN')),
                 'savings_goal': format_currency(budget.get('savings_goal', 0.0), currency=budget.get('currency', 'NGN')),
-                'surplus_deficit': format_currency(budget.get('surplus_deficit', 0.0), currency=budget.get('currency', 'NGN')),
+                'surplus_deficit': budget.get('surplus_deficit', 0.0),  # Store as float
+                'surplus_deficit_formatted': format_currency(budget.get('surplus_deficit', 0.0), currency=budget.get('currency', 'NGN')),  # Formatted for display
                 'housing': format_currency(budget.get('housing', 0.0), currency=budget.get('currency', 'NGN')),
                 'food': format_currency(budget.get('food', 0.0), currency=budget.get('currency', 'NGN')),
                 'transport': format_currency(budget.get('transport', 0.0), currency=budget.get('currency', 'NGN')),
@@ -286,7 +287,8 @@ def main():
                 'fixed_expenses': format_currency(0.0, currency='NGN'),
                 'variable_expenses': format_currency(0.0, currency='NGN'),
                 'savings_goal': format_currency(0.0, currency='NGN'),
-                'surplus_deficit': format_currency(0.0, currency='NGN'),
+                'surplus_deficit': 0.0,  # Store as float
+                'surplus_deficit_formatted': format_currency(0.0, currency='NGN'),  # Formatted for display
                 'housing': format_currency(0.0, currency='NGN'),
                 'food': format_currency(0.0, currency='NGN'),
                 'transport': format_currency(0.0, currency='NGN'),
@@ -312,7 +314,7 @@ def main():
         insights = []
         try:
             income_float = float(clean_currency(latest_budget.get('income', '0')) or 0)
-            surplus_deficit_float = float(clean_currency(latest_budget.get('surplus_deficit', '0')) or 0)
+            surplus_deficit_float = latest_budget.get('surplus_deficit', 0.0)  # Already a float
             savings_goal_float = float(clean_currency(latest_budget.get('savings_goal', '0')) or 0)
             if income_float > 0:
                 if surplus_deficit_float < 0:
@@ -331,7 +333,7 @@ def main():
             categories=categories,
             tips=tips,
             insights=insights,
-            activities=activities,  # Pass activities to the template
+            activities=activities,
             tool_title=trans('budget_title', default='Budget Planner')
         )
     except Exception as e:
@@ -346,7 +348,8 @@ def main():
                 'fixed_expenses': format_currency(0.0, currency='NGN'),
                 'variable_expenses': format_currency(0.0, currency='NGN'),
                 'savings_goal': format_currency(0.0, currency='NGN'),
-                'surplus_deficit': format_currency(0.0, currency='NGN'),
+                'surplus_deficit': 0.0,  # Store as float
+                'surplus_deficit_formatted': format_currency(0.0, currency='NGN'),  # Formatted for display
                 'housing': format_currency(0.0, currency='NGN'),
                 'food': format_currency(0.0, currency='NGN'),
                 'transport': format_currency(0.0, currency='NGN'),
@@ -358,7 +361,7 @@ def main():
             categories={},
             tips=[],
             insights=[],
-            activities=[],  # Pass empty activities list on error
+            activities=[],
             tool_title=trans('budget_title', default='Budget Planner')
         ), 500
 
