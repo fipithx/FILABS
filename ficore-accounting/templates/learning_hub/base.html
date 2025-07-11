@@ -15,10 +15,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" integrity="sha256-LwX4N1IpsvxT6J+wZ3WVE4R0ZbL6QFL7JYOFhcWmdDY=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="{{ url_for('learning_hub.static', filename='css/learning_hub.css') | e }}">
-    <link rel="icon" href="{{ url_for('learning_hub.static', filename='img/favicon.ico') | e }}">
-    <link rel="apple-touch-icon" href="{{ url_for('learning_hub.static', filename='img/apple-touch-icon.png') | e }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('learning_hub.static', filename='img/favicon-32x32.png') | e }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('learning_hub.static', filename='img/favicon-16x16.png') | e }}">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if session.get('dark_mode', False) %}dark-mode{% endif %}">
