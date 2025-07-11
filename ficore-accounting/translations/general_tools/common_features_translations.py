@@ -6,7 +6,7 @@ COMMON_FEATURES_TRANSLATIONS = {
     'en': {
         # News Management
         'news_article_not_found': 'Article not found',
-        'news_title': 'Title',
+        'news_title': 'News',
         'tax_deadlines_title': 'Tax Deadlines',
         'news_content': 'Content',
         'tax_enter_your': 'Enter your income details',
@@ -301,7 +301,6 @@ COMMON_FEATURES_TRANSLATIONS = {
     'ha': {
         # News Management
         'news_article_not_found': 'Ba a sami labarin ba',
-        'news_title': 'Take',
         'news_content': 'Abun ciki',
         'news_source_link': 'Hanyar Samu',
         'news_category': 'Rukuni',
@@ -508,6 +507,7 @@ COMMON_FEATURES_TRANSLATIONS = {
         'tax_implement_changes_details': 'Sabunta bayanai da matakai don bin sabbin dokoki zuwa Janairu 2026.',
         'tax_enter_your': 'Shigar da bayanan kuɗin shiga',
             'tax_to_calculate_tax_obligation': 'Ƙididdige harajin da ake bin ku',
+        'news_title': 'Labarai',
             'tax_understand_taxes': 'Fahimci harajinku',
             'tax_no_rate_found': 'Ba a sami ƙimar haraji ga bayanan da aka bayar ba',
         'tax_seek_support': 'Nemi Tallafi',
