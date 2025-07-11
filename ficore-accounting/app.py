@@ -42,7 +42,7 @@ from flask_babel import Babel
 from flask_compress import Compress
 import requests
 from learning_hub import init_storage
-from business_finance import business  # Added import for business_finance blueprint
+from business_finance import business
 
 # Load environment variables
 load_dotenv()
@@ -356,7 +356,7 @@ def create_app():
             
             def shutdown_scheduler():
                 try:
-                   If scheduler and getattr(scheduler, 'running', False):
+                    if scheduler and getattr(scheduler, 'running', False):
                         scheduler.shutdown(wait=True)
                         logger.info('Scheduler shutdown successfully')
                 except Exception as e:
@@ -756,7 +756,7 @@ def create_app():
             if current_user.role == 'agent':
                 return redirect(url_for('agents_bp.agent_portal'))
             elif current_user.role == 'trader':
-                return redirect(url_for('general_bp.home'))
+                return redirect(url_for('business.home'))
             elif current_user.role == 'admin':
                 try:
                     return redirect(url_for('dashboard.index'))
@@ -818,18 +818,7 @@ def create_app():
             if current_user.role == 'agent':
                 return redirect(url_for('agents_bp.agent_portal'))
             elif current_user.role == 'trader':
-                try:
-                    return render_template(
-                        'general/home.html',
-                        title=utils.trans('business_home', lang=lang)
-                    )
-                except TemplateNotFound as e:
-                    logger.error(f'Template not found: {str(e)}')
-                    return render_template(
-                        'personal/GENERAL/error.html',
-                        error=str(e),
-                        title=utils.trans('business_home', lang=lang)
-                    ), 404
+                return redirect(url_for('business.home'))
             else:
                 flash(utils.trans('no_permission'), 'error')
                 return redirect(url_for('index'))
@@ -900,89 +889,6 @@ def create_app():
             logger.error(f'Translate API error: {str(e)}')
             return jsonify({'error': utils.trans('error')}), 500
     
-    @app.route('/set_language/<lang>')
-    @utils.limiter.limit('10 per minute')
-    def set_language(lang):
-        supported_languages = current_app.config.get('SUPPORTED_LANGUAGES', ['en', 'ha'])
-        new_lang = lang if lang in supported_languages else 'en'
-        
-        try:
-            session['lang'] = new_lang
-            if current_user.is_authenticated:
-                try:
-                    current_app.extensions['mongo']['ficodb'].users.update_one(
-                        {'_id': current_user.id},
-                        {'$set': {'lang': new_lang}}
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f'Could not update user language for user {current_user.id}: {str(e)}',
-                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
-                    )
-                    flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
-                    return redirect(url_for('index'))
-                    
-            logger.info(
-                f'Set language to {new_lang} for user {current_user.id if current_user.is_authenticated else "anonymous"}',
-                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
-            )
-            flash(utils.trans('lang_updated', default='Language updated successfully'), 'success')
-            
-            redirect_url = request.referrer if is_safe_referrer(request.referrer, request.host) else url_for('index')
-            return redirect(redirect_url)
-        except Exception as e:
-            logger.error(
-                f'Session error: {str(e)}',
-                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr}
-            )
-            flash(utils.trans('invalid_lang', default='Could not update language'), 'danger')
-            return redirect(url_for('index'))
-    
-    @app.route('/api/notifications/count')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def notification_count():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                count = db.notification.count_documents({'user_id': user_id, 'read_status': False})
-                return jsonify({'count': count})
-        except Exception as e:
-            logger.error(f'Notification count error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('notification_count_error')}), 500
-    
-    @app.route('/api/notifications')
-    @login_required
-    @utils.limiter.limit('10 per minute')
-    def notifications():
-        try:
-            with app.app_context():
-                db = app.extensions['mongo']['ficodb']
-                user_id = current_user.id
-                lang = session.get('lang', 'en')
-                notifications = list(db.notification.find({'user_id': user_id}).sort('sent_at', -1).limit(10))
-                logger.info(f"Fetched {len(notifications)} notifications for user {user_id}")
-                result = [{
-                    'id': str(n['notification_id']),
-                    'message': utils.trans(n['message'], lang=lang),
-                    'type': n['type'],
-                    'timestamp': n['sent_at'].isoformat(),
-                    'read': n.get('read_status', False)
-                } for n in notifications]
-                notification_ids = [n['notification_id'] for n in notifications if not n.get('read_status', False)]
-                if notification_ids:
-                    db.notification.update_many(
-                        {'notification_id': {'$in': notification_ids}, 'user_id': user_id},
-                        {'$set': {'read_status': True}}
-                    )
-                    logger.info(f"Marked {len(notification_ids)} notifications read for user {user_id}")
-                notification = result[0] if result else None
-                return jsonify({'notifications': result, 'notification': notification}), 200
-        except Exception as e:
-            logger.error(f'Notifications error for user {user_id}: {str(e)}')
-            return jsonify({'error': utils.trans('notifications_error')}), 500
-    
     @app.route('/setup', methods=['GET'])
     @utils.limiter.limit('10 per minute')
     def setup_database_route():
@@ -1032,149 +938,12 @@ def create_app():
             logger.warning(f'Invalid static path: {filename}')
             abort(404)
         try:
-            response = send_from_directory('static', filename)
-            if filename.endswith('.woff2'):
-                response.headers['Content-Type'] = 'font/woff2'
-                response.headers['Cache-Control'] = 'public, max-age=604800'
-            else:
-                response.headers['Cache-Control'] = 'public, max-age=3600'
-            return response
-        except FileNotFoundError:
-            logger.error(f'Static file not found: {filename}')
-            abort(404)
-
-    @app.route('/static_personal/<path:filename>')
-    def static_personal(filename):
-        allowed_extensions = {'.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}
-        file_ext = os.path.splitext(filename)[1].lower()
-        if '..' in filename or filename.startswith('/') or file_ext not in allowed_extensions:
-            logger.warning(f'Invalid personal file path or ext: {filename}')
-            abort(404)
-
-        try:
-            response = send_from_directory('static_personal', filename)
-            if file_ext in {'.css', '.js'}:
-                response.headers['Cache-Control'] = 'public, max-age=3600'
-            elif file_ext in {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}:
-                response.headers['Cache-Control'] = 'public, max-age=604800'
-            return response
-        except FileNotFoundError:
-            logger.error(f'File not found: {filename}')
+            return send_from_directory(app.static_folder, filename)
+        except Exception as e:
+            logger.error(f'Error serving static file {filename}: {str(e)}')
             abort(404)
     
-    @app.route('/favicon.ico')
-    def favicon():
-        try:
-            return send_from_directory(app.static_folder, 'img/favicon.ico')
-        except FileNotFoundError:
-            logger.error('Favicon not found')
-            abort(404)
-    
-    @app.route('/service-worker.js')
-    def service_worker():
-        try:
-            return app.send_static_file('js/service-worker.js')
-        except FileNotFoundError:
-            logger.error('Service worker not found')
-            abort(404)
-    
-    @app.route('/manifest.json')
-    def manifest():
-        manifest_data = {
-            "name": "FiCore App",
-            "short_name": "FiCore",
-            "description": "Financial management for personal and business use",
-            "start_url": "/",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#007bff",
-            "icons": [
-                {
-                    "src": "/static/img/icon-192x192.png",
-                    "sizes": "192x192",
-                    "type": "image/png"
-                },
-                {
-                    "src": "/static/img/icon-512x512.png",
-                    "sizes": "512x512",
-                    "type": "image/png"
-                }
-            ],
-            "lang": session.get('lang', 'en'),
-            "dir": "ltr",
-            "orientation": "portrait",
-            "scope": "/",
-            "related_applications": [],
-            "prefer_related_applications": False
-        }
-        return jsonify(manifest_data)
-
-    # Error handlers
-    @app.errorhandler(CSRFError)
-    def handle_csrf_error(e):
-        logger.error(f'CSRF error: {str(e)}')
-        try:
-            return render_template(
-                'error/403.html', 
-                error=utils.trans('csrf_error'), 
-                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
-            ), 400
-        except TemplateNotFound:
-            return render_template(
-                'personal/GENERAL/error.html', 
-                error=utils.trans('csrf_error'), 
-                title=utils.trans('csrf_error', lang=session.get('lang', 'en'))
-            ), 400
-
-    @app.errorhandler(404)
-    def page_not_found(e):
-        logger.error(f'Not found: {request.url}')
-        try:
-            return render_template(
-                'personal/GENERAL/404.html', 
-                error=str(e), 
-                title=utils.trans('not_found', lang=session.get('lang', 'en'))
-            ), 404
-        except TemplateNotFound:
-            return render_template(
-                'personal/GENERAL/error.html', 
-                error=str(e), 
-                title=utils.trans('not_found', lang=session.get('lang', 'en'))
-            ), 404
-
-    @app.errorhandler(500)
-    def internal_server_error(e):
-        logger.error(f'Server error: {str(e)}')
-        try:
-            return render_template(
-                'personal/GENERAL/error.html', 
-                error=str(e), 
-                title=utils.trans('server_error', lang=session.get('lang', 'en'))
-            ), 500
-        except TemplateNotFound:
-            return render_template(
-                'personal/GENERAL/error.html', 
-                error=str(e), 
-                title=utils.trans('server_error', lang=session.get('lang', 'en'))
-            ), 500
-    
-    scheduler_shutdown_done = False
-    mongo_client_closed = False
-
-    @app.teardown_appcontext
-    def cleanup_scheduler(exception):
-        nonlocal scheduler_shutdown_done
-        scheduler = app.config.get('SCHEDULER')
-        if scheduler and scheduler.running and not scheduler_shutdown_done:
-            try:
-                scheduler.shutdown()
-                logger.info('Scheduler shutdown')
-                scheduler_shutdown_done = True
-            except Exception as e:
-                logger.error(f'Scheduler shutdown error: {str(e)}')
-
     return app
-
 app = create_app()
 
 if __name__ == '__main__':
