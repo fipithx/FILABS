@@ -5,6 +5,7 @@ Budget management translations for personal finance tools
 BUDGET_TRANSLATIONS = {
     'en': {
         'budget_budget_planner': 'Budget',
+        'budget_planner_title': 'Budget',
         'budget_income_max': 'Maximum income limit reached.',
         'budget_create_first': 'Create Your First Budget',
         'budget_amount_positive': 'Amount must be a positive value.',
@@ -209,6 +210,7 @@ BUDGET_TRANSLATIONS = {
         'budget_summary': 'Takaitaccen Kasafin Kudi', # "Budget Summary"
         'budget_income_max': 'An kai iyakar kuɗin shiga.',
         'budget_amount_positive': 'Adadin dole ne ya zama mai inganci.',
+        'budget_planner_title': 'Kasafin Kuɗi',
         'budget_log_error': 'An kasa yin rajistar bayanan kasafin kuɗi',
         'budget_dashboard_load_error': 'An kasa loda allon kasafin kuɗi',
         'budget_create_first': 'Ƙirƙiri Kasafin Kuɗin Farko',
