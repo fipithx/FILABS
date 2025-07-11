@@ -82,10 +82,30 @@
                 </div>
             </div>
         </div>
+        <!-- Notifications -->
+        <div class="section-card notifications">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="section-title mb-0">{{ t('general_notifications', default='Notifications') | e }}</h3>
+                <span class="badge bg-primary rounded-pill" id="notificationCount">0</span>
+            </div>
+            <div id="notificationList">
+                <div class="notification-card">
+                    <div class="notification-item">
+                        <div class="notification-icon">
+                            <i class="bi bi-info-circle text-muted"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-description">{{ t('general_no_notifications', default='No notifications') | e }}</div>
+                            <div class="notification-time text-muted">{{ t('general_check_back_later', default='Check back later') | e }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Quick Actions -->
-        <section class="quick-actions-section"> {# Change this outer div to a section and apply the new class #}
-            <h3 class="quick-actions-heading">{{ t('general_quick_actions', default='Quick Actions') | e }}</h3> {# Apply the new heading class #}
-            <div class="quick-actions"> {# This div correctly remains your grid container #}
+        <section class="quick-actions-section">
+            <h3 class="quick-actions-heading">{{ t('general_quick_actions', default='Quick Actions') | e }}</h3>
+            <div class="quick-actions">
                 {% for tool in tools_for_template %}
                 <a href="{{ tool.url | default('#') | e }}" class="quick-action-card {{ tool.class | default('') }} text-decoration-none" aria-label="{{ t(tool.label_key, default=tool.label) | e }}">
                     {% if tool.badge %}
@@ -97,7 +117,6 @@
                 {% endfor %}
             </div>
         </section>
-        </div>
         <!-- Explore Features -->
         <div class="section-card explore-section">
             <h3 class="section-title">{{ t('general_explore_features', default='Explore Features') | e }}</h3>
@@ -119,6 +138,28 @@
 <style>
 .spacer {
     margin: 1.5rem 0;
+}
+.notification-card {
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.75rem 0;
+}
+.notification-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.notification-icon {
+    font-size: 1.25rem;
+}
+.notification-content {
+    flex-grow: 1;
+}
+.notification-description {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.notification-time {
+    font-size: 0.8rem;
 }
 </style>
 {% endblock %}
@@ -147,6 +188,13 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Unexpected navigation items in top-header:', topNavItems);
         }
     }
+
+    {% if current_user.is_authenticated %}
+    // Load financial data, notifications, and recent activity
+    loadFinancialSummary();
+    loadRecentActivity();
+    loadNotifications();
+    {% endif %}
 });
 
 {% if current_user.is_authenticated %}
@@ -167,21 +215,114 @@ const translations = {
     check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
 };
 
-// Load financial data, notifications, and recent activity
-loadFinancialSummary();
-loadRecentActivity();
-
+// Load financial data
 function loadFinancialSummary() {
     Promise.all([
-        fetch('{{ url_for("debt_summary") | e }}').then(r => r.json()).catch(() => ({totalIOwe: 0, totalIAmOwed: 0})),
-        fetch('{{ url_for("coins.get_balance") | e }}').then(r => r.json()).catch(() => ({coin_balance: 0})),
-        fetch('{{ url_for("cashflow_summary") | e }}').then(r => r.json()).catch(() => ({netCashflow: 0}))
+        fetch('{{ url_for("business.debt_summary") | e }}').then(r => r.json()).catch(() => ({totalIOwe: 0, totalIAmOwed: 0})),
+        fetch('{{ url_for("business.get_balance") | e }}').then(r => r.json()).catch(() => ({coin_balance: 0})),
+        fetch('{{ url_for("business.cashflow_summary") | e }}').then(r => r.json()).catch(() => ({netCashflow: 0}))
     ]).then(([debtData, walletData, cashflowData]) => {
         updateDebtSummary(debtData);
         updateSnapshots(walletData, cashflowData);
     }).catch(error => {
         console.error('Error loading financial data:', error);
     });
+}
+
+// Load recent activity
+function loadRecentActivity() {
+    fetch('{{ url_for("business.recent_activity") | e }}')
+        .then(response => response.json())
+        .then(activities => {
+            const activityList = document.getElementById('recentActivityList');
+            if (activities && activities.length > 0) {
+                activityList.innerHTML = activities.map(activity => `
+                    <div class="recent-activity-card">
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="bi ${getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description fw-semibold">${activity.description}</div>
+                                <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
+                            </div>
+                            ${activity.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.amount)}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                activityList.innerHTML = `
+                    <div class="recent-activity-card">
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
+                                <div class="activity-time text-muted">${translations.start_by_adding_debt}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent activity:', error);
+        });
+}
+
+// Load notifications
+function loadNotifications() {
+    // Update notification count
+    fetch('{{ url_for("business.notification_count") | e }}')
+        .then(response => response.json())
+        .then(data => {
+            const notificationCount = document.getElementById('notificationCount');
+            notificationCount.textContent = data.count || 0;
+            notificationCount.className = `badge bg-${data.count > 0 ? 'danger' : 'primary'} rounded-pill`;
+        })
+        .catch(error => {
+            console.error('Error loading notification count:', error);
+        });
+
+    // Fetch and display notifications
+    fetch('{{ url_for("business.notifications") | e }}')
+        .then(response => response.json())
+        .then(data => {
+            const notificationList = document.getElementById('notificationList');
+            if (data.notifications && data.notifications.length > 0) {
+                notificationList.innerHTML = data.notifications.map(notification => `
+                    <div class="notification-card">
+                        <div class="notification-item">
+                            <div class="notification-icon">
+                                <i class="bi ${getNotificationIcon(notification.type)} ${notification.read ? 'text-muted' : 'text-primary'}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-description fw-semibold">${notification.message}</div>
+                                <div class="notification-time text-muted">${formatTimeAgo(notification.timestamp)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                notificationList.innerHTML = `
+                    <div class="notification-card">
+                        <div class="notification-item">
+                            <div class="notification-icon">
+                                <i class="bi bi-info-circle text-muted"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-description fw-semibold">${translations.no_notifications}</div>
+                                <div class="notification-time text-muted">${translations.check_back_later}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+        });
 }
 
 function updateDebtSummary(data) {
@@ -223,47 +364,6 @@ function updateSnapshots(walletData, cashflowData) {
     document.getElementById('netCashflow').dataset.originalText = '₦' + format_currency(cashflowData.netCashflow || 0);
 }
 
-function loadRecentActivity() {
-    fetch('{{ url_for("recent_activity") | e }}')
-        .then(response => response.json())
-        .then(activities => {
-            const activityList = document.getElementById('recentActivityList');
-            if (activities && activities.length > 0) {
-                activityList.innerHTML = activities.map(activity => `
-                    <div class="recent-activity-card">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi ${getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-description fw-semibold">${activity.description}</div>
-                                <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
-                            </div>
-                            ${activity.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.amount)}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                activityList.innerHTML = `
-                    <div class="recent-activity-card">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-info-circle text-muted"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
-                                <div class="activity-time text-muted">${translations.start_by_adding_debt}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Error loading recent activity:', error);
-        });
-}
-
 function getActivityIcon(type) {
     const icons = {
         'debt_added': 'bi-plus-circle',
@@ -288,6 +388,15 @@ function getActivityColor(type) {
         'trader_registered': 'text-primary'
     };
     return colors[type] || 'text-muted';
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'email': 'bi-envelope',
+        'sms': 'bi-chat',
+        'whatsapp': 'bi-whatsapp'
+    };
+    return icons[type] || 'bi-info-circle';
 }
 
 function formatTimeAgo(timestamp) {
