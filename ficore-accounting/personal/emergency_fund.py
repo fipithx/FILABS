@@ -141,7 +141,7 @@ def main():
     try:
         log_tool_usage(
             db=db,
-            tool_name='emergency_fund',
+            details='emergency_fund',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='main_view'
@@ -158,7 +158,7 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        tool_name='emergency_fund',
+                        details='emergency_fund',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='create_plan'
@@ -423,7 +423,7 @@ def unsubscribe(email):
         try:
             log_tool_usage(
                 db=db,
-                tool_name='emergency_fund',
+                details='emergency_fund',
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session.get('sid', 'unknown'),
                 action='unsubscribe'
