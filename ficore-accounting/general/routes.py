@@ -29,7 +29,7 @@ def landing():
         current_app.logger.error(f"Error rendering landing page: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('general_error', default='An error occurred'), 'danger')
         response = make_response(render_template(
-            'general/error.html',
+            'personal/GENERAL/error.html',
             error_message="Unable to load the landing page due to an internal error.",
             title=trans('general_welcome', lang=session.get('lang', 'en'), default='Welcome')
         ), 500)
