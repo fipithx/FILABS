@@ -13,6 +13,7 @@ from pymongo.errors import ConnectionFailure
 from translations import trans
 import requests
 from werkzeug.routing import BuildError
+import time
 
 # Flask extensions
 from flask_login import LoginManager
@@ -37,6 +38,7 @@ class SessionFormatter(logging.Formatter):
     def format(self, record):
         record.session_id = getattr(record, 'session_id', 'no_session_id')
         record.ip_address = getattr(record, 'ip_address', 'unknown')
+        record.user_role = getattr(record, 'user_role', 'anonymous')
         return super().format(record)
 
 class SessionAdapter(logging.LoggerAdapter):
@@ -44,17 +46,20 @@ class SessionAdapter(logging.LoggerAdapter):
         kwargs['extra'] = kwargs.get('extra', {})
         session_id = 'no-session-id'
         ip_address = 'unknown'
+        user_role = 'anonymous'
         try:
             if has_request_context():
                 session_id = session.get('sid', 'no-session-id')
                 ip_address = request.remote_addr
+                user_role = current_user.role if current_user.is_authenticated else 'anonymous'
             else:
-                session_id = 'no-request-context'
+                session_id = f'non-request-{str(uuid.uuid4())[:8]}'
         except Exception as e:
-            session_id = 'session-error'
+            session_id = f'session-error-{str(uuid.uuid4())[:8]}'
             kwargs['extra']['session_error'] = str(e)
         kwargs['extra']['session_id'] = session_id
         kwargs['extra']['ip_address'] = ip_address
+        kwargs['extra']['user_role'] = user_role
         return msg, kwargs
 
 logger = SessionAdapter(root_logger, {})
@@ -911,19 +916,40 @@ def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None)
 
 def create_anonymous_session():
     '''
-    Create a guest session for anonymous access.
+    Create a guest session for anonymous access with retry logic.
     '''
-    try:
-        with current_app.app_context():
-            session['sid'] = str(uuid.uuid4())
-            session['is_anonymous'] = True
-            session['created_at'] = datetime.utcnow().isoformat()
-            if 'lang' not in session:
-                session['lang'] = 'en'
-            logger.info(f"{trans('general_anonymous_session_created', default='Created anonymous session')}: {session['sid']}")
-    except Exception as e:
-        logger.error(f"{trans('general_anonymous_session_error', default='Error creating anonymous session')}: {str(e)}", exc_info=True)
-        raise
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            with current_app.app_context():
+                session['sid'] = str(uuid.uuid4())
+                session['is_anonymous'] = True
+                session['created_at'] = datetime.utcnow().isoformat()
+                if 'lang' not in session:
+                    session['lang'] = 'en'
+                session.modified = True
+                logger.info(
+                    f"{trans('general_anonymous_session_created', default='Created anonymous session')}: {session['sid']}",
+                    extra={'session_id': session['sid'], 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+                )
+                return
+        except Exception as e:
+            logger.warning(
+                f"Attempt {attempt + 1} failed to create anonymous session: {str(e)}",
+                exc_info=True,
+                extra={'session_id': 'no-session-id', 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+            )
+            if attempt == max_retries - 1:
+                session['sid'] = f'error-{str(uuid.uuid4())[:8]}'
+                session['is_anonymous'] = True
+                session.modified = True
+                logger.error(
+                    f"{trans('general_anonymous_session_error', default='Error creating anonymous session after retries')}: {str(e)}",
+                    exc_info=True,
+                    extra={'session_id': session['sid'], 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+                )
+                return
+            time.sleep(0.5)
 
 def clean_currency(value):
     if not value or not isinstance(value, str):
