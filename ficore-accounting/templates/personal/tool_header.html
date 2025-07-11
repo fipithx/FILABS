@@ -40,7 +40,7 @@
                        data-bs-toggle="tooltip" title="{{ t('net_worth_title', default='Net Worth') }}">
                         <i class="fas fa-chart-line"></i>
                     </a>
-                    <a href="{{ url_for('personal.learning_hub.main') }}" class="btn btn-outline-primary btn-sm {{ 'active' if request.endpoint == 'personal.learning_hub.main' else '' }}" 
+                    <a href="{{ url_for('learning_hub.main') }}" class="btn btn-outline-primary btn-sm {{ 'active' if request.endpoint == 'learning_hub.main' else '' }}" 
                        data-bs-toggle="tooltip" title="{{ t('learning_hub_title', default='Learning Hub') }}">
                         <i class="fas fa-graduation-cap"></i>
                     </a>
