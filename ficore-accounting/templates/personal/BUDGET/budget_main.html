@@ -169,13 +169,13 @@
                     <h5><i class="fas fa-chart-pie"></i> {{ t('budget_summary', default='Financial Summary') }}</h5>
                 </div>
                 <div class="card-body">
-                    {% if latest_budget and latest_budget['income'] is defined and latest_budget['income'] is not none %}
+                    {% if latest_budget and latest_budget.get('income_raw', 0.0) > 0 %}
                         <div class="row text-center mb-4">
                             <div class="col-md-4">
                                 <div class="card bg-success text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_income', default='Income') }}</h6>
-                                        <h4>{{ latest_budget['income'] | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('income', '0') | format_currency }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -183,15 +183,15 @@
                                 <div class="card bg-danger text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_expenses', default='Total Expenses') }}</h6>
-                                        <h4>{{ latest_budget['fixed_expenses'] | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('fixed_expenses', '0') | format_currency }}</h4>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="card bg-{{ 'success' if latest_budget['surplus_deficit']|float >= 0 else 'warning' }} text-white">
+                                <div class="card bg-{{ 'success' if latest_budget.get('surplus_deficit', 0)|float >= 0 else 'warning' }} text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_surplus_deficit', default='Surplus/Deficit') }}</h6>
-                                        <h4>{{ latest_budget['surplus_deficit_formatted'] | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('surplus_deficit_formatted', '0') | format_currency }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -231,10 +231,10 @@
                                                 {% for budget_id, budget in budgets.items() %}
                                                     <tr>
                                                         <td>{{ budget.get('created_at', 'N/A') | format_datetime }}</td>
-                                                        <td>{{ budget.get('income', 0) | format_currency }}</td>
-                                                        <td>{{ budget.get('fixed_expenses', 0) | format_currency }}</td>
+                                                        <td>{{ budget.get('income', '0') | format_currency }}</td>
+                                                        <td>{{ budget.get('fixed_expenses', '0') | format_currency }}</td>
                                                         <td class="{% if budget.get('surplus_deficit', 0)|float >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                            {{ budget.get('surplus_deficit_formatted', 0) | format_currency }}
+                                                            {{ budget.get('surplus_deficit_formatted', '0') | format_currency }}
                                                         </td>
                                                         <td>
                                                             <form method="POST" action="{{ url_for('personal.budget.main') }}" style="display: inline;">
@@ -273,7 +273,7 @@
             <div class="card-body">
                 <p>{{ t('general_share_ficore_invite', default='Invite your friends to join Ficore Africa and manage their finances better!') }}</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) }}" readonly>
+                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else '' }}" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ t('general_profile_copy_link', default='Copy') }}</button>
                 </div>
             </div>
@@ -379,9 +379,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Copy referral link
     window.copyReferralLink = function() {
         const referralLink = document.getElementById('referralLink');
-        referralLink.select();
-        document.execCommand('copy');
-        alert('{{ t('general_profile_link_copied', default='Referral link copied to clipboard!') }}');
+        if (referralLink.value) {
+            referralLink.select();
+            document.execCommand('copy');
+            alert('{{ t('general_profile_link_copied', default='Referral link copied to clipboard!') }}');
+        } else {
+            alert('{{ t('general_profile_no_referral', default='No referral link available.') }}');
+        }
     };
 });
 </script>
