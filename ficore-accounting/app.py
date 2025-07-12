@@ -21,7 +21,7 @@ from models import (
     to_dict_financial_health, to_dict_budget, to_dict_bill, to_dict_net_worth,
     to_dict_emergency_fund, to_dict_quiz_result, initialize_app_data
 )
-from learning_hub.models import get_learning_progress, to_dict_learning_progress
+from learning_hub.models import get_progress, to_dict_learning_progress
 import utils
 from session_utils import create_anonymous_session
 from translations import trans, get_translations, get_all_translations, get_module_translations
