@@ -179,7 +179,6 @@ def learning_hub_main():
         # Log tool usage
         log_tool_usage(
             db=db,
-            tool_name='learning_hub',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session['sid'],
             action='main_view'
@@ -672,7 +671,6 @@ def profile():
     try:
         log_tool_usage(
             db=db,
-            tool_name='learning_hub',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session['sid'],
             action='profile_submit' if request.method == 'POST' else 'profile_view'
@@ -736,7 +734,6 @@ def unsubscribe(email):
     try:
         log_tool_usage(
             db=db,
-            tool_name='learning_hub',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session['sid'],
             action='unsubscribe'
@@ -776,7 +773,6 @@ def serve_uploaded_file(filename):
     try:
         log_tool_usage(
             db=db,
-            tool_name='learning_hub',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session['sid'],
             action='serve_file'
