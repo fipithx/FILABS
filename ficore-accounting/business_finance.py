@@ -77,7 +77,7 @@ def home():
                     extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
         
         return render_template(
-            'business/home.html',
+            'general/home.html',
             coin_balance=coin_balance,
             total_i_owe=total_i_owe,
             total_i_am_owed=total_i_am_owed,
