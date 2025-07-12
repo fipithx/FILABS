@@ -22,55 +22,37 @@
             </div>
         </div>
         <div class="card-footer">
-            <div class="responsive-btn-group" role="group">
-                <a href="{{ url_for('debtors.generate_iou', id=debtor._id) }}" 
-                   class="btn btn-success btn-sm"
-                   data-bs-toggle="tooltip" 
-                   title="{{ t('debtors_download_iou', default='Download IOU') }}">
-                    {{ t('debtors_download_iou', default='Download IOU') }}
-                </a>
-                {% if debtor.contact %}
-                <button type="button" 
-                        class="btn btn-info btn-sm share-btn" 
-                        data-id="{{ debtor._id }}" 
-                        data-contact="{{ debtor.contact }}"
-                        data-bs-toggle="tooltip" 
-                        title="{{ t('debtors_share_iou', default='Share IOU') }}">
-                    {{ t('debtors_share_iou', default='Share IOU') }}
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ t('general_actions', default='Actions') }}
                 </button>
-                <button type="button" 
-                        class="btn btn-warning btn-sm reminder-btn" 
-                        data-id="{{ debtor._id }}" 
-                        data-name="{{ debtor.name }}" 
-                        data-amount="{{ debtor.amount_owed }}" 
-                        data-contact="{{ debtor.contact }}" 
-                        data-date="{{ format_date(debtor.created_at) }}"
-                        data-bs-toggle="tooltip" 
-                        title="{{ t('debtors_send_reminder', default='Send Reminder') }}">
-                    {{ t('debtors_reminder', default='Reminder') }}
-                </button>
-                <button type="button" 
-                        class="btn btn-primary btn-sm snooze-btn" 
-                        data-id="{{ debtor._id }}" 
-                        data-name="{{ debtor.name }}"
-                        data-bs-toggle="tooltip" 
-                        title="{{ t('debtors_snooze_reminder', default='Snooze Reminder') }}">
-                    {{ t('debtors_snooze', default='Snooze') }}
-                </button>
-                {% endif %}
-                <a href="{{ url_for('debtors.edit', id=debtor._id) }}" 
-                   class="btn btn-primary btn-sm"
-                   data-bs-toggle="tooltip" 
-                   title="{{ t('general_edit', default='Edit') }}">
-                    {{ t('general_edit', default='Edit') }}
-                </a>
-                <a href="{{ url_for('debtors.index') }}" 
-                   class="btn btn-secondary btn-sm"
-                   data-bs-toggle="tooltip" 
-                   title="{{ t('general_back', default='Back') }}">
-                    {{ t('general_back', default='Back') }}
-                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('debtors.generate_iou', id=debtor._id) }}">{{ t('debtors_download_iou', default='Download IOU') }}</a></li>
+                    {% if debtor.contact %}
+                    <li><a class="dropdown-item share-btn" 
+                           data-id="{{ debtor._id }}" 
+                           data-contact="{{ debtor.contact }}"
+                           href="#">{{ t('debtors_share_iou', default='Share IOU') }}</a></li>
+                    <li><a class="dropdown-item reminder-btn" 
+                           data-id="{{ debtor._id }}" 
+                           data-name="{{ debtor.name }}" 
+                           data-amount="{{ debtor.amount_owed }}" 
+                           data-contact="{{ debtor.contact }}" 
+                           data-date="{{ format_date(debtor.created_at) }}"
+                           href="#">{{ t('debtors_reminder', default='Reminder') }}</a></li>
+                    <li><a class="dropdown-item snooze-btn" 
+                           data-id="{{ debtor._id }}" 
+                           data-name="{{ debtor.name }}"
+                           href="#">{{ t('debtors_snooze', default='Snooze') }}</a></li>
+                    {% endif %}
+                </ul>
             </div>
+            <a href="{{ url_for('debtors.index') }}" 
+               class="btn btn-secondary btn-sm"
+               data-bs-toggle="tooltip" 
+               title="{{ t('general_back', default='Back') }}">
+                {{ t('general_back', default='Back') }}
+            </a>
         </div>
     </div>
 </div>
