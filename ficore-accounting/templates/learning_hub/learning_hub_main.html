@@ -42,7 +42,7 @@
             <p>{{ t('coins_earned', default='Coins Earned: {0}', lang=lang).format(total_coins_earned) }}</p>
             <div class="gamification">
                 {% for badge in badges_earned %}
-                    <img src="{{ url_for('static', filename='images/badge.png') }}" alt="Badge">
+                    <img src="{{ url_for('static', filename='img/badge.png') }}" alt="Badge">
                     <span>{{ badge.title_en }}</span>
                 {% endfor %}
             </div>
