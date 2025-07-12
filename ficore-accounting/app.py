@@ -17,10 +17,11 @@ from mailersend_email import init_email_config
 from scheduler_setup import init_scheduler
 from models import (
     create_user, get_user_by_email, get_user, get_financial_health, get_budgets, get_bills,
-    get_net_worth, get_emergency_funds, get_learning_progress, get_quiz_results,
+    get_net_worth, get_emergency_funds, get_quiz_results,
     to_dict_financial_health, to_dict_budget, to_dict_bill, to_dict_net_worth,
-    to_dict_emergency_fund, to_dict_learning_progress, to_dict_quiz_result, initialize_database
+    to_dict_emergency_fund, to_dict_quiz_result, initialize_database
 )
+from learning_hub.models import get_learning_progress, to_dict_learning_progress
 import utils
 from session_utils import create_anonymous_session
 from translations import trans, get_translations, get_all_translations, get_module_translations
