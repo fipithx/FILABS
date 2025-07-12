@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ t('inventory_add_stock_title', default='Add Stock') }} - FiCore{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="page-title">
+        <h1>{{ t('inventory_add_stock_title', default='Add Stock') }}</h1>
+        <small class="subtext">{{ t('inventory_subtitle', default='Kayanka da Hajojinka') }} - {{ item.item_name }}</small>
+    </div>
+    <form action="{{ url_for('inventory.add_stock', id=item._id) }}" method="POST" class="row g-3">
+        {{ form.hidden_tag() }}
+        <div class="col-12">
+            <label for="qty" class="form-label">{{ t('inventory_quantity_to_add', default='Quantity to Add') }} ({{ item.unit }})</label>
+            {{ form.qty(class="form-control", type="number", min=1, required=True) }}
+            {% if form.qty.errors %}
+                <p class="text-danger mt-1">{{ form.qty.errors[0] }}</p>
+            {% endif %}
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary w-100">{{ t('inventory_add_stock', default='Add Stock') }}</button>
+        </div>
+        <div class="col-12">
+            <a href="{{ url_for('inventory.manage') }}" class="btn btn-secondary w-100">{{ t('general_back', default='Back') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
