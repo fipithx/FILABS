@@ -7,7 +7,7 @@ from flask_login import current_user
 from .forms import LearningHubProfileForm, UploadForm
 from .models import (
     get_progress, save_course_progress, course_lookup, lesson_lookup,
-    calculate_progress_summary, init_storage, get_mongo_db
+    calculate_progress_summary, init_learning_materials, get_mongo_db
 )
 from utils import requires_role, is_admin, trans, format_currency, clean_currency, get_all_recent_activities, log_tool_usage, get_explore_features
 from session_utils import create_anonymous_session
