@@ -129,6 +129,7 @@ def main():
     current_app.logger.info(f"Starting main for session {session['sid']} {'(anonymous)' if session.get('is_anonymous') else ''}", extra={'session_id': session['sid']})
     try:
         log_tool_usage(
+            tool_name='financial_health',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -147,6 +148,7 @@ def main():
             if action == 'calculate_score' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        tool_name='financial_health',
                         db=db,
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -422,6 +424,7 @@ def summary():
     db = get_mongo_db()  # Ensure valid database connection
     try:
         log_tool_usage(
+            tool_name='financial_health',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -461,6 +464,7 @@ def unsubscribe(email):
     
     try:
         log_tool_usage(
+            tool_name='financial_health',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
