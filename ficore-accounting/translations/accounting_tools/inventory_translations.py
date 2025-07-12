@@ -5,6 +5,9 @@ Inventory management translations for accounting tools
 INVENTORY_TRANSLATIONS = {
     'en': {
         'inventory_list': 'Inventory List',
+        'net_worth_net_worth': 'Net Worth',
+        'net_worth_calculator': 'Net Worth Calculator',
+        'net_worth_desc': 'Track your assets and liabilities to calculate your net worth',
         'inventory_add_item': 'Add Item',
         'inventory_dashboard': 'Inventory',
         'inventory_dashboard_desc': 'Manage your product stock and inventory.',
@@ -112,6 +115,9 @@ INVENTORY_TRANSLATIONS = {
         'inventory_total_value_stock': 'Jimillar Ƙimar Ajiya',
         'inventory_low_stock_alerts': 'Sanarwar Ƙarancin Ajiya',
         'inventory_title': 'Kaya',
+        'net_worth_net_worth': 'Dukiyar Kuɗi',
+        'net_worth_calculator': 'Kalkuleta Dukiyar Kuɗi',
+        'net_worth_desc': 'Bincika dukiyoyinku da basussuka don ƙididdige dukiyar kuɗinku',
         'inventory_add_goods_stock': 'Ƙara Kaya zuwa Jari',
         'inventory_dashboard_desc': 'Sarrafa kayanka da ajiyarka.', # "Manage your product stock and inventory."
         'inventory_tooltip': 'Duba da sarrafa kayanka.',
