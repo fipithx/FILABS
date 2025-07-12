@@ -55,6 +55,25 @@ def index():
         flash(trans('debtors_fetch_error', default='An error occurred'), 'danger')
         return redirect(url_for('dashboard.index'))
 
+@debtors_bp.route('/manage')
+@login_required
+@utils.requires_role('trader')
+def manage():
+    """List all debtor records for management (edit/delete) by the current user."""
+    try:
+        db = utils.get_mongo_db()
+        query = {'type': 'debtor'} if utils.is_admin() else {'user_id': str(current_user.id), 'type': 'debtor'}
+        debtors = list(db.records.find(query).sort('created_at', -1))
+        
+        return render_template(
+            'debtors/manage_debtors.html',
+            debtors=debtors
+        )
+    except Exception as e:
+        logger.error(f"Error fetching debtors for manage page for user {current_user.id}: {str(e)}")
+        flash(trans('debtors_fetch_error', default='An error occurred'), 'danger')
+        return redirect(url_for('debtors.index'))
+
 @debtors_bp.route('/view/<id>')
 @login_required
 @utils.requires_role('trader')
