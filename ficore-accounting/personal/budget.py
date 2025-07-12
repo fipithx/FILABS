@@ -134,6 +134,7 @@ def main():
     
     try:
         log_tool_usage(
+            tool_name='budget',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -164,6 +165,7 @@ def main():
             if action == 'create_budget' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        tool_name='budget',
                         db=db,
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -261,6 +263,7 @@ def main():
                 budget_id = request.form.get('budget_id')
                 try:
                     log_tool_usage(
+                        tool_name='budget',
                         db=db,
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -435,6 +438,7 @@ def summary():
     db = get_mongo_db()
     try:
         log_tool_usage(
+            tool_name='budget',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
