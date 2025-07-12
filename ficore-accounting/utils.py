@@ -9,7 +9,7 @@ from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 from translations import trans
 import requests
 from werkzeug.routing import BuildError
@@ -31,7 +31,7 @@ compress = Compress()
 limiter = Limiter(key_func=get_remote_address, default_limits=['200 per day', '50 per hour'], storage_uri='memory://')
 
 # Set up logging with session support
-root_logger = logging.getLogger('ficore_app.utils')
+root_logger = logging.getLogger('ficore_app')
 root_logger.setLevel(logging.DEBUG)
 
 class SessionFormatter(logging.Formatter):
@@ -716,8 +716,8 @@ def get_explore_features():
                 {
                     "endpoint": "coins.history",
                     "label": "Coins",
-                    "label_key": "proof_coins_dashboard",
-                    "description_key": "proof_coins_desc",
+                    "label_key": "coins_dashboard",
+                    "description_key": "coins_dashboard_desc",
                     "tooltip_key": "coins_tooltip",
                     "icon": "bi-coin",
                     "category": "Proof of Concept"
@@ -784,9 +784,8 @@ def get_explore_features():
                     "tooltip_key": "learning_hub_tool_tutorials_tooltip",
                     "icon": "bi-book",
                     "category": "Learning"
-                }
+                },
             ]
-            # Ensure every feature has a title_key
             for feature in features:
                 if 'title_key' not in feature:
                     feature['title_key'] = feature.get('label', 'default_feature').lower().replace(' ', '_') + '_title'
@@ -799,7 +798,7 @@ def get_explore_features():
         logger.error(f"Error generating explore features: {str(e)}", exc_info=True)
         return []
 
-# Initialize module-level variables (will be populated with URLs later)
+# Initialize module-level variables
 PERSONAL_TOOLS = []
 PERSONAL_NAV = []
 PERSONAL_EXPLORE_FEATURES = []
@@ -814,14 +813,13 @@ ADMIN_NAV = []
 ADMIN_EXPLORE_FEATURES = []
 ALL_TOOLS = []
 
-# Pre-generate tools/navigation with URLs at startup
 def initialize_tools_with_urls(app):
-    '''
+    """
     Initialize all tool/navigation lists with resolved URLs.
     
     Args:
         app: Flask application instance
-    '''
+    """
     global PERSONAL_TOOLS, PERSONAL_NAV, PERSONAL_EXPLORE_FEATURES
     global BUSINESS_TOOLS, BUSINESS_NAV, BUSINESS_EXPLORE_FEATURES
     global AGENT_TOOLS, AGENT_NAV, AGENT_EXPLORE_FEATURES
@@ -862,7 +860,7 @@ def initialize_tools_with_urls(app):
         raise
 
 def generate_tools_with_urls(tools):
-    '''
+    """
     Generate a list of tools with resolved URLs and validated icons.
     
     Args:
@@ -870,12 +868,11 @@ def generate_tools_with_urls(tools):
     
     Returns:
         List of dictionaries with 'url' keys added and validated 'icon' fields
-    '''
+    """
     result = []
     for tool in tools:
         try:
             url = url_for(tool['endpoint'], _external=True)
-            # Validate icon field; use fallback if missing or invalid
             icon = tool.get('icon', 'bi-question-circle')
             if not icon or not icon.startswith('bi-'):
                 logger.warning(f"Invalid or missing icon for tool {tool.get('label', 'unknown')}: {icon}. Using fallback 'bi-question-circle'.")
@@ -890,17 +887,17 @@ def generate_tools_with_urls(tools):
     return result
 
 def get_limiter():
-    '''
+    """
     Return the initialized Flask-Limiter instance.
     
     Returns:
         Limiter: The configured Flask-Limiter instance
-    '''
+    """
     return limiter
 
 def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None):
-    '''
-    Log tool usage to MongoDB with improved error handling and session support.
+    """
+    Log tool usage to MongoDB tool_usage collection with improved error handling and session support.
     
     Args:
         action (str): The action performed (e.g., 'main_view', 'add_bill').
@@ -911,32 +908,27 @@ def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None)
     
     Raises:
         RuntimeError: If database connection fails or insertion fails.
-    '''
+    """
     try:
-        # Fetch database instance if not provided
         if db is None:
             db = get_mongo_db()
         
-        # Validate inputs
         if not action or not isinstance(action, str):
             raise ValueError("Action must be a non-empty string")
         
-        # Use provided session_id or fetch from session
         effective_session_id = session_id or session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'
         
-        # Prepare log entry
         log_entry = {
-            'action': action,
-            'details': details or {},
+            'tool_name': action,
             'user_id': str(user_id) if user_id else None,
             'session_id': effective_session_id,
+            'action': details.get('action') if details else None,
             'timestamp': datetime.utcnow(),
             'ip_address': request.remote_addr if has_request_context() else 'unknown',
             'user_agent': request.headers.get('User-Agent') if has_request_context() else 'unknown'
         }
         
-        # Insert log entry into MongoDB
-        db.tool_usage_logs.insert_one(log_entry)
+        db.tool_usage.insert_one(log_entry)
         logger.info(
             f"Logged tool usage: {action}",
             extra={
@@ -969,9 +961,9 @@ def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None)
         raise RuntimeError(f"Failed to log tool usage: {str(e)}")
 
 def create_anonymous_session():
-    '''
+    """
     Create a guest session for anonymous access with retry logic.
-    '''
+    """
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -1006,9 +998,17 @@ def create_anonymous_session():
             time.sleep(0.5)
 
 def clean_currency(value):
+    """
+    Clean currency input by removing non-numeric characters.
+    
+    Args:
+        value: Input value to clean
+    
+    Returns:
+        float: Cleaned numeric value
+    """
     if not value or not isinstance(value, str):
         return float(value) if isinstance(value, (int, float)) else 0.0
-    # Remove currency symbols and non-numeric characters
     cleaned = re.sub(r'[^\d.]', '', value)
     try:
         return float(cleaned) if cleaned else 0.0
@@ -1017,7 +1017,7 @@ def clean_currency(value):
         return 0.0
         
 def trans_function(key, lang=None, **kwargs):
-    '''
+    """
     Translation function wrapper for backward compatibility.
     
     Args:
@@ -1027,7 +1027,7 @@ def trans_function(key, lang=None, **kwargs):
     
     Returns:
         Translated string with formatting applied
-    '''
+    """
     try:
         with current_app.app_context():
             return trans(key, lang=lang, **kwargs)
@@ -1036,7 +1036,7 @@ def trans_function(key, lang=None, **kwargs):
         return key
 
 def is_valid_email(email):
-    '''
+    """
     Validate email address format.
     
     Args:
@@ -1044,58 +1044,71 @@ def is_valid_email(email):
     
     Returns:
         bool: True if email is valid, False otherwise
-    '''
+    """
     if not email or not isinstance(email, str):
         return False
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email.strip()) is not None
 
 def get_mongo_db():
-    '''
-    Get MongoDB database instance from the application extensions.
+    """
+    Get MongoDB database instance with retry logic.
     
     Returns:
         Database object
-    '''
-    try:
-        with current_app.app_context():
-            if 'mongo' not in current_app.extensions:
-                mongo_uri = os.getenv('MONGO_URI')
-                if not mongo_uri:
-                    logger.error("MONGO_URI environment variable not set",
-                                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
-                    raise RuntimeError("MONGO_URI environment variable not set")
+    """
+    max_retries = 3
+    retry_delay = 1
+    for attempt in range(max_retries):
+        try:
+            with current_app.app_context():
+                if 'mongo' not in current_app.extensions:
+                    mongo_uri = os.getenv('MONGO_URI')
+                    if not mongo_uri:
+                        logger.error("MONGO_URI environment variable not set",
+                                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
+                        raise RuntimeError("MONGO_URI environment variable not set")
+                    
+                    client = MongoClient(
+                        mongo_uri,
+                        serverSelectionTimeoutMS=5000,
+                        tls=True,
+                        tlsCAFile=certifi.where() if os.getenv('MONGO_CA_FILE') is None else os.getenv('MONGO_CA_FILE'),
+                        maxPoolSize=50,
+                        minPoolSize=5
+                    )
+                    client.admin.command('ping')
+                    current_app.extensions['mongo'] = client
+                    logger.info("MongoDB client initialized successfully in utils.get_mongo_db",
+                               extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
                 
-                client = MongoClient(
-                    mongo_uri,
-                    serverSelectionTimeoutMS=5000,
-                    tls=True,
-                    tlsCAFile=certifi.where() if os.getenv('MONGO_CA_FILE') is None else os.getenv('MONGO_CA_FILE'),
-                    maxPoolSize=50,
-                    minPoolSize=5
+                db = current_app.extensions['mongo']['ficodb']
+                db.command('ping')
+                return db
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.warning(
+                f"Attempt {attempt + 1}/{max_retries} failed to connect to MongoDB: {str(e)}",
+                exc_info=True,
+                extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+            )
+            if attempt == max_retries - 1:
+                logger.error(
+                    f"Failed to connect to MongoDB after {max_retries} attempts: {str(e)}",
+                    exc_info=True,
+                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
                 )
-                client.admin.command('ping')
-                current_app.extensions['mongo'] = client
-                logger.info("MongoDB client initialized successfully in utils.get_mongo_db",
-                           extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
-            
-            db = current_app.extensions['mongo']['ficodb']
-            # Verify connection
-            db.command('ping')
-            return db
-    except Exception as e:
-        logger.error(f"Failed to connect to MongoDB database: {str(e)}",
-                    exc_info=True, extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'})
-        raise
+                raise RuntimeError(f"Failed to connect to MongoDB: {str(e)}")
+            time.sleep(retry_delay)
+    raise RuntimeError("Failed to connect to MongoDB after retries")
 
 def close_mongo_db():
-    '''
+    """
     No-op function for backward compatibility.
-    '''
+    """
     pass
 
 def get_mail(app):
-    '''
+    """
     Initialize and return Flask-Mail instance.
     
     Args:
@@ -1103,7 +1116,7 @@ def get_mail(app):
     
     Returns:
         Mail instance
-    '''
+    """
     try:
         with app.app_context():
             mail = Mail(app)
@@ -1114,7 +1127,7 @@ def get_mail(app):
         return None
 
 def requires_role(role):
-    '''
+    """
     Decorator to require specific user role.
     
     Args:
@@ -1122,7 +1135,7 @@ def requires_role(role):
     
     Returns:
         Decorator function
-    '''
+    """
     def decorator(f):
         from functools import wraps
         from flask_login import current_user
@@ -1145,7 +1158,7 @@ def requires_role(role):
     return decorator
 
 def check_coin_balance(required_amount=1, user_id=None):
-    '''
+    """
     Check if user has sufficient coin balance.
     
     Args:
@@ -1154,7 +1167,7 @@ def check_coin_balance(required_amount=1, user_id=None):
     
     Returns:
         bool: True if user has sufficient balance, False otherwise
-    '''
+    """
     try:
         with current_app.app_context():
             from flask_login import current_user
@@ -1176,7 +1189,7 @@ def check_coin_balance(required_amount=1, user_id=None):
         return False
 
 def get_user_query(user_id):
-    '''
+    """
     Get user query for MongoDB operations.
     
     Args:
@@ -1184,16 +1197,16 @@ def get_user_query(user_id):
     
     Returns:
         dict: MongoDB query for user
-    '''
+    """
     return {'_id': user_id}
 
 def is_admin():
-    '''
+    """
     Check if current user is admin.
     
     Returns:
         bool: True if current user is admin, False otherwise
-    '''
+    """
     try:
         with current_app.app_context():
             from flask_login import current_user
@@ -1202,7 +1215,7 @@ def is_admin():
         return False
 
 def format_currency(amount, currency='₦', lang=None):
-    '''
+    """
     Format currency amount with proper locale.
     
     Args:
@@ -1212,7 +1225,7 @@ def format_currency(amount, currency='₦', lang=None):
     
     Returns:
         Formatted currency string
-    '''
+    """
     try:
         with current_app.app_context():
             if lang is None:
@@ -1226,7 +1239,7 @@ def format_currency(amount, currency='₦', lang=None):
         return f"{currency}0"
 
 def format_date(date_obj, lang=None, format_type='short'):
-    '''
+    """
     Format date according to language preference.
     
     Args:
@@ -1236,7 +1249,7 @@ def format_date(date_obj, lang=None, format_type='short'):
     
     Returns:
         Formatted date string
-    '''
+    """
     try:
         with current_app.app_context():
             if lang is None:
@@ -1268,7 +1281,7 @@ def format_date(date_obj, lang=None, format_type='short'):
         return str(date_obj) if date_obj else ''
 
 def sanitize_input(input_string, max_length=None):
-    '''
+    """
     Sanitize user input to prevent XSS and other attacks.
     
     Args:
@@ -1277,7 +1290,7 @@ def sanitize_input(input_string, max_length=None):
     
     Returns:
         Sanitized string
-    '''
+    """
     if not input_string:
         return ''
     sanitized = str(input_string).strip()
@@ -1287,7 +1300,7 @@ def sanitize_input(input_string, max_length=None):
     return sanitized
 
 def generate_unique_id(prefix=''):
-    '''
+    """
     Generate a unique identifier.
     
     Args:
@@ -1295,14 +1308,14 @@ def generate_unique_id(prefix=''):
     
     Returns:
         Unique identifier string
-    '''
+    """
     unique_id = str(uuid.uuid4())
     if prefix:
         return f"{prefix}_{unique_id}"
     return unique_id
 
 def validate_required_fields(data, required_fields):
-    '''
+    """
     Validate that all required fields are present and not empty.
     
     Args:
@@ -1311,7 +1324,7 @@ def validate_required_fields(data, required_fields):
     
     Returns:
         tuple: (is_valid, missing_fields)
-    '''
+    """
     missing_fields = []
     for field in required_fields:
         if field not in data or not data[field] or str(data[field]).strip() == '':
@@ -1319,12 +1332,12 @@ def validate_required_fields(data, required_fields):
     return len(missing_fields) == 0, missing_fields
 
 def get_user_language():
-    '''
+    """
     Get the current user's language preference.
     
     Returns:
         Language code ('en' or 'ha')
-    '''
+    """
     try:
         with current_app.app_context():
             return session.get('lang', 'en') if has_request_context() else 'en'
@@ -1332,14 +1345,14 @@ def get_user_language():
         return 'en'
 
 def log_user_action(action, details=None, user_id=None):
-    '''
+    """
     Log user action for audit purposes.
     
     Args:
         action: Action performed
         details: Additional details about the action
         user_id: User ID (optional, will use current_user if not provided)
-    '''
+    """
     try:
         with current_app.app_context():
             from flask_login import current_user
@@ -1364,7 +1377,7 @@ def log_user_action(action, details=None, user_id=None):
         logger.error(f"{trans('general_user_action_log_error', default='Error logging user action')}: {str(e)}", exc_info=True)
 
 def send_sms_reminder(recipient, message):
-    '''
+    """
     Send an SMS reminder to the specified recipient.
     
     Args:
@@ -1373,7 +1386,7 @@ def send_sms_reminder(recipient, message):
     
     Returns:
         tuple: (success, api_response)
-    '''
+    """
     try:
         with current_app.app_context():
             recipient = re.sub(r'\D', '', recipient)
@@ -1404,7 +1417,7 @@ def send_sms_reminder(recipient, message):
         return False, {'error': str(e)}
 
 def send_whatsapp_reminder(recipient, message):
-    '''
+    """
     Send a WhatsApp reminder to the specified recipient.
     
     Args:
@@ -1413,7 +1426,7 @@ def send_whatsapp_reminder(recipient, message):
     
     Returns:
         tuple: (success, api_response)
-    '''
+    """
     try:
         with current_app.app_context():
             recipient = re.sub(r'\D', '', recipient)
@@ -1443,9 +1456,8 @@ def send_whatsapp_reminder(recipient, message):
         logger.error(f"Error sending WhatsApp message to {recipient}: {str(e)}", exc_info=True)
         return False, {'error': str(e)}
 
-# Activity fetching functions
 def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
-    '''
+    """
     Fetch recent activities across all tools for a user or session.
     
     Args:
@@ -1457,11 +1469,10 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
     
     Returns:
         list: List of recent activity records
-    '''
+    """
     if db is None:
         db = get_mongo_db()
     
-    # Build query based on user_id or session_id
     query = {} if is_admin_user else {'user_id': str(user_id)} if user_id else {'session_id': session_id} if session_id else {}
     
     try:
@@ -1560,7 +1571,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
         # Fetch recent learning hub progress
         learning_hub_progress = db.learning_materials.find({
             **query,
-            'type': {'$ne': 'course'}  # Exclude course definitions, include progress records
+            'type': 'progress'
         }).sort('updated_at', -1).limit(5)
         for progress in learning_hub_progress:
             if not progress.get('course_id') or not progress.get('updated_at'):
@@ -1586,7 +1597,6 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
 
         activities.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        # Log successful fetch
         logger.debug(
             f"Fetched {len(activities)} recent activities for {'user ' + str(user_id) if user_id else 'session ' + str(session_id) if session_id else 'all'}",
             extra={'session_id': session_id or 'unknown', 'ip': request.remote_addr or 'unknown'}
@@ -1602,7 +1612,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
         raise
 
 def get_all_recent_activities(user_id=None, is_admin_user=False, db=None, session_id=None, limit=10):
-    '''
+    """
     Fetch recent activities across all tools for a user or session.
     
     Args:
@@ -1614,180 +1624,8 @@ def get_all_recent_activities(user_id=None, is_admin_user=False, db=None, sessio
     
     Returns:
         list: List of recent activity records
-    '''
+    """
     return get_recent_activities(user_id, is_admin_user, db, session_id, limit)
-
-# Data conversion functions for backward compatibility
-def to_dict_financial_health(record):
-    '''Convert financial health record to dictionary.'''
-    if not record:
-        return {'score': None, 'status': None}
-    return {
-        'score': record.get('score'),
-        'status': record.get('status'),
-        'debt_to_income': record.get('debt_to_income'),
-        'savings_rate': record.get('savings_rate'),
-        'interest_burden': record.get('interest_burden'),
-        'badges': record.get('badges', []),
-        'created_at': record.get('created_at')
-    }
-
-def to_dict_budget(record):
-    '''Convert budget record to dictionary.'''
-    if not record:
-        return {'surplus_deficit': None, 'savings_goal': None}
-    return {
-        'income': record.get('income', 0),
-        'fixed_expenses': record.get('fixed_expenses', 0),
-        'variable_expenses': record.get('variable_expenses', 0),
-        'savings_goal': record.get('savings_goal', 0),
-        'surplus_deficit': record.get('surplus_deficit', 0),
-        'housing': record.get('housing', 0),
-        'food': record.get('food', 0),
-        'transport': record.get('transport', 0),
-        'dependents': record.get('dependents', 0),
-        'miscellaneous': record.get('miscellaneous', 0),
-        'others': record.get('others', 0),
-        'created_at': record.get('created_at')
-    }
-
-def to_dict_bill(record):
-    '''Convert bill record to dictionary.'''
-    if not record:
-        return {'amount': None, 'status': None}
-    return {
-        'id': str(record.get('_id', '')),
-        'bill_name': record.get('bill_name', ''),
-        'amount': record.get('amount', 0),
-        'due_date': record.get('due_date', ''),
-        'frequency': record.get('frequency', ''),
-        'category': record.get('category', ''),
-        'status': record.get('status', ''),
-        'send_email': record.get('send_email', False),
-        'reminder_days': record.get('reminder_days'),
-        'user_email': record.get('user_email', ''),
-        'first_name': record.get('first_name', '')
-    }
-
-def to_dict_net_worth(record):
-    '''Convert net worth record to dictionary.'''
-    if not record:
-        return {'net_worth': None, 'total_assets': None}
-    return {
-        'cash_savings': record.get('cash_savings', 0),
-        'investments': record.get('investments', 0),
-        'property': record.get('property', 0),
-        'loans': record.get('loans', 0),
-        'total_assets': record.get('total_assets', 0),
-        'total_liabilities': record.get('total_liabilities', 0),
-        'net_worth': record.get('net_worth', 0),
-        'badges': record.get('badges', []),
-        'created_at': record.get('created_at')
-    }
-
-def to_dict_emergency_fund(record):
-    '''Convert emergency fund record to dictionary.'''
-    if not record:
-        return {'target_amount': None, 'savings_gap': None}
-    return {
-        'monthly_expenses': record.get('monthly_expenses', 0),
-        'monthly_income': record.get('monthly_income', 0),
-        'current_savings': record.get('current_savings', 0),
-        'risk_tolerance_level': record.get('risk_tolerance_level', ''),
-        'dependents': record.get('dependents', 0),
-        'timeline': record.get('timeline', 0),
-        'recommended_months': record.get('recommended_months', 0),
-        'target_amount': record.get('target_amount', 0),
-        'savings_gap': record.get('savings_gap', 0),
-        'monthly_savings': record.get('monthly_savings', 0),
-        'percent_of_income': record.get('percent_of_income'),
-        'badges': record.get('badges', []),
-        'created_at': record.get('created_at')
-    }
-
-def to_dict_learning_progress(record):
-    '''Convert learning progress record to dictionary.'''
-    if not record:
-        return {'lessons_completed': [], 'quiz_scores': {}}
-    return {
-        'course_id': record.get('course_id', ''),
-        'lessons_completed': record.get('lessons_completed', []),
-        'quiz_scores': record.get('quiz_scores', {}),
-        'current_lesson': record.get('current_lesson'),
-        'coins_earned': record.get('coins_earned', 0),
-        'badges_earned': record.get('badges_earned', [])
-    }
-
-def to_dict_quiz_result(record):
-    '''Convert quiz result record to dictionary.'''
-    if not record:
-        return {'personality': None, 'score': None}
-    return {
-        'personality': record.get('personality', ''),
-        'score': record.get('score', 0),
-        'badges': record.get('badges', []),
-        'insights': record.get('insights', []),
-        'tips': record.get('tips', []),
-        'created_at': record.get('created_at')
-    }
-
-def to_dict_news_article(record):
-    '''Convert news article record to dictionary.'''
-    if not record:
-        return {'title': None, 'content': None}
-    return {
-        'id': str(record.get('_id', '')),
-        'title': record.get('title', ''),
-        'content': record.get('content', ''),
-        'source_type': record.get('source_type', ''),
-        'source_link': record.get('source_link'),
-        'published_at': record.get('published_at'),
-        'category': record.get('category'),
-        'is_verified': record.get('is_verified', False),
-        'is_active': record.get('is_active', True)
-    }
-
-def to_dict_tax_rate(record):
-    '''Convert tax rate record to dictionary.'''
-    if not record:
-        return {'rate': None, 'description': None}
-    return {
-        'id': str(record.get('_id', '')),
-        'role': record.get('role', ''),
-        'min_income': record.get('min_income', 0),
-        'max_income': record.get('max_income'),
-        'rate': record.get('rate', 0),
-        'description': record.get('description', '')
-    }
-
-def to_dict_payment_location(record):
-    '''Convert payment location record to dictionary.'''
-    if not record:
-        return {'name': None, 'address': None}
-    return {
-        'id': str(record.get('_id', '')),
-        'name': record.get('name', ''),
-        'address': record.get('address', ''),
-        'contact': record.get('contact', ''),
-        'coordinates': record.get('coordinates')
-    }
-
-def to_dict_tax_reminder(record):
-    '''Convert tax reminder record to dictionary.'''
-    if not record:
-        return {'tax_type': None, 'amount': None}
-    return {
-        'id': str(record.get('_id', '')),
-        'user_id': record.get('user_id', ''),
-        'tax_type': record.get('tax_type', ''),
-        'due_date': record.get('due_date'),
-        'amount': record.get('amount', 0),
-        'status': record.get('status', ''),
-        'created_at': record.get('created_at'),
-        'notification_id': record.get('notification_id'),
-        'sent_at': record.get('sent_at'),
-        'payment_location_id': record.get('payment_location_id')
-    }
 
 # Export all functions and variables
 __all__ = [
@@ -1797,10 +1635,7 @@ __all__ = [
     'get_user_query', 'is_admin', 'format_currency', 'format_date', 'sanitize_input',
     'generate_unique_id', 'validate_required_fields', 'get_user_language',
     'log_user_action', 'send_sms_reminder', 'send_whatsapp_reminder',
-    'to_dict_financial_health', 'to_dict_budget', 'to_dict_bill', 'to_dict_net_worth',
-    'to_dict_emergency_fund', 'to_dict_learning_progress', 'to_dict_quiz_result',
-    'to_dict_news_article', 'to_dict_tax_rate', 'to_dict_payment_location',
-    'to_dict_tax_reminder', 'initialize_tools_with_urls',
+    'initialize_tools_with_urls',
     'PERSONAL_TOOLS', 'PERSONAL_NAV', 'PERSONAL_EXPLORE_FEATURES',
     'BUSINESS_TOOLS', 'BUSINESS_NAV', 'BUSINESS_EXPLORE_FEATURES',
     'AGENT_TOOLS', 'AGENT_NAV', 'AGENT_EXPLORE_FEATURES',
