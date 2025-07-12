@@ -1,12 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField, SubmitField, FileField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, Email, Optional
+from wtforms.validators import DataRequired, Email, Optional, Length, Regexp
 from flask import session
 from utils import trans
-
-from flask_wtf import FlaskForm
-from wtforms import StringField, FileField, SubmitField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, Length, Optional, Regexp
 from flask import session
 
 class UploadForm(FlaskForm):
