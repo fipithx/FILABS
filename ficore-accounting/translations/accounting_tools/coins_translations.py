@@ -103,6 +103,7 @@ COINS_TRANSLATIONS = {
         'coins_receipt_required': 'Ana buƙatar rasit',
         'coins_dashboard_desc': 'Duba coins na app.',
         'purchase': 'Saya',
+        'coins_title': 'Kuɗaɗe',
         'coins_purchase_coins': 'Sayi Kuɗaɗe',
         'coins_your_wallet': 'Wallet ɗin Ku',
         'coins_title': 'Kuɗin Tsabar',
