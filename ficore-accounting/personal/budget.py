@@ -23,20 +23,26 @@ budget_bp = Blueprint(
 csrf = CSRFProtect()
 
 def clean_currency(value):
-    """Strip currency symbols and commas from string values, handling edge cases."""
+    """Strip currency symbols, commas, and handle edge cases for currency inputs."""
     if not value or value == 'NGN0':
         return '0'
     if isinstance(value, str):
-        # Remove currency symbols, commas, and whitespace
-        value = re.sub(r'[^\d.]', '', value)
-        return value if value else '0'
-    return str(value)
+        # Remove NGN, commas, whitespace, and other non-numeric characters (except decimal point)
+        value = re.sub(r'[^\d.]', '', value.strip())
+        # Ensure the value is a valid number
+        try:
+            float_value = float(value) if value else 0.0
+            return str(float_value)
+        except ValueError:
+            current_app.logger.warning(f"Invalid currency value: {value}")
+            return '0'
+    return str(float(value))
 
 def strip_commas(value):
-    """Strip commas and currency symbols from string values."""
+    """Strip commas and currency symbols from string values, delegating to clean_currency."""
     if isinstance(value, str):
-        return clean_currency(value.replace(',', '')) or '0'
-    return value
+        return clean_currency(value)
+    return str(value)
 
 def custom_login_required(f):
     """Custom login decorator that allows both authenticated users and anonymous sessions."""
@@ -96,11 +102,12 @@ class BudgetForm(FlaskForm):
             return False
         for field in [self.income, self.housing, self.food, self.transport, self.dependents, self.miscellaneous, self.others, self.savings_goal]:
             try:
-                if field.data is not None:
-                    field.data = float(field.data or 0)
+                # Ensure field data is cleaned and converted to float
+                cleaned_value = clean_currency(str(field.data or '0'))
+                field.data = float(cleaned_value)
                 current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}", extra={'session_id': session.get('sid', 'no-session-id')})
-            except (ValueError, TypeError):
-                current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}", extra={'session_id': session.get('sid', 'no-session-id')})
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}, error: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
                 field.errors.append(trans('budget_amount_invalid', session.get('lang', 'en')))
                 return False
         return True
@@ -168,16 +175,17 @@ def main():
                     current_app.logger.error(f"Failed to log budget creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('budget_log_error', default='Error logging budget creation. Continuing with submission.'), 'warning')
                 
-                income = form.income.data
+                # Use raw float values for calculations
+                income = float(form.income.data)
                 expenses = sum([
-                    form.housing.data,
-                    form.food.data,
-                    form.transport.data,
-                    form.dependents.data,
-                    form.miscellaneous.data,
-                    form.others.data
+                    float(form.housing.data),
+                    float(form.food.data),
+                    float(form.transport.data),
+                    float(form.dependents.data),
+                    float(form.miscellaneous.data),
+                    float(form.others.data)
                 ])
-                savings_goal = form.savings_goal.data
+                savings_goal = float(form.savings_goal.data)
                 surplus_deficit = income - expenses
                 budget_data = {
                     '_id': ObjectId(),
@@ -189,12 +197,12 @@ def main():
                     'variable_expenses': 0,
                     'savings_goal': savings_goal,
                     'surplus_deficit': surplus_deficit,
-                    'housing': form.housing.data,
-                    'food': form.food.data,
-                    'transport': form.transport.data,
-                    'dependents': form.dependents.data,
-                    'miscellaneous': form.miscellaneous.data,
-                    'others': form.others.data,
+                    'housing': float(form.housing.data),
+                    'food': float(form.food.data),
+                    'transport': float(form.transport.data),
+                    'dependents': float(form.dependents.data),
+                    'miscellaneous': float(form.miscellaneous.data),
+                    'others': float(form.others.data),
                     'created_at': datetime.utcnow(),
                     'currency': 'NGN'
                 }
@@ -234,12 +242,12 @@ def main():
                                 "first_name": form.first_name.data,
                                 "income": format_currency(income, currency='NGN'),
                                 "expenses": format_currency(expenses, currency='NGN'),
-                                "housing": format_currency(form.housing.data, currency='NGN'),
-                                "food": format_currency(form.food.data, currency='NGN'),
-                                "transport": format_currency(form.transport.data, currency='NGN'),
-                                "dependents": format_currency(form.dependents.data, currency='NGN'),
-                                "miscellaneous": format_currency(form.miscellaneous.data, currency='NGN'),
-                                "others": format_currency(form.others.data, currency='NGN'),
+                                "housing": format_currency(float(form.housing.data), currency='NGN'),
+                                "food": format_currency(float(form.food.data), currency='NGN'),
+                                "transport": format_currency(float(form.transport.data), currency='NGN'),
+                                "dependents": format_currency(float(form.dependents.data), currency='NGN'),
+                                "miscellaneous": format_currency(float(form.miscellaneous.data), currency='NGN'),
+                                "others": format_currency(float(form.others.data), currency='NGN'),
                                 "savings_goal": format_currency(savings_goal, currency='NGN'),
                                 "surplus_deficit": format_currency(surplus_deficit, currency='NGN'),
                                 "created_at": budget_data['created_at'].strftime('%Y-%m-%d'),
@@ -281,27 +289,27 @@ def main():
                 'user_id': budget.get('user_id'),
                 'session_id': budget.get('session_id'),
                 'user_email': budget.get('user_email', ''),
-                'income': format_currency(budget.get('income', 0.0), currency=budget.get('currency', 'NGN')),
-                'income_raw': float(budget.get('income', 0.0)),  # Raw value for calculations
-                'fixed_expenses': format_currency(budget.get('fixed_expenses', 0.0), currency=budget.get('currency', 'NGN')),
+                'income': format_currency(float(budget.get('income', 0.0)), currency=budget.get('currency', 'NGN')),
+                'income_raw': float(budget.get('income', 0.0)),
+                'fixed_expenses': format_currency(float(budget.get('fixed_expenses', 0.0)), currency=budget.get('currency', 'NGN')),
                 'fixed_expenses_raw': float(budget.get('fixed_expenses', 0.0)),
-                'variable_expenses': format_currency(budget.get('variable_expenses', 0.0), currency=budget.get('currency', 'NGN')),
+                'variable_expenses': format_currency(float(budget.get('variable_expenses', 0.0)), currency=budget.get('currency', 'NGN')),
                 'variable_expenses_raw': float(budget.get('variable_expenses', 0.0)),
-                'savings_goal': format_currency(budget.get('savings_goal', 0.0), currency=budget.get('currency', 'NGN')),
+                'savings_goal': format_currency(float(budget.get('savings_goal', 0.0)), currency=budget.get('currency', 'NGN')),
                 'savings_goal_raw': float(budget.get('savings_goal', 0.0)),
-                'surplus_deficit': budget.get('surplus_deficit', 0.0),  # Store as float
-                'surplus_deficit_formatted': format_currency(budget.get('surplus_deficit', 0.0), currency=budget.get('currency', 'NGN')),  # Formatted for display
-                'housing': format_currency(budget.get('housing', 0.0), currency=budget.get('currency', 'NGN')),
+                'surplus_deficit': float(budget.get('surplus_deficit', 0.0)),
+                'surplus_deficit_formatted': format_currency(float(budget.get('surplus_deficit', 0.0)), currency=budget.get('currency', 'NGN')),
+                'housing': format_currency(float(budget.get('housing', 0.0)), currency=budget.get('currency', 'NGN')),
                 'housing_raw': float(budget.get('housing', 0.0)),
-                'food': format_currency(budget.get('food', 0.0), currency=budget.get('currency', 'NGN')),
+                'food': format_currency(float(budget.get('food', 0.0)), currency=budget.get('currency', 'NGN')),
                 'food_raw': float(budget.get('food', 0.0)),
-                'transport': format_currency(budget.get('transport', 0.0), currency=budget.get('currency', 'NGN')),
+                'transport': format_currency(float(budget.get('transport', 0.0)), currency=budget.get('currency', 'NGN')),
                 'transport_raw': float(budget.get('transport', 0.0)),
-                'dependents': format_currency(budget.get('dependents', 0.0), currency=budget.get('currency', 'NGN')),
+                'dependents': format_currency(float(budget.get('dependents', 0.0)), currency=budget.get('currency', 'NGN')),
                 'dependents_raw': float(budget.get('dependents', 0.0)),
-                'miscellaneous': format_currency(budget.get('miscellaneous', 0.0), currency=budget.get('currency', 'NGN')),
+                'miscellaneous': format_currency(float(budget.get('miscellaneous', 0.0)), currency=budget.get('currency', 'NGN')),
                 'miscellaneous_raw': float(budget.get('miscellaneous', 0.0)),
-                'others': format_currency(budget.get('others', 0.0), currency=budget.get('currency', 'NGN')),
+                'others': format_currency(float(budget.get('others', 0.0)), currency=budget.get('currency', 'NGN')),
                 'others_raw': float(budget.get('others', 0.0)),
                 'created_at': budget.get('created_at').strftime('%Y-%m-%d') if budget.get('created_at') else 'N/A'
             }
@@ -354,9 +362,9 @@ def main():
         ]
         insights = []
         try:
-            income_float = latest_budget.get('income_raw', 0.0)
-            surplus_deficit_float = latest_budget.get('surplus_deficit', 0.0)
-            savings_goal_float = latest_budget.get('savings_goal_raw', 0.0)
+            income_float = float(latest_budget.get('income_raw', 0.0))
+            surplus_deficit_float = float(latest_budget.get('surplus_deficit', 0.0))
+            savings_goal_float = float(latest_budget.get('savings_goal_raw', 0.0))
             if income_float > 0:
                 if surplus_deficit_float < 0:
                     insights.append(trans("budget_insight_budget_deficit", default='Your expenses exceed your income. Consider reducing costs.'))
@@ -443,7 +451,7 @@ def summary():
         if not latest_budget:
             current_app.logger.info(f"No budget found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
             return jsonify({'totalBudget': format_currency(0.0, currency='NGN')})
-        total_budget = latest_budget[0].get('income', 0.0)
+        total_budget = float(latest_budget[0].get('income', 0.0))
         current_app.logger.info(f"Fetched budget summary for user {current_user.id}: {total_budget}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'totalBudget': format_currency(total_budget, currency=latest_budget[0].get('currency', 'NGN'))})
     except Exception as e:
