@@ -19,7 +19,7 @@ from models import (
     create_user, get_user_by_email, get_user, get_financial_health, get_budgets, get_bills,
     get_net_worth, get_emergency_funds, get_quiz_results,
     to_dict_financial_health, to_dict_budget, to_dict_bill, to_dict_net_worth,
-    to_dict_emergency_fund, to_dict_quiz_result, initialize_database
+    to_dict_emergency_fund, to_dict_quiz_result, initialize_app_data
 )
 from learning_hub.models import get_learning_progress, to_dict_learning_progress
 import utils
@@ -349,7 +349,7 @@ def create_app():
     # Initialize MongoDB, session, scheduler, and other components within app context
     try:
         with app.app_context():
-            initialize_database(app)
+            initialize_app_data(app)
             logger.info('Database initialized successfully')
 
             setup_session(app)
@@ -904,7 +904,7 @@ def create_app():
                 ), 403
         try:
             with app.app_context():
-                initialize_database(app)
+                initialize_app_data(app)
             flash(utils.trans('db_setup_success'), 'success')
             logger.info('Database setup completed')
             return redirect(url_for('index'))
