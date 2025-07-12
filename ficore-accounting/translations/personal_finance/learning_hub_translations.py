@@ -2,6 +2,11 @@ LEARNING_HUB_TRANSLATIONS = {
     'en': {
         # Core UI Translations
         'learning_hub_title': 'Learning Hub',
+        'personal_finance_learning_title': 'Personal Finance Learning',
+        'business_learning_title': 'Business Learning',
+        'agent_learning_title': 'Agent Learning',
+        'compliance_learning_title': 'Compliance Learning',
+        'tool_tutorials_title': 'Tool Tutorials',
         'learning_hub_welcome': 'Welcome to your journey of financial empowerment and digital literacy tailored for Northern Nigeria!',
         'learning_hub_error_loading': 'Error loading Learning Hub',
         'learning_hub_nav': 'Learning Hub Navigation',
@@ -444,5 +449,10 @@ LEARNING_HUB_TRANSLATIONS = {
         'learning_hub_lesson_marked': 'An alama darasin a matsayin an kammala!',
         'learning_hub_lesson_done': 'Ka gama dukkan darussa a wannan kwas.',
         'next_lesson': 'Darasi na Gaba',
+        'personal_finance_learning_title': 'Koyon Kuɗin Kai',
+        'business_learning_title': 'Koyon Kasuwanci',
+        'agent_learning_title': 'Koyon Wakili',
+        'compliance_learning_title': 'Koyon Yarda da Dokoki',
+        'tool_tutorials_title': 'Koyarwar Kayan Aiki',
     }
 }
