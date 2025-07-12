@@ -140,6 +140,7 @@ def main():
     form = EmergencyFundForm(data=form_data)
     try:
         log_tool_usage(
+            tool_name='emergency_fund',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -156,6 +157,7 @@ def main():
             if action == 'create_plan' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        tool_name='emergency_fund',
                         db=db,
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -420,6 +422,7 @@ def unsubscribe(email):
     try:
         try:
             log_tool_usage(
+                tool_name='emergency_fund',
                 db=db,
                 user_id=current_user.id if current_user.is_authenticated else None,
                 session_id=session.get('sid', 'unknown'),
