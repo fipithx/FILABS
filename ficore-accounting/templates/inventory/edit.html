@@ -17,35 +17,35 @@
         </div>
         <div class="col-12">
             <label for="qty" class="form-label">{{ t('inventory_quantity', default='Quantity') }}</label>
-            {{ form.qty(class="form-control", type="number", required=True) }}
+            {{ form.qty(class="form-control", type="number", min=0, required=True) }}
             {% if form.qty.errors %}
                 <p class="text-danger mt-1">{{ form.qty.errors[0] }}</p>
             {% endif %}
         </div>
         <div class="col-12">
             <label for="unit" class="form-label">{{ t('inventory_unit', default='Unit') }}</label>
-            {{ form.unit(class="form-control") }}
+            {{ form.unit(class="form-control", required=True) }}
             {% if form.unit.errors %}
                 <p class="text-danger mt-1">{{ form.unit.errors[0] }}</p>
             {% endif %}
         </div>
         <div class="col-12">
             <label for="buying_price" class="form-label">{{ t('inventory_buying_price', default='Buying Price') }}</label>
-            {{ form.buying_price(class="form-control", type="number", step="0.01") }}
+            {{ form.buying_price(class="form-control", type="number", step="0.01", min=0, required=True) }}
             {% if form.buying_price.errors %}
                 <p class="text-danger mt-1">{{ form.buying_price.errors[0] }}</p>
             {% endif %}
         </div>
         <div class="col-12">
             <label for="selling_price" class="form-label">{{ t('inventory_selling_price', default='Selling Price') }}</label>
-            {{ form.selling_price(class="form-control", type="number", step="0.01") }}
+            {{ form.selling_price(class="form-control", type="number", step="0.01", min=0, required=True) }}
             {% if form.selling_price.errors %}
                 <p class="text-danger mt-1">{{ form.selling_price.errors[0] }}</p>
             {% endif %}
         </div>
         <div class="col-12">
             <label for="threshold" class="form-label">{{ t('inventory_threshold', default='Low Stock Threshold') }}</label>
-            {{ form.threshold(class="form-control", type="number") }}
+            {{ form.threshold(class="form-control", type="number", min=0) }}
             {% if form.threshold.errors %}
                 <p class="text-danger mt-1">{{ form.threshold.errors[0] }}</p>
             {% endif %}
