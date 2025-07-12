@@ -42,7 +42,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_babel import Babel
 from flask_compress import Compress
 import requests
-from learning_hub import init_storage
+from learning_hub import init_learning_materials
 from business_finance import business
 
 # Load environment variables
@@ -401,7 +401,7 @@ def create_app():
                 logger.warning(f'Some indexes may already exist: {str(e)}')
             
             try:
-                init_storage(app)
+                init_learning_materials(app)
                 logger.info('Learning Hub storage initialized successfully')
             except Exception as e:
                 logger.error(f'Failed to initialize Learning Hub storage: {str(e)}', exc_info=True)
