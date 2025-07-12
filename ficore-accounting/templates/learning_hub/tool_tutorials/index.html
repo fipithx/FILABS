@@ -1,51 +1,57 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ tool_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_hub.css') }}">
+</head>
+<body>
+    <header>
+        <h1>{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</h1>
+        <p>{{ t('tool_tutorials_welcome', default='Master digital tools for financial management, optimized for low-bandwidth access in Northern Nigeria.', lang=lang) }}</p>
+    </header>
 
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script>{% extends "learning_hub/base.html" %}
-
-{% block content %}
-    <h2>{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</h2>
-    <p>{{ t('learning_hub_tool_tutorials_intro', default='Tutorials to help you master digital tools for financial management.', lang=lang) }}</p>
-    <div>
-        <h3>{{ t('learning_hub_available_courses', default='Available Courses', lang=lang) }}</h3>
+    <nav>
         <ul>
-            <li>{{ t('learning_hub_digital_foundations_title', default='Digital Foundations', lang=lang) }}</li>
+            <li><a href="{{ url_for('learning_hub.main') }}">{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.personal') }}">{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.business') }}">{{ t('learning_hub_business_title', default='Business Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.agents') }}">{{ t('learning_hub_agents_title', default='Agent Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.compliance') }}">{{ t('learning_hub_compliance_title', default='Compliance Learning', lang=lang) }}</a></li>
         </ul>
+    </nav>
+
+    <div class="container">
+        <div class="section-title">{{ t('tool_tutorials_courses', default='Tool Tutorial Courses', lang=lang) }}</div>
+        <div class="card">
+            <h3>{{ t('course_digital_foundations_title', default='Digital Foundations', lang=lang) }}</h3>
+            <p>{{ t('course_digital_foundations_desc', default='Learn to use mobile apps like WhatsApp for business communication in low-bandwidth areas.', lang=lang) }}</p>
+            <a href="{{ url_for('learning_hub.course_overview', course_id='digital_foundations') }}" class="btn">{{ t('start_course', default='Start Course', lang=lang) }}</a>
+        </div>
+        <div class="card">
+            <h3>{{ t('course_spreadsheets_title', default='Using Spreadsheets for Finance', lang=lang) }}</h3>
+            <p>{{ t('course_spreadsheets_desc', default='Master Google Sheets to track expenses for your household or business in Northern Nigeria.', lang=lang) }}</p>
+            <a href="{{ url_for('learning_hub.course_overview', course_id='spreadsheets_101') }}" class="btn">{{ t('start_course', default='Start Course', lang=lang) }}</a>
+        </div>
+        <div class="card">
+            <h3>{{ t('course_online_banking_title', default='Online Banking Basics', lang=lang) }}</h3>
+            <p>{{ t('course_online_banking_desc', default='Learn to use Nigerian banking apps securely for transactions and savings.', lang=lang) }}</p>
+            <a href="{{ url_for('learning_hub.course_overview', course_id='online_banking_101') }}" class="btn">{{ t('start_course', default='Start Course', lang=lang) }}</a>
+        </div>
+        <div class="gamification">
+            <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coin">
+            <p>{{ t('gamification_tools', default='Earn coins and unlock the “Digital Pro” badge by mastering tool tutorials!', lang=lang) }}</p>
+        </div>
     </div>
-{% endblock %}
+
+    <div class="language-toggle">
+        <a href="?lang=en">{{ t('lang_english', default='English', lang=lang) }}</a> |
+        <a href="?lang=ha">{{ t('lang_hausa', default='Hausa', lang=lang) }}</a>
+    </div>
+
+    <footer>
+        <p>{{ t('footer_text', default='Empowering Northern Nigeria through Financial Education', lang=lang) }}</p>
+    </footer>
+</body>
+</html>
