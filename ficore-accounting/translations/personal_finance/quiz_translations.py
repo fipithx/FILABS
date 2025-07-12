@@ -6,6 +6,7 @@ QUIZ_TRANSLATIONS = {
     'en': {
         # Quiz-specific
         'quiz_financial_personality_quiz': 'Personality Quiz',
+        'quiz_translations_title':'Personality Quiz',
         'quiz_your_financial_personality_results': 'Your Financial Personality Results',
         'quiz_take_first': 'Take Your First Quiz',
         'quiz_saver': 'Saver',
@@ -254,6 +255,7 @@ QUIZ_TRANSLATIONS = {
             'quiz_comparison': 'Kwatantawa da Wasu',
             'quiz_rank': 'Mat sayarka',
             'quiz_average_score': 'Matsakaicin Maki',
+        'quiz_translations_title':'Gwajin Fahimtar Kudi',
             'badge_first_quiz_taker': 'Mai Ɗaukar Tambayoyin Farko',
             'badge_first_quiz_taker_desc': 'An ba da kyauta saboda kammala tambayoyin kuɗi na farko.',
             'quiz_previous_assessments': 'Ƙididdigar da Ta Gabata',
