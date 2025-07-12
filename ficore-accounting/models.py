@@ -679,9 +679,9 @@ def initialize_app_data(app):
                     logger.error(f"Failed to insert sample agents: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
                     raise
             
-            # Initialize courses and quizzes (to be handled by learning hub's init_storage)
-            from learning_hub.models import init_storage
-            init_storage(app)
+            # Initialize courses and quizzes (to be handled by learning hub's init_learning_materials)
+            from learning_hub.models import init_learning_materials
+            init_learning_materials(app)
             
         except Exception as e:
             logger.error(f"{trans('general_database_initialization_failed', default='Failed to initialize database')}: {str(e)}", 
