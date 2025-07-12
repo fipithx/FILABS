@@ -1043,7 +1043,24 @@ def lesson_lookup(course, lesson_id):
     except Exception as e:
         logger.error(f"Error looking up lesson {lesson_id}: {str(e)}", exc_info=True, extra={'session_id': session.get('sid', 'no-session-id')})
         return None, None
-
+def to_dict_learning_progress(record):
+    """Convert learning progress record to dictionary."""
+    if not record:
+        return {'course_id': None, 'progress': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'session_id': record.get('session_id', ''),
+        'course_id': record.get('course_id', ''),
+        'lessons_completed': record.get('lessons_completed', []),
+        'quiz_scores': record.get('quiz_scores', {}),
+        'current_lesson': record.get('current_lesson', ''),
+        'coins_earned': record.get('coins_earned', 0),
+        'badges_earned': record.get('badges_earned', []),
+        'created_at': record.get('created_at'),
+        'updated_at': record.get('updated_at')
+    }
+    
 def calculate_progress_summary():
     """Calculate progress summary for display."""
     try:
