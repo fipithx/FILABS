@@ -281,7 +281,7 @@ def seed_tax_data():
                     continue
                 db.vat_rules.insert_one(rule)
             logger.info("Seeded VAT rules")
-        if\infty
+        if float('inf')
         if db.payment_locations.count_documents({}) == 0:
             locations = [
                 {'name': 'Lagos NRS Office', 'address': '123 Broad Street, Lagos', 'contact': '+234-1-2345678'},
