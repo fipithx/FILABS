@@ -1984,7 +1984,9 @@ h2.card-title {
 
 /* Tables */
 .table-responsive {
-    overflow-x: hidden;
+    overflow-x: auto; /* Enable horizontal scrolling for tables */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+    max-width: 100%; /* Fit within parent container */
 }
 
 .table {
@@ -1995,29 +1997,35 @@ h2.card-title {
     border: 1px solid var(--table-border);
     border-radius: 10px;
     overflow: hidden;
+    table-layout: auto; /* Allow columns to adjust based on content */
 }
 
 .table th, .table td {
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem; /* Increased padding for better spacing */
     border-bottom: 1px solid var(--table-border);
     text-align: left;
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
     vertical-align: middle;
-    color: var(--table-text);
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    max-width: 100%;
+    color: var(--table-text); /* Ensure consistent text color */
+    white-space: nowrap; /* Prevent wrapping in headers by default */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Truncate long text with ellipsis */
 }
 
 .table th {
     background: var(--table-header-bg);
-    color: var(--table-header-text);
-    font-weight: 600;
+    color: var(--table-header-text); /* Explicit header text color */
+    font-weight: 700; /* Bolder headers for emphasis */
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); /* Subtle shadow for readability */
+    min-width: 100px; /* Minimum width for headers */
 }
 
 .table td {
-    color: var(--table-text);
+    color: var(--table-text); /* Reinforce text color for cells */
+    white-space: normal; /* Allow wrapping in table cells */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 200px; /* Limit cell width for wrapping */
 }
 
 .table-striped tbody tr:nth-of-type(even) {
@@ -2025,7 +2033,7 @@ h2.card-title {
 }
 
 .table-hover tbody tr:hover {
-    background: var(--button-secondary-hover);
+    background: var(--active-row-bg, var(--button-secondary-hover)); /* Dynamic hover color */
 }
 
 .table tr:last-child td {
@@ -2043,17 +2051,73 @@ h2.card-title {
 .table .status-settled {
     background: var(--table-row-bg-settled);
 }
+
+/* Explicitly handle table-bordered for full borders */
+.table-bordered th, .table-bordered td {
+    border: 1px solid var(--table-border);
+}
+
+/* Specific column widths for better control */
+.table th:nth-child(1), .table td:nth-child(1) { /* Name */
+    min-width: 150px;
+}
+.table th:nth-child(2), .table td:nth-child(2) { /* Amount */
+    min-width: 120px;
+}
+.table th:nth-child(3), .table td:nth-child(3) { /* Contact */
+    min-width: 130px;
+}
+.table th:nth-child(4), .table td:nth-child(4) { /* Created At */
+    min-width: 120px;
+}
+.table th:nth-child(5), .table td:nth-child(5) { /* Reminders */
+    min-width: 100px;
+}
+.table th:nth-child(6), .table td:nth-child(6) { /* Actions */
+    min-width: 250px; /* Wider for button group */
+}
+
+/* Dark mode overrides */
 .dark-mode .table,
 .dark-mode .table th,
 .dark-mode .table td {
-  color: var(--table-text) !important;
-  background: var(--table-light-bg) !important;
-  border-color: var(--table-border) !important;
+    color: var(--table-text) !important; /* Ensure text visibility */
+    background: var(--table-light-bg) !important;
+    border-color: var(--table-border) !important;
 }
 
 .dark-mode .table th {
-  background: var(--table-header-bg) !important;
-  color: var(--table-header-text) !important;
+    background: var(--table-header-bg) !important;
+    color: var(--table-header-text) !important;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4); /* Stronger shadow for dark mode */
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .table th, .table td {
+        padding: 0.75rem 1rem; /* Adjusted padding for mobile */
+        font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+        min-width: 80px; /* Smaller minimum width for mobile */
+    }
+
+    .table th:nth-child(6), .table td:nth-child(6) { /* Actions column */
+        min-width: 200px; /* Adjust for mobile */
+    }
+}
+
+/* Print styles */
+@media print {
+    .table {
+        border: 1px solid #000000;
+    }
+
+    .table th, .table td {
+        border: 1px solid #000000;
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        white-space: normal; /* Ensure text wraps in print */
+        color: #000000 !important; /* Black text for print */
+    }
 }
 
 /* Footer */
