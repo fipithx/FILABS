@@ -5,7 +5,7 @@ learning_hub_bp = Blueprint('learning_hub', __name__, url_prefix='/learning_hub'
 # Import routes to register them with the blueprint
 from . import routes
 
-def init_storage(app):
+def init_learning_materials(app):
     """
     Initialize storage for the Learning Hub (e.g., MongoDB collections).
     Called by the main app during initialization.
