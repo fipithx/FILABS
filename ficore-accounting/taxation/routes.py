@@ -244,6 +244,7 @@ def seed_tax_data():
             if collection not in db.list_collection_names():
                 db.create_collection(collection)
                 logger.info(f"Created collection: {collection}")
+
         if db.tax_rates.count_documents({}) == 0:
             tax_rates = [
                 {'role': 'personal', 'min_income': 0.0, 'max_income': 300000.0, 'rate': 0.07, 'description': trans('tax_rate_personal_7_2025', default='7% PAYE for income up to ₦300,000 in 2025, with 20% relief and ₦200,000 CRA'), 'year': 2025},
@@ -269,6 +270,7 @@ def seed_tax_data():
                     continue
                 db.tax_rates.insert_one(rate)
             logger.info("Seeded tax rates")
+
         if db.vat_rules.count_documents({}) == 0:
             vat_rules = [
                 {'category': cat, 'vat_exempt': True, 'description': trans(f'tax_vat_exempt_{cat}', default=f'{cat.capitalize()} is exempt from VAT')} for cat in ['food', 'healthcare', 'education', 'rent', 'power', 'baby_products']
@@ -281,7 +283,7 @@ def seed_tax_data():
                     continue
                 db.vat_rules.insert_one(rule)
             logger.info("Seeded VAT rules")
-        if float('inf')
+
         if db.payment_locations.count_documents({}) == 0:
             locations = [
                 {'name': 'Lagos NRS Office', 'address': '123 Broad Street, Lagos', 'contact': '+234-1-2345678'},
@@ -289,12 +291,14 @@ def seed_tax_data():
             ]
             db.payment_locations.insert_many(locations)
             logger.info("Seeded tax locations")
+
         if db.tax_reminders.count_documents({}) == 0:
             reminders = [
                 {'user_id': 'admin', 'message': trans('tax_reminder_quarterly', default='File quarterly tax return with NRS'), 'reminder_date': datetime.datetime(2026, 3, 31), 'created_at': datetime.datetime.utcnow()}
             ]
             db.tax_reminders.insert_many(reminders)
             logger.info("Seeded reminders")
+
         db.config.insert_one({'key': 'tax_data_seeded', 'value': True})
         logger.info("Tax data seeding completed")
     except Exception as e:
@@ -444,34 +448,64 @@ def calculate_tax():
             form=form,
             role=current_user.role,
             tax_rates=[],
-            vatbegin
-    vat_rules = list(db.vat_rules.find())
-    serialized_vat_rules = [
-        {
-            'category': rule.get('category', 'unknown'),
-            'vat_exempt': rule.get('vat_exempt', False),
-            'description': rule.get('description', ''),
-            '_id': str(rule['_id'])
-        } for rule in vat_rules
-    ]
-    return render_template(
-        'taxation/taxation.html',
-        section='payment_info',
-        locations=serialized_locations,
-        policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
-        title=trans('tax_payment_info_title', default='Tax Payment Information', lang=session.get('lang', 'en'))
-    )
+            vat_rules=[],
+            policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+            title=trans('tax_calculate_title', default='Calculate Tax', lang=session.get('lang', 'en'))
+        )
+
+@taxation_bp.route('/payment_info', methods=['GET'])
+@requires_role(['personal', 'trader', 'agent', 'company'])
+@login_required
+def payment_info():
+    try:
+        db = get_mongo_db()
+        locations = list(db.payment_locations.find())
+        serialized_locations = [
+            {
+                'name': loc.get('name', 'Unknown'),
+                'address': loc.get('address', 'Unknown'),
+                'contact': loc.get('contact', 'Unknown'),
+                '_id': str(loc['_id'])
+            } for loc in locations
+        ]
+        return render_template(
+            'taxation/taxation.html',
+            section='payment_info',
+            locations=serialized_locations,
+            policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+            title=trans('tax_payment_info_title', default='Tax Payment Information', lang=session.get('lang', 'en'))
+        )
+    except Exception as e:
+        logger.error(f"Error in payment_info: user={current_user.id}, error={str(e)}")
+        flash(trans('tax_general_error', default='An error occurred while retrieving payment information. Please try again.'), 'danger')
+        return render_template(
+            'taxation/taxation.html',
+            section='payment_info',
+            locations=[],
+            policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+            title=trans('tax_payment_info_title', default='Tax Payment Information', lang=session.get('lang', 'en'))
+        )
 
 @taxation_bp.route('/understand_taxes', methods=['GET'])
 @requires_role(['personal', 'trader', 'agent', 'company'])
 @login_required
 def understand_taxes():
-    return render_template(
-        'taxation/taxation.html',
-        section='understand_taxes',
-        policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
-        title=trans('tax_understand_taxes_title', default='Understand Your Taxes', lang=session.get('lang', 'en'))
-    )
+    try:
+        return render_template(
+            'taxation/taxation.html',
+            section='understand_taxes',
+            policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+            title=trans('tax_understand_taxes_title', default='Understand Your Taxes', lang=session.get('lang', 'en'))
+        )
+    except Exception as e:
+        logger.error(f"Error in understand_taxes: user={current_user.id}, error={str(e)}")
+        flash(trans('tax_general_error', default='An error occurred while loading tax information. Please try again.'), 'danger')
+        return render_template(
+            'taxation/taxation.html',
+            section='understand_taxes',
+            policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
+            title=trans('tax_understand_taxes_title', default='Understand Your Taxes', lang=session.get('lang', 'en'))
+        )
 
 @taxation_bp.route('/reminders', methods=['GET', 'POST'])
 @requires_role(['personal', 'trader', 'agent', 'company'])
@@ -537,7 +571,7 @@ def manage_tax_rates():
                 'description': form.description.data
             }
             result = db.tax_rates.insert_one(tax_rate)
-            logger.info(f"Tax rate added: user={current_user.id}, role={ form.role.data}, rate={form.rate.data}, rate_id={result.inserted_id}")
+            logger.info(f"Tax rate added: user={current_user.id}, role={form.role.data}, rate={form.rate.data}, rate_id={result.inserted_id}")
             flash(trans('tax_rate_added', default='Tax rate added successfully'), 'success')
             return redirect(url_for('taxation_bp.manage_tax_rates'))
         rates = list(db.tax_rates.find({'role': {'$exists': True}}))
