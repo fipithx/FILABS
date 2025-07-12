@@ -1023,21 +1023,49 @@ def create_anonymous_session():
 
 def clean_currency(value):
     """
-    Clean currency input by removing non-numeric characters.
+    Clean currency input by removing non-numeric characters, including NGN prefix and currency symbols.
     
     Args:
-        value: Input value to clean
+        value: Input value to clean (str, int, float, or None)
     
     Returns:
-        float: Cleaned numeric value
+        float: Cleaned numeric value, or 0.0 if invalid
     """
-    if not value or not isinstance(value, str):
-        return float(value) if isinstance(value, (int, float)) else 0.0
-    cleaned = re.sub(r'[^\d.]', '', value)
     try:
-        return float(cleaned) if cleaned else 0.0
-    except ValueError:
-        logger.warning(f"Invalid currency value: {value}")
+        # Handle None or non-string inputs
+        if value is None or value == '':
+            logger.debug(
+                "clean_currency received empty or None input, returning 0.0",
+                extra={'session_id': session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'}
+            )
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+
+        # Convert to string and remove NGN prefix, currency symbols (₦), commas, and spaces
+        value_str = str(value).strip()
+        cleaned = re.sub(r'[^0-9.]', '', value_str.replace('NGN', '').replace('₦', ''))
+
+        # Validate the cleaned string
+        if not cleaned or cleaned.count('.') > 1:
+            logger.warning(
+                f"Invalid currency format after cleaning: {value_str}, cleaned: {cleaned}, returning 0.0",
+                extra={'session_id': session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'}
+            )
+            return 0.0
+
+        # Convert to float
+        result = float(cleaned)
+        logger.debug(
+            f"clean_currency processed {value_str} to {result}",
+            extra={'session_id': session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'}
+        )
+        return result
+    except (ValueError, TypeError) as e:
+        logger.warning(
+            f"Currency format error for value '{value}': {str(e)}, returning 0.0",
+            extra={'session_id': session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'}
+        )
         return 0.0
         
 def trans_function(key, lang=None, **kwargs):
