@@ -1101,7 +1101,7 @@ def create_feedback(db, feedback_data):
                     exc_info=True, extra={'session_id': feedback_data.get('session_id', 'no-session-id')})
         raise
 
-def log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
+def utils.log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
     """
     Log tool usage in the tool_usage collection.
     
