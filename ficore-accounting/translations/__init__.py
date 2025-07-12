@@ -1,6 +1,7 @@
 import logging
-from flask import session, has_request_context, g, request  
+from flask import session, has_request_context, g, request
 from typing import Dict, Optional, Union
+import threading
 
 # Set up logger to match app.py
 root_logger = logging.getLogger('ficore_app')
@@ -23,6 +24,10 @@ class SessionAdapter(logging.LoggerAdapter):
         return msg, kwargs
 
 logger = SessionAdapter(root_logger, {})
+
+# Thread-safe set to store logged missing keys
+logged_missing_keys = set()
+lock = threading.Lock()
 
 # Import translation modules
 try:
@@ -88,7 +93,7 @@ KEY_PREFIX_TO_MODULE = {
     'budget_': 'budget',
     'emergency_fund_': 'emergency_fund',
     'financial_health_': 'financial_health',
-    'net_worth_': 'net_worth',
+    'net_worth_': 'inventory',  # Map net_worth_ to inventory module
     'learning_hub_': 'learning_hub',
     'quiz_': 'quiz',
     'badge_': 'quiz',  # Route badge_ keys to quiz translations
@@ -154,7 +159,7 @@ def trans(key: str, lang: Optional[str] = None, **kwargs: str) -> str:
     
     Notes:
         - Uses session['lang'] if lang is None and request context exists.
-        - Logs warnings for missing translations.
+        - Logs warnings for missing translations only once per key.
         - Uses g.logger if available, else the default logger.
         - Checks general translations for common UI elements without prefixes.
     """
@@ -165,7 +170,10 @@ def trans(key: str, lang: Optional[str] = None, **kwargs: str) -> str:
     if lang is None:
         lang = session.get('lang', 'en') if has_request_context() else 'en'
     if lang not in ['en', 'ha']:
-        current_logger.warning(f"Invalid language '{lang}', falling back to 'en'", extra={'session_id': session_id})
+        with lock:
+            if f"invalid_language_{lang}" not in logged_missing_keys:
+                logged_missing_keys.add(f"invalid_language_{lang}")
+                current_logger.warning(f"Invalid language '{lang}', falling back to 'en'", extra={'session_id': session_id})
         lang = 'en'
 
     # Determine module based on key prefix or specific keys
@@ -204,10 +212,13 @@ def trans(key: str, lang: Optional[str] = None, **kwargs: str) -> str:
         en_dict = module.get('en', {})
         translation = en_dict.get(key, key)
         if translation == key:
-            current_logger.warning(
-                f"Missing translation for key='{key}' in module '{module_name}', lang='{lang}'",
-                extra={'session_id': session_id}
-            )
+            with lock:
+                if key not in logged_missing_keys:
+                    logged_missing_keys.add(key)
+                    current_logger.warning(
+                        f"Missing translation for key='{key}' in module '{module_name}', lang='{lang}'",
+                        extra={'session_id': session_id}
+                    )
 
     # Apply string formatting
     try:
