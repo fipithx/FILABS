@@ -13,7 +13,7 @@ def init_learning_materials(app):
     from .models import init_storage  # Correct: init_storage is defined in models.py
     try:
         with app.app_context():
-            init_storage(app)  # Fixed: Changed setup_storage to init_storage
+            init_learning_materials(app)  # Fixed: Changed setup_storage to init_storage
     except Exception as e:
         app.logger.error(f"Error initializing Learning Hub storage: {str(e)}")
         raise
