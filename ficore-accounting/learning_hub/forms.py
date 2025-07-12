@@ -4,6 +4,87 @@ from wtforms.validators import DataRequired, Email, Optional
 from flask import session
 from utils import trans
 
+from flask_wtf import FlaskForm
+from wtforms import StringField, FileField, SubmitField, SelectField, TextAreaField
+from wtforms.validators import DataRequired, Length, Optional, Regexp
+from flask import session
+
+class UploadForm(FlaskForm):
+    """Form for uploading lesson content (e.g., videos, text) for the learning hub."""
+    title = StringField(
+        'Lesson Title (English)',
+        validators=[DataRequired(), Length(min=3, max=100)],
+        description="Enter the lesson title in English."
+    )
+    title_ha = StringField(
+        'Lesson Title (Hausa)',
+        validators=[DataRequired(), Length(min=3, max=100)],
+        description="Enter the lesson title in Hausa."
+    )
+    content_type = SelectField(
+        'Content Type',
+        choices=[('text', 'Text'), ('video', 'Video')],
+        validators=[DataRequired()],
+        description="Select the type of content for this lesson."
+    )
+    content_file = FileField(
+        'Content File',
+        validators=[Optional()],
+        description="Upload a video file (e.g., MP4) for video lessons."
+    )
+    content_text = TextAreaField(
+        'Content Text (English)',
+        validators=[Optional(), Length(max=5000)],
+        description="Enter the lesson content in English (for text-based lessons)."
+    )
+    content_text_ha = TextAreaField(
+        'Content Text (Hausa)',
+        validators=[Optional(), Length(max=5000)],
+        description="Enter the lesson content in Hausa (for text-based lessons)."
+    )
+    course_id = StringField(
+        'Course ID',
+        validators=[DataRequired(), Regexp(r'^[a-z0-9_]+$')],
+        description="Enter the course ID this lesson belongs to (e.g., budgeting_101)."
+    )
+    module_id = StringField(
+        'Module ID',
+        validators=[DataRequired(), Regexp(r'^[a-z0-9_-]+$')],
+        description="Enter the module ID this lesson belongs to (e.g., module-1)."
+    )
+    submit = SubmitField('Upload Lesson')
+
+class LearningHubProfileForm(FlaskForm):
+    """Form for updating user profile settings in the learning hub."""
+    language = SelectField(
+        'Preferred Language',
+        choices=[('en', 'English'), ('ha', 'Hausa')],
+        validators=[DataRequired()],
+        description="Select your preferred language for the learning hub."
+    )
+    role = SelectField(
+        'Role',
+        choices=[
+            ('civil_servant', 'Civil Servant'),
+            ('nysc', 'NYSC Member'),
+            ('agent', 'Agent')
+        ],
+        validators=[DataRequired()],
+        description="Select your role to access relevant courses."
+    )
+    full_name = StringField(
+        'Full Name',
+        validators=[DataRequired(), Length(min=2, max=100)],
+        description="Enter your full name."
+    )
+    phone_number = StringField(
+        'Phone Number',
+        validators=[Optional(), Regexp(r'^\+?234\d{10}$', message="Enter a valid Nigerian phone number (e.g., +2348031234567).")],
+        description="Enter your phone number (optional)."
+    )
+    submit = SubmitField('Update Profile')
+    
+
 class LearningHubProfileForm(FlaskForm):
     first_name = StringField(trans('general_first_name', default='First Name'), validators=[DataRequired()])
     email = StringField(trans('general_email', default='Email'), validators=[Optional(), Email()])
