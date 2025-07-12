@@ -156,6 +156,14 @@ _PERSONAL_NAV = [
         "description_key": "bill_bill_desc",
         "tooltip_key": "bill_tooltip",
         "icon": "bi-receipt"
+    },    
+    {
+        "endpoint": "learning_hub.main",
+        "label": "Learning Hub",
+        "label_key": "learning_hub_main",
+        "description_key": "learning_hub_desc",
+        "tooltip_key": "learning_hub_tooltip",
+        "icon": "bi-book"
     },
     {
         "endpoint": "settings.profile",
@@ -247,6 +255,14 @@ _PERSONAL_EXPLORE_FEATURES = [
         "description_key": "learning_hub_desc",
         "tooltip_key": "learning_hub_tooltip",
         "icon": "bi-book"
+    },
+    {
+        "endpoint": "reports.index",
+        "label": "Reports",
+        "label_key": "personal_reports",
+        "description_key": "personal_reports_desc",
+        "tooltip_key": "personal_reports_tooltip",
+        "icon": "bi-journal-minus"
     },
 ]
 
@@ -400,6 +416,14 @@ _BUSINESS_EXPLORE_FEATURES = [
         "description_key": "learning_hub_desc",
         "tooltip_key": "learning_hub_tooltip",
         "icon": "bi-book"
+    },
+    {
+        "endpoint": "reports.index",
+        "label": "Reports",
+        "label_key": "business_reports",
+        "description_key": "business_reports_desc",
+        "tooltip_key": "business_reports_tooltip",
+        "icon": "bi-journal-minus"
     },
 ]
 
