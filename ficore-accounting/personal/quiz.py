@@ -268,6 +268,7 @@ def main():
     
     try:
         log_tool_usage(
+            tool_name='quiz',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
@@ -286,6 +287,7 @@ def main():
             if action == 'submit_quiz' and form.validate_on_submit():
                 try:
                     log_tool_usage(
+                        tool_name='quiz',
                         db=db,
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
@@ -560,6 +562,7 @@ def unsubscribe(email):
     
     try:
         log_tool_usage(
+            tool_name='quiz',
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
