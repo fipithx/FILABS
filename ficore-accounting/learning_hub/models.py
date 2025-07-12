@@ -5,7 +5,8 @@ from flask import current_app, session
 from flask_login import current_user
 import logging
 
-logger = logging.getLogger('ficore_app.learning_hub')
+# Unified logger for the application
+logger = logging.getLogger('ficore_app')
 logger.setLevel(logging.INFO)
 
 # Course and quiz data
@@ -33,7 +34,7 @@ courses_data = {
                         "title_en": "Income Sources",
                         "title_ha": "Tushen Kuɗin Shiga",
                         "content_type": "video",
-                        "content_path": "uploads/budgeting_101_lesson1.mp4",
+                        "content_path": "Uploads/budgeting_101_lesson1.mp4",
                         "content_en": "Understanding different sources of income is crucial for effective budgeting. Learn about salary, business income from local markets like Sabon Gari, and Halal investments.",
                         "content_ha": "Fahimtar tushen kuɗin shiga yana da mahimmanci don tsarin kudi mai inganci. Koyi game da albashi, kuɗin shiga na kasuwanci daga kasuwanni kamar Sabon Gari, da jarin Halal.",
                         "quiz_id": "quiz-1-1"
@@ -509,7 +510,7 @@ courses_data = {
                         "title_en": "What is a Browser?",
                         "title_ha": "Menene Mai Bincike?",
                         "content_type": "video",
-                        "content_path": "uploads/browser_intro.mp4",
+                        "content_path": "Uploads/browser_intro.mp4",
                         "content_en": "Explore how to use web browsers like Chrome to access the internet effectively, even with limited connectivity in Northern Nigeria.",
                         "content_ha": "Bincika yadda ake amfani da masu bincike na yanar gizo kamar Chrome don samun damar intanet yadda ya kamata, ko da tare da ƙarancin haɗin kai a Arewacin Najeriya.",
                         "quiz_id": None
@@ -895,10 +896,10 @@ quizzes_data = {
     }
 }
 
-def init_storage(app):
-    """Initialize storage with app context and logger."""
+def init_learning_materials(app):
+    """Initialize learning materials (courses and quizzes) in MongoDB."""
     with app.app_context():
-        logger.info("Initializing courses storage.", extra={'session_id': 'no-request-context'})
+        logger.info("Initializing learning materials storage.", extra={'session_id': 'no-request-context'})
         try:
             db = get_mongo_db()
             existing_courses = list(db.learning_materials.find({'type': 'course'}))
@@ -938,17 +939,17 @@ def init_storage(app):
             
             if default_courses:
                 db.learning_materials.insert_many(default_courses)
-                logger.info(f"Initialized courses collection with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
+                logger.info(f"Initialized learning_materials with {len(default_courses)} default courses", extra={'session_id': 'no-request-context'})
             else:
                 logger.info("No new courses to initialize; all default courses already exist", extra={'session_id': 'no-request-context'})
                 
             if default_quizzes:
                 db.learning_materials.insert_many(default_quizzes)
-                logger.info(f"Initialized quizzes collection with {len(default_quizzes)} default quizzes", extra={'session_id': 'no-request-context'})
+                logger.info(f"Initialized learning_materials with {len(default_quizzes)} default quizzes", extra={'session_id': 'no-request-context'})
             else:
                 logger.info("No new quizzes to initialize; all default quizzes already exist", extra={'session_id': 'no-request-context'})
         except Exception as e:
-            logger.error(f"Error initializing courses: {str(e)}", exc_info=True, extra={'session_id': 'no-request-context'})
+            logger.error(f"Error initializing learning materials: {str(e)}", exc_info=True, extra={'session_id': 'no-request-context'})
             raise
 
 def get_progress():
@@ -991,6 +992,7 @@ def save_course_progress(course_id, course_progress):
         filter_kwargs = {'course_id': course_id} if current_user.is_authenticated and hasattr(current_user, 'is_admin') and current_user.is_admin else {'user_id': current_user.id, 'course_id': course_id} if current_user.is_authenticated else {'session_id': session['sid'], 'course_id': course_id}
         update_data = {
             '$set': {
+                'type': 'progress',
                 'user_id': current_user.id if current_user.is_authenticated else None,
                 'session_id': session['sid'],
                 'course_id': course_id,
@@ -1006,6 +1008,7 @@ def save_course_progress(course_id, course_progress):
         logger.info(f"Saved progress for course {course_id}", extra={'session_id': session['sid']})
     except Exception as e:
         logger.error(f"Error saving progress to MongoDB for course {course_id}: {str(e)}", extra={'session_id': session.get('sid', 'no-session-id')})
+        raise
 
 def course_lookup(course_id):
     """Retrieve course by ID with validation and fallback to in-memory data."""
