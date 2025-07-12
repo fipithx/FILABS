@@ -130,7 +130,6 @@ def main():
     try:
         log_tool_usage(
             db=db,
-            details='financial_health',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='main_view'
@@ -149,7 +148,6 @@ def main():
                 try:
                     log_tool_usage(
                         db=db,
-                        details='financial_health',
                         user_id=current_user.id if current_user.is_authenticated else None,
                         session_id=session.get('sid', 'unknown'),
                         action='calculate_score'
@@ -425,7 +423,6 @@ def summary():
     try:
         log_tool_usage(
             db=db,
-            details='financial_health',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='summary_view'
@@ -465,7 +462,6 @@ def unsubscribe(email):
     try:
         log_tool_usage(
             db=db,
-            details='financial_health',
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown'),
             action='unsubscribe'
