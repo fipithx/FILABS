@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ tool_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_hub.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</h1>
+        <p>{{ t('main_welcome', default='Your central hub for financial education and digital skills in Northern Nigeria.', lang=lang) }}</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('learning_hub.personal') }}">{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.business') }}">{{ t('learning_hub_business_title', default='Business Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.agents') }}">{{ t('learning_hub_agents_title', default='Agent Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.compliance') }}">{{ t('learning_hub_compliance_title', default='Compliance Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.tool_tutorials') }}">{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.profile') }}">{{ t('learning_hub_profile_title', default='Profile', lang=lang) }}</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        {% if error %}
+            <div class="card">
+                <p style="color: red;">{{ error }}</p>
+            </div>
+        {% endif %}
+
+        <div class="section-title">{{ t('progress_summary', default='Your Learning Progress', lang=lang) }}</div>
+        <div class="card">
+            <p>{{ t('total_courses', default='Total Courses: {0}', lang=lang).format(total_courses) }}</p>
+            <p>{{ t('total_completed', default='Courses Completed: {0}', lang=lang).format(total_completed) }}</p>
+            <p>{{ t('quiz_scores', default='Quiz Scores: {0}', lang=lang).format(quiz_scores_count) }}</p>
+            <p>{{ t('certificates_earned', default='Certificates Earned: {0}', lang=lang).format(certificates_earned) }}</p>
+            <p>{{ t('coins_earned', default='Coins Earned: {0}', lang=lang).format(total_coins_earned) }}</p>
+            <div class="gamification">
+                {% for badge in badges_earned %}
+                    <img src="{{ url_for('static', filename='images/badge.png') }}" alt="Badge">
+                    <span>{{ badge.title_en }}</span>
+                {% endfor %}
+            </div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: {{ (total_completed / total_courses * 100) if total_courses > 0 else 0 }}%;"></div>
+            </div>
+        </div>
+
+        <div class="section-title">{{ t('available_courses', default='Available Courses', lang=lang) }}</div>
+        <form method="POST" action="{{ url_for('learning_hub.set_role_filter') }}">
+            <label for="role_filter">{{ t('role_filter', default='Filter by Role:', lang=lang) }}</label>
+            <select id="role_filter" name="role">
+                <option value="all" {% if role_filter == 'all' %}selected{% endif %}>{{ t('role_all', default='All', lang=lang) }}</option>
+                <option value="civil_servant" {% if role_filter == 'civil_servant' %}selected{% endif %}>{{ t('role_civil_servant', default='Civil Servant', lang=lang) }}</option>
+                <option value="nysc" {% if role_filter == 'nysc' %}selected{% endif %}>{{ t('role_nysc', default='NYSC', lang=lang) }}</option>
+                <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>{{ t('role_agent', default='Agent', lang=lang) }}</option>
+            </select>
+            <button type="submit">{{ t('apply_filter', default='Apply Filter', lang=lang) }}</button>
+        </form>
+
+        {% for course_id, course in courses.items() %}
+            <div class="card" id="course-{{ course_id }}">
+                <h3>{{ course.title_en if lang == 'en' else course.title_ha }}</h3>
+                <p>{{ course.description_en if lang == 'en' else course.description_ha }}</p>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width: {{ (progress[course_id].lessons_completed | length / course.modules | sum(attribute='lessons') | length * 100) if course_id in progress and course.modules | sum(attribute='lessons') | length > 0 else 0 }}%;"></div>
+                </div>
+                <a href="{{ url_for('learning_hub.course_overview', course_id=course_id) }}" class="btn">{{ t('view_course', default='View Course', lang=lang) }}</a>
+            </div>
+        {% endfor %}
+
+        {% if is_admin() %}
+            <div class="section-title">{{ t('upload_content', default='Upload New Content', lang=lang) }}</div>
+            <form method="POST" action="{{ url_for('learning_hub.learning_hub_main') }}" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="upload">
+                {{ upload_form.hidden_tag() }}
+                <label for="title">{{ t('course_title', default='Course Title', lang=lang) }}</label>
+                {{ upload_form.title }}
+                <label for="description">{{ t('course_description', default='Course Description', lang=lang) }}</label>
+                {{ upload_form.description }}
+                <label for="course_id">{{ t('course_id', default='Course ID', lang=lang) }}</label>
+                {{ upload_form.course_id }}
+                <label for="roles">{{ t('roles', default='Roles', lang=lang) }}</label>
+                {{ upload_form.roles }}
+                <label for="content_type">{{ t('content_type', default='Content Type', lang=lang) }}</label>
+                {{ upload_form.content_type }}
+                <label for="is_premium">{{ t('is_premium', default='Premium Content', lang=lang) }}</label>
+                {{ upload_form.is_premium }}
+                <label for="file">{{ t('upload_file', default='Upload File (mp4, pdf, txt, md)', lang=lang) }}</label>
+                {{ upload_form.file }}
+                <button type="submit">{{ t('upload', default='Upload', lang=lang) }}</button>
+            </form>
+        {% endif %}
+
+        <div class="section-title">{{ t('recent_activities', default='Recent Activities', lang=lang) }}</div>
+        <div class="card">
+            {% for activity in activities %}
+                <p>{{ activity.action }} - {{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="section-title">{{ t('webinar_registration', default='Register for Upcoming Webinar', lang=lang) }}</div>
+        <form method="POST" action="{{ url_for('learning_hub.register_webinar') }}">
+            <label for="email">{{ t('email', default='Email', lang=lang) }}</label>
+            <input type="email" name="email" required>
+            <button type="submit">{{ t('register', default='Register', lang=lang) }}</button>
+        </form>
+    </div>
+
+    <div class="language-toggle">
+        <a href="?lang=en">{{ t('lang_english', default='English', lang=lang) }}</a> |
+        <a href="?lang=ha">{{ t('lang_hausa', default='Hausa', lang=lang) }}</a>
+    </div>
+
+    <footer>
+        <p>{{ t('footer_text', default='Empowering Northern Nigeria through Financial Education', lang=lang) }}</p>
+    </footer>
+
+    <script>
+        $(document).ready(function() {
+            $('a[href*="#"]').click(function(e) {
+                e.preventDefault();
+                const target = $(this.hash);
+                if (target.length) {
+                    $('html, body').animate({ scrollTop: target.offset().top }, 500);
+                } else {
+                    // Fetch course or lesson data via AJAX
+                    const hash = this.hash.substring(1);
+                    if (hash.startsWith('course-')) {
+                        const courseId = hash.replace('course-', '');
+                        $.get('{{ url_for("learning_hub.get_course_data") }}/' + courseId, function(data) {
+                            if (data.success) {
+                                // Render course content dynamically
+                                $('#course-content').html(`
+                                    <div class="card">
+                                        <h3>${data.course.title_en}</h3>
+                                        <p>${data.course.description_en}</p>
+                                        <div class="progress-bar">
+                                            <div class="progress-bar-fill" style="width: ${data.progress.lessons_completed.length / data.course.modules.reduce((sum, m) => sum + m.lessons.length, 0) * 100}%"></div>
+                                        </div>
+                                        ${data.course.modules.map(m => `
+                                            <div>
+                                                <h4>${m.title_en}</h4>
+                                                ${m.lessons.map(l => `
+                                                    <p><a href="#lesson-${courseId}-${l.id}">${l.title_en}</a></p>
+                                                `).join('')}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                `);
+                            }
+                        });
+                    } else if (hash.startsWith('lesson-')) {
+                        const [_, courseId, lessonId] = hash.split('-');
+                        $.get('{{ url_for("learning_hub.get_lesson_data") }}', { course_id: courseId, lesson_id: lessonId }, function(data) {
+                            if (data.success) {
+                                $('#course-content').html(`
+                                    <div class="card">
+                                        <h3>${data.lesson.title_en}</h3>
+                                        <p>${data.lesson.content_en}</p>
+                                        <button onclick="markLessonComplete('${courseId}', '${lessonId}')">{{ t('mark_complete', default='Mark as Complete', lang=lang) }}</button>
+                                        ${data.next_lesson_id ? `<a href="#lesson-${courseId}-${data.next_lesson_id}" class="btn">{{ t('next_lesson', default='Next Lesson', lang=lang) }}</a>` : ''}
+                                    </div>
+                                `);
+                            }
+                        });
+                    } else if (hash.startsWith('quiz-')) {
+                        const [_, courseId, quizId] = hash.split('-');
+                        $.get('{{ url_for("learning_hub.get_quiz_data") }}', { course_id: courseId, quiz_id: quizId }, function(data) {
+                            if (data.success) {
+                                $('#course-content').html(`
+                                    <div class="card">
+                                        <h3>${data.quiz.id}</h3>
+                                        <form method="POST" action="{{ url_for('learning_hub.quiz_action') }}">
+                                            <input type="hidden" name="course_id" value="${courseId}">
+                                            <input type="hidden" name="quiz_id" value="${quizId}">
+                                            <input type="hidden" name="action" value="submit_quiz">
+                                            ${data.quiz.questions.map((q, i) => `
+                                                <p>${q.question_en}</p>
+                                                ${q.options_en.map(opt => `
+                                                    <label><input type="radio" name="q${i}" value="${opt}">${opt}</label><br>
+                                                `).join('')}
+                                            `).join('')}
+                                            <button type="submit">{{ t('submit_quiz', default='Submit Quiz', lang=lang) }}</button>
+                                        </form>
+                                    </div>
+                                `);
+                            }
+                        });
+                    }
+                }
+            });
+
+            function markLessonComplete(courseId, lessonId) {
+                $.post('{{ url_for("learning_hub.lesson_action") }}', {
+                    course_id: courseId,
+                    lesson_id: lessonId,
+                    action: 'mark_complete'
+                }, function(data) {
+                    if (data.success) {
+                        alert(data.message + (data.coins_earned ? ' ' + data.coins_earned : '') + (data.badge_earned ? ' Badge: ' + data.badge_earned : ''));
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
