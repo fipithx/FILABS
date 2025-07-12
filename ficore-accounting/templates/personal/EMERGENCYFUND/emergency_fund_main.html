@@ -106,7 +106,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('emergency_fund_current_savings', default='Current Savings') }}</label>
                                     {{ form.current_savings(class="form-control number-input", placeholder=t('emergency_fund_current_savings_placeholder', default='e.g., 20,000')) }}
-                                    <div class="invalid-feedback">{{ t('emergency_fund_current_savings_required', default='Current savings amount is required') }}</div>
+                                    <div class="invalid-feedback">{{ t('emergency_fund_current_savings_invalid', default='Please enter a valid savings amount') }}</div>
                                     <div class="form-text">{{ t('emergency_fund_current_savings_example', default='Example: ₦20,000 in your Ajo savings') }}</div>
                                 </div>
                             </div>
@@ -124,7 +124,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('emergency_fund_dependents', default='Number of Dependents') }}</label>
                                     {{ form.dependents(class="form-control number-input", placeholder=t('emergency_fund_dependents_placeholder', default='e.g., 3')) }}
-                                    <div class="invalid-feedback">{{ t('emergency_fund_dependents_required', default='Number of dependents is required') }}</div>
+                                    <div class="invalid-feedback">{{ t('emergency_fund_dependents_invalid', default='Please enter a valid number of dependents') }}</div>
                                     <div class="form-text">{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') }}</div>
                                 </div>
                             </div>
@@ -159,7 +159,7 @@
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
                                         <h6>{{ t('emergency_fund_target_amount', default='Target Amount') }}</h6>
-                                        <h4>{{ latest_record.get('target_amount', 0) | format_currency }}</h4>
+                                        <h4>{{ latest_record.get('target_amount', '₦0') }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -167,7 +167,7 @@
                                 <div class="card bg-warning text-white">
                                     <div class="card-body text-center">
                                         <h6>{{ t('emergency_fund_current_savings', default='Current Savings') }}</h6>
-                                        <h4>{{ latest_record.get('current_savings', 0) | format_currency }}</h4>
+                                        <h4>{{ latest_record.get('current_savings', '₦0') }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -175,7 +175,7 @@
                                 <div class="card bg-info text-white">
                                     <div class="card-body text-center">
                                         <h6>{{ t('emergency_fund_savings_gap', default='Savings Gap') }}</h6>
-                                        <h4>{{ latest_record.get('savings_gap', 0) | format_currency }}</h4>
+                                        <h4>{{ latest_record.get('savings_gap', '₦0') }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -187,7 +187,7 @@
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('emergency_fund_monthly_expenses', default='Monthly Expenses') }}</span>
-                                        <strong>{{ latest_record.get('monthly_expenses', 0) | format_currency }}</strong>
+                                        <strong>{{ latest_record.get('monthly_expenses', '₦0') }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('emergency_fund_recommended_months', default='Recommended Months') }}</span>
@@ -195,7 +195,7 @@
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('emergency_fund_monthly_savings', default='Monthly Savings Needed') }}</span>
-                                        <strong>{{ latest_record.get('monthly_savings', 0) | format_currency }}</strong>
+                                        <strong>{{ latest_record.get('monthly_savings', '₦0') }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('emergency_fund_timeline', default='Timeline') }}</span>
@@ -203,7 +203,7 @@
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('emergency_fund_created_at', default='Created At') }}</span>
-                                        <strong>{{ latest_record.get('created_at', 'N/A') | format_datetime }}</strong>
+                                        <strong>{{ latest_record.get('created_at', 'N/A') }}</strong>
                                     </li>
                                 </ul>
                             </div>
@@ -275,42 +275,77 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Number formatting
+    // Number formatting for currency and dependents inputs
     document.querySelectorAll('.number-input').forEach(input => {
         input.addEventListener('input', () => {
-            let value = input.value.replace(/,/g, '');
-            if (!value) return;
-            
-            if (input.id === 'dependents' && parseInt(value) > 100) {
-                value = '100';
-                alert('{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') }}');
-            } else if (parseFloat(value) > 10000000000) {
-                value = '10000000000';
-                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed ₦10 billion') }}');
+            let value = input.value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters except decimal point
+            if (!value) {
+                input.value = '';
+                return;
             }
-            
-            input.value = parseFloat(value).toLocaleString('en-NG', { maximumFractionDigits: input.id === 'dependents' ? 0 : 2 });
+
+            // Handle dependents (integer only)
+            if (input.id === 'dependents') {
+                value = parseInt(value) || 0;
+                if (value > 100) {
+                    value = 100;
+                    alert('{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') }}');
+                }
+                input.value = value.toLocaleString('en-NG', { maximumFractionDigits: 0 });
+            } else {
+                // Handle currency fields (allow decimals)
+                value = parseFloat(value) || 0;
+                if (value > 10000000000) {
+                    value = 10000000000;
+                    alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed ₦10 billion') }}');
+                }
+                input.value = value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
         });
 
         input.addEventListener('paste', (e) => {
             e.preventDefault();
             let pasted = (e.clipboardData || window.clipboardData).getData('text');
-            let clean = pasted.replace(/[^0-9.]/g, '');
-            input.value = parseFloat(clean).toLocaleString('en-NG', { maximumFractionDigits: input.id === 'dependents' ? 0 : 2 });
+            let clean = pasted.replace(/[^0-9.]/g, ''); // Remove non-numeric characters
+            if (!clean) return;
+
+            if (input.id === 'dependents') {
+                clean = parseInt(clean) || 0;
+                if (clean > 100) {
+                    clean = 100;
+                    alert('{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') }}');
+                }
+                input.value = clean.toLocaleString('en-NG', { maximumFractionDigits: 0 });
+            } else {
+                clean = parseFloat(clean) || 0;
+                if (clean > 10000000000) {
+                    clean = 10000000000;
+                    alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed ₦10 billion') }}');
+                }
+                input.value = clean.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
         });
 
         input.addEventListener('blur', () => {
             if (input.value) {
-                input.value = parseFloat(input.value.replace(/,/g, '')).toLocaleString('en-NG', { maximumFractionDigits: input.id === 'dependents' ? 0 : 2 });
+                let value = input.value.replace(/[^0-9.]/g, '');
+                if (input.id === 'dependents') {
+                    value = parseInt(value) || 0;
+                    input.value = value.toLocaleString('en-NG', { maximumFractionDigits: 0 });
+                } else {
+                    value = parseFloat(value) || 0;
+                    input.value = value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
             }
         });
     });
 
-    // Form submission
+    // Form submission: Clean inputs before sending
     document.getElementById('emergencyFundForm').addEventListener('submit', function() {
         document.querySelectorAll('.number-input').forEach(function(input) {
             if (input.value) {
-                input.value = input.value.replace(/,/g, '');
+                let cleanValue = input.value.replace(/[^0-9.]/g, '');
+                input.value = cleanValue;
             }
         });
     });
