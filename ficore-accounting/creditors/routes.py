@@ -55,6 +55,29 @@ def index():
         flash(trans('creditors_fetch_error', default='An error occurred'), 'danger')
         return redirect(url_for('dashboard.index'))
 
+@creditors_bp.route('/manage')
+@login_required
+@utils.requires_role('trader')
+def manage():
+    """List all creditor records for management (edit/delete) by the current user."""
+    try:
+        db = utils.get_mongo_db()
+        # TEMPORARY: Allow admin to view all creditors during testing
+        # TODO: Restore original user_id filter for production
+        query = {'type': 'creditor'} if utils.is_admin() else {'user_id': str(current_user.id), 'type': 'creditor'}
+        creditors = list(db.records.find(query).sort('created_at', -1))
+        
+        return render_template(
+            'creditors/manage_creditors.html',
+            creditors=creditors,
+            format_currency=utils.format_currency,
+            title=trans('creditors_manage_title', default='Manage Creditors', lang=session.get('lang', 'en'))
+        )
+    except Exception as e:
+        logger.error(f"Error fetching creditors for manage page for user {current_user.id}: {str(e)}")
+        flash(trans('creditors_fetch_error', default='An error occurred'), 'danger')
+        return redirect(url_for('creditors.index'))
+
 @creditors_bp.route('/view/<id>')
 @login_required
 @utils.requires_role('trader')
@@ -401,8 +424,21 @@ def delete(id):
         # TEMPORARY: Allow admin to delete any creditor during testing
         # TODO: Restore original user_id filter for production
         query = {'_id': ObjectId(id), 'type': 'creditor'} if utils.is_admin() else {'_id': ObjectId(id), 'user_id': str(current_user.id), 'type': 'creditor'}
+        creditor = db.records.find_one(query)
+        if not creditor:
+            flash(trans('creditors_record_not_found', default='Record not found'), 'danger')
+            return redirect(url_for('creditors.index'))
         result = db.records.delete_one(query)
         if result.deleted_count:
+            db.creditor_transactions.insert_one({
+                'user_id': str(current_user.id),
+                'creditor_id': str(creditor['_id']),
+                'creditor_name': creditor['name'],
+                'type': 'delete',
+                'amount_change': 0,
+                'date': datetime.utcnow(),
+                'ref': f"Deleted creditor: {creditor['name']}"
+            })
             flash(trans('creditors_delete_success', default='Creditor deleted successfully'), 'success')
         else:
             flash(trans('creditors_record_not_found', default='Record not found'), 'danger')
