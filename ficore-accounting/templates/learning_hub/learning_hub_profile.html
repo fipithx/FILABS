@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ tool_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_hub.css') }}">
+</head>
+<body>
+    <header>
+        <h1>{{ t('learning_hub_profile_title', default='Learning Hub Profile', lang=lang) }}</h1>
+        <p>{{ t('profile_welcome', default='Manage your profile and email preferences to stay updated on your learning journey.', lang=lang) }}</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('learning_hub.main') }}">{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.personal') }}">{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.business') }}">{{ t('learning_hub_business_title', default='Business Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.agents') }}">{{ t('learning_hub_agents_title', default='Agent Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.compliance') }}">{{ t('learning_hub_compliance_title', default='Compliance Learning', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.tool_tutorials') }}">{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="section-title">{{ t('profile_settings', default='Profile Settings', lang=lang) }}</div>
+        <form method="POST" action="{{ url_for('learning_hub.profile') }}">
+            {{ profile_form.hidden_tag() }}
+            <label for="first_name">{{ t('first_name', default='First Name', lang=lang) }}</label>
+            {{ profile_form.first_name }}
+            <label for="email">{{ t('email', default='Email', lang=lang) }}</label>
+            {{ profile_form.email }}
+            <label for="send_email">{{ t('send_email', default='Receive Email Notifications', lang=lang) }}</label>
+            {{ profile_form.send_email }}
+            <button type="submit">{{ t('save_profile', default='Save Profile', lang=lang) }}</button>
+        </form>
+        <a href="{{ url_for('learning_hub.unsubscribe', email=profile_data.email) }}" class="btn">{{ t('unsubscribe', default='Unsubscribe from Emails', lang=lang) }}</a>
+    </div>
+
+    <div class="language-toggle">
+        <a href="?lang=en">{{ t('lang_english', default='English', lang=lang) }}</a> |
+        <a href="?lang=ha">{{ t('lang_hausa', default='Hausa', lang=lang) }}</a>
+    </div>
+
+    <footer>
+        <p>{{ t('footer_text', default='Empowering Northern Nigeria through Financial Education', lang=lang) }}</p>
+    </footer>
+</body>
+</html>
