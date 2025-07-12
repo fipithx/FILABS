@@ -8,7 +8,7 @@ import logging
 import uuid
 import time
 from translations import trans
-from utils import get_mongo_db, logger  # Use SessionAdapter logger from utils
+from utils import get_mongo_db, log_tool_usage, logger # Use SessionAdapter logger from utils
 from functools import lru_cache
 import traceback
 
@@ -1101,7 +1101,7 @@ def create_feedback(db, feedback_data):
                     exc_info=True, extra={'session_id': feedback_data.get('session_id', 'no-session-id')})
         raise
 
-def utils.log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
+def log_tool_usage(db, tool_name, user_id=None, session_id=None, action=None):
     """
     Log tool usage in the tool_usage collection.
     
