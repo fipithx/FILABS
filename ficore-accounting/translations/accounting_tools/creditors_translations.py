@@ -8,6 +8,7 @@ CREDITORS_TRANSLATIONS = {
         'creditors_dashboard_desc': 'Keep track of money you owe to others.',
         'creditors_tooltip': 'Manage your debts to creditors.',
         'creditors_list': 'Creditors List',
+        'they_owe_title': 'They Owe',
         # Creditors
         'creditors_amount_owed': 'Amount Owed',
         'creditors_add_creditor': 'Add Creditor',
@@ -96,6 +97,7 @@ CREDITORS_TRANSLATIONS = {
         'creditors_send_delivery_reminder': 'Aika Tunatarwa game da Isarwa',
         'creditors_total_outstanding': 'Jimillar da Ya Rage',
         'creditors_overdue_payments': 'Biyan da Ya Wuce Lokaci',
+        'they_owe_title': 'Suna Bashi',
         'creditors_dashboard_desc':'Kula da wadanda suke binku bashi.',
         'creditors_aging_report': 'Rahoton Tsufa',
         'creditors_create_what_you_owe': 'Ƙirƙiri Abin da Kake Bashi',
