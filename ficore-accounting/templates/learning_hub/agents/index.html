@@ -1,3 +1,5 @@
+{% extends 'base.html' %}
+{% block content %}
 <!DOCTYPE html>
 <html lang="{{ lang }}">
 <head>
@@ -40,7 +42,7 @@
             <a href="{{ url_for('learning_hub.course_overview', course_id='fraud_prevention_101') }}" class="btn">{{ t('start_course', default='Start Course', lang=lang) }}</a>
         </div>
         <div class="gamification">
-            <img src="{{ url_for('static', filename='images/coin.png') }}" alt="Coin">
+            <img src="{{ url_for('static', filename='img/coin.png') }}" alt="Coin">
             <p>{{ t('gamification_agents', default='Earn coins and unlock the “Trusted Agent” badge by completing agent courses!', lang=lang) }}</p>
         </div>
     </div>
@@ -55,3 +57,4 @@
     </footer>
 </body>
 </html>
+{% endblock %}
