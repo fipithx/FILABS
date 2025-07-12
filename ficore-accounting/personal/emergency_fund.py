@@ -35,8 +35,9 @@ class CommaSeparatedFloatField(FloatField):
     def process_formdata(self, valuelist):
         if valuelist:
             try:
-                self.data = float(valuelist[0].replace(',', ''))
-            except ValueError:
+                cleaned_value = clean_currency(valuelist[0])
+                self.data = float(cleaned_value) if cleaned_value else None
+            except (ValueError, TypeError):
                 self.data = None
                 raise ValidationError(self.gettext('Not a valid number'))
 
@@ -44,8 +45,9 @@ class CommaSeparatedIntegerField(IntegerField):
     def process_formdata(self, valuelist):
         if valuelist:
             try:
-                self.data = int(valuelist[0].replace(',', ''))
-            except ValueError:
+                cleaned_value = clean_currency(valuelist[0])
+                self.data = int(cleaned_value) if cleaned_value else None
+            except (ValueError, TypeError):
                 self.data = None
                 raise ValidationError(self.gettext('Not a valid integer'))
 
@@ -120,7 +122,7 @@ class EmergencyFundForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main emergency fund interface with tabbed layout."""
-    db = get_mongo_db()  # Initialize database connection
+    db = get_mongo_db()
     try:
         activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
         current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
@@ -128,9 +130,11 @@ def main():
         current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
         activities = []
+
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
+
     session.permanent = True
     session.modified = True
     form_data = {}
@@ -138,6 +142,7 @@ def main():
         form_data['email'] = current_user.email
         form_data['first_name'] = current_user.get_first_name()
     form = EmergencyFundForm(data=form_data)
+
     try:
         log_tool_usage(
             tool_name='emergency_fund',
@@ -149,7 +154,7 @@ def main():
     except Exception as e:
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('emergency_fund_log_error', default='Error logging emergency fund activity. Please try again.'), 'warning')
-    
+
     try:
         filter_kwargs = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         if request.method == 'POST':
@@ -166,7 +171,7 @@ def main():
                 except Exception as e:
                     current_app.logger.error(f"Failed to log emergency fund plan creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_log_error', default='Error logging emergency fund plan creation. Continuing with submission.'), 'warning')
-                
+
                 months = int(form.timeline.data)
                 base_target = form.monthly_expenses.data * months
                 recommended_months = months
@@ -182,6 +187,7 @@ def main():
                 percent_of_income = None
                 if form.monthly_income.data and form.monthly_income.data > 0:
                     percent_of_income = (monthly_savings / form.monthly_income.data) * 100
+
                 badges = []
                 if form.timeline.data in ['6', '12']:
                     badges.append('Planner')
@@ -191,6 +197,7 @@ def main():
                     badges.append('Steady Saver')
                 if (form.current_savings.data or 0) >= target_amount:
                     badges.append('Fund Master')
+
                 emergency_fund = {
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
@@ -213,9 +220,10 @@ def main():
                     'badges': badges,
                     'created_at': datetime.utcnow()
                 }
+
                 try:
                     db.emergency_funds.insert_one(emergency_fund)
-                    current_app.logger.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
+                    current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
                 except Exception as e:
                     current_app.logger.error(f"Failed to save emergency fund record to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -231,11 +239,13 @@ def main():
                         activities=activities,
                         tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
                     )
+
                 if form.email_opt_in.data and form.email.data:
                     try:
                         config = EMAIL_CONFIG["emergency_fund"]
                         subject = trans(config["subject_key"], default='Your Emergency Fund Plan')
                         template = config["template"]
+                        created_at_str = emergency_fund['created_at'].strftime('%Y-%m-%d') if emergency_fund.get('created_at') else 'N/A'
                         send_email(
                             app=current_app,
                             logger=current_app.logger,
@@ -257,7 +267,7 @@ def main():
                                 'monthly_savings': format_currency(monthly_savings),
                                 'percent_of_income': f"{percent_of_income:.2f}%" if percent_of_income else 'N/A',
                                 'badges': badges,
-                                'created_at': emergency_fund['created_at'].strftime('%Y-%m-%d'),
+                                'created_at': created_at_str,
                                 'cta_url': url_for('emergency_fund.main', _external=True),
                                 'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
                             },
@@ -267,15 +277,19 @@ def main():
                     except Exception as e:
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
+
         user_data = db.emergency_funds.find(filter_kwargs).sort('created_at', -1)
         user_data = list(user_data)
         current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'unknown')})
+
         if not user_data and current_user.is_authenticated and current_user.email:
             user_data = db.emergency_funds.find({'email': current_user.email}).sort('created_at', -1)
             user_data = list(user_data)
             current_app.logger.info(f"Retrieved {len(user_data)} records for email {current_user.email}", extra={'session_id': session.get('sid', 'unknown')})
+
         records = []
         for record in user_data:
+            created_at_str = record.get('created_at').strftime('%Y-%m-%d') if record.get('created_at') and isinstance(record.get('created_at'), datetime) else 'N/A'
             record_data = {
                 'id': str(record['_id']),
                 'user_id': record.get('user_id'),
@@ -296,9 +310,10 @@ def main():
                 'monthly_savings': format_currency(record.get('monthly_savings', 0)),
                 'percent_of_income': f"{record.get('percent_of_income'):.2f}%" if record.get('percent_of_income') else 'N/A',
                 'badges': record.get('badges', []),
-                'created_at': record.get('created_at').strftime('%Y-%m-%d') if record.get('created_at') else 'N/A'
+                'created_at': created_at_str
             }
             records.append((record_data['id'], record_data))
+
         latest_record = records[-1][1] if records else {
             'monthly_expenses': format_currency(0),
             'monthly_income': 'N/A',
@@ -314,6 +329,7 @@ def main():
             'badges': [],
             'created_at': 'N/A'
         }
+
         insights = []
         try:
             target_amount_float = float(clean_currency(latest_record['target_amount']) or 0)
@@ -331,6 +347,7 @@ def main():
                         insights.append(trans('emergency_fund_insight_large_family', default='With {dependents} dependents, consider a {recommended_months}-month fund.', dependents=latest_record.get('dependents', 0), recommended_months=latest_record.get('recommended_months', 0)))
         except (ValueError, TypeError) as e:
             current_app.logger.warning(f"Error parsing amounts for insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+
         cross_tool_insights = []
         filter_kwargs_budget = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         budget_data = db.budgets.find(filter_kwargs_budget).sort('created_at', -1)
@@ -341,6 +358,7 @@ def main():
                 savings_possible = latest_budget['income'] - latest_budget['fixed_expenses']
                 if savings_possible > 0:
                     cross_tool_insights.append(trans('emergency_fund_cross_tool_savings_possible', default='Your budget shows {amount} available for savings monthly.', amount=format_currency(savings_possible)))
+
         return render_template(
             'personal/EMERGENCYFUND/emergency_fund_main.html',
             form=form,
@@ -391,7 +409,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def summary():
     """Return the latest emergency fund target amount or savings gap for the current user."""
-    db = get_mongo_db()  # Initialize database connection
+    db = get_mongo_db()
     try:
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
         collection = db.emergency_funds
@@ -400,8 +418,8 @@ def summary():
         if not latest_record:
             current_app.logger.info(f"No emergency fund record found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
             return jsonify({'targetAmount': 0.0, 'savingsGap': 0.0})
-        target_amount = latest_record[0].get('target_amount', 0.0)
-        savings_gap = latest_record[0].get('savings_gap', 0.0)
+        target_amount = float(clean_currency(str(latest_record[0].get('target_amount', 0.0))) or 0.0)
+        savings_gap = float(clean_currency(str(latest_record[0].get('savings_gap', 0.0))) or 0.0)
         current_app.logger.info(f"Fetched emergency fund summary for user {current_user.id}: target_amount={target_amount}, savings_gap={savings_gap}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'targetAmount': target_amount, 'savingsGap': savings_gap})
     except Exception as e:
@@ -413,7 +431,7 @@ def summary():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from emergency fund emails."""
-    db = get_mongo_db()  # Initialize database connection
+    db = get_mongo_db()
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -431,7 +449,7 @@ def unsubscribe(email):
         except Exception as e:
             current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans('emergency_fund_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
-        
+
         filter_kwargs = {'email': email}
         if current_user.is_authenticated and not is_admin():
             filter_kwargs['user_id'] = current_user.id
