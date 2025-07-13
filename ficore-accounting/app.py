@@ -412,6 +412,9 @@ def create_app():
                 db.bill_reminders.create_index([('user_id', 1), ('sent_at', -1)])
                 db.bill_reminders.create_index([('notification_id', 1)])
                 db.records.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
+                db.budgets.create_index([('created_at', -1)])
+                db.budgets.create_index([('user_id', 1)])
+                db.budgets.create_index([('session_id', 1)])
                 db.cashflows.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
                 logger.info('Created indexes for personal finance collections')
             except Exception as e:
