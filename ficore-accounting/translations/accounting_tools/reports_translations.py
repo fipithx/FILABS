@@ -8,7 +8,6 @@ REPORTS_TRANSLATIONS = {
         'reports_financial_reports': 'Financial Reports',
         # Reports
         'reports_start_date': 'Start Date',
-        'business_reports': 'Business Reports',
         'reports_end_date': 'End Date',
         'reports_index': 'Reports Dashboard',
         'reports_profit_loss': 'Profit & Loss',
