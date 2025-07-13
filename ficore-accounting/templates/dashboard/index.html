@@ -441,261 +441,262 @@
             <a href="{{ url_for('users.login') }}" class="btn btn-primary">{{ t('general_login', default='Log In') }}</a>
         </div>
     {% endif %}
-</div>
 
-<!-- Creditor Actions Modal -->
-<div class="modal fade" id="creditorActionsModal" tabindex="-1" aria-labelledby="creditorActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="creditorActionsModalLabel">{{ t('creditors_what_you_owe', default='What You Owe') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="creditorModalName"></span></p>
-                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="creditorModalAmount"></span></p>
-                        <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="creditorModalContact"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="creditorModalDescription"></span></p>
-                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="creditorModalDate"></span></p>
+    <!-- Creditor Actions Modal -->
+    <div class="modal fade" id="creditorActionsModal" tabindex="-1" aria-labelledby="creditorActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="creditorActionsModalLabel">{{ t('creditors_what_you_owe', default='What You Owe') }}</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="creditorModalName"></span></p>
+                            <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="creditorModalAmount"></span></p>
+                            <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="creditorModalContact"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="creditorModalDescription"></span></p>
+                            <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="creditorModalDate"></span></p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <a id="creditorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
-                <button id="creditorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
-                <a id="creditorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
-                <form id="creditorDeleteForm" action="#" method="POST" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
-                        {{ t('general_delete', default='Delete') }}
-                    </button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Debtor Actions Modal -->
-<div class="modal fade" id="debtorActionsModal" tabindex="-1" aria-labelledby="debtorActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="debtorActionsModalLabel">{{ t('debtors_what_they_owe_you', default='What They Owe You') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="debtorModalName"></span></p>
-                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="debtorModalAmount"></span></p>
-                        <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="debtorModalContact"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="debtorModalDescription"></span></p>
-                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="debtorModalDate"></span></p>
-                        <p><strong>{{ t('debtors_reminders', default='Reminders') }}:</strong> <span id="debtorModalReminders"></span></p>
-                    </div>
+                <div class="modal-footer">
+                    <a id="creditorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                    <button id="creditorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
+                    <a id="creditorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                    <form id="creditorDeleteForm" action="#" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                            {{ t('general_delete', default='Delete') }}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <a id="debtorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
-                <button id="debtorReminderBtn" class="btn btn-warning" style="display: none;">{{ t('general_reminder', default='Reminder') }}</button>
-                <button id="debtorSnoozeBtn" class="btn btn-primary" style="display: none;">{{ t('general_snooze', default='Snooze') }}</button>
-                <button id="debtorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
-                <a id="debtorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
-                <form id="debtorDeleteForm" action="#" method="POST" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
-                        {{ t('general_delete', default='Delete') }}
-                    </button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
-            </div>
         </div>
     </div>
-</div>
 
-<!-- Payment Actions Modal -->
-<div class="modal fade" id="paymentActionsModal" tabindex="-1" aria-labelledby="paymentActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="paymentActionsModalLabel">{{ t('payments_money_out', default='Money Out') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>{{ t('payments_recipient', default='Recipient') }}:</strong> <span id="paymentModalRecipient"></span></p>
-                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="paymentModalAmount"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="paymentModalDescription"></span></p>
-                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="paymentModalDate"></span></p>
+    <!-- Debtor Actions Modal -->
+    <div class="modal fade" id="debtorActionsModal" tabindex="-1" aria-labelledby="debtorActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="debtorActionsModalLabel">{{ t('debtors_what_they_owe_you', default='What They Owe You') }}</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="debtorModalName"></span></p>
+                            <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="debtorModalAmount"></span></p>
+                            <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="debtorModalContact"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="debtorModalDescription"></span></p>
+                            <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="debtorModalDate"></span></p>
+                            <p><strong>{{ t('debtors_reminders', default='Reminders') }}:</strong> <span id="debtorModalReminders"></span></p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <a id="paymentViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
-                <a id="paymentEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
-                <form id="paymentDeleteForm" action="#" method="POST" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
-                        {{ t('general_delete', default='Delete') }}
-                    </button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Receipt Actions Modal -->
-<div class="modal fade" id="receiptActionsModal" tabindex="-1" aria-labelledby="receiptActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="receiptActionsModalLabel">{{ t('receipts_money_in', default='Money In') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>{{ t('receipts_payer', default='Payer') }}:</strong> <span id="receiptModalPayer"></span></p>
-                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="receiptModalAmount"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="receiptModalDescription"></span></p>
-                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="receiptModalDate"></span></p>
-                    </div>
+                <div class="modal-footer">
+                    <a id="debtorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                    <button id="debtorReminderBtn" class="btn btn-warning" style="display: none;">{{ t('general_reminder', default='Reminder') }}</button>
+                    <button id="debtorSnoozeBtn" class="btn btn-primary" style="display: none;">{{ t('general_snooze', default='Snooze') }}</button>
+                    <button id="debtorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
+                    <a id="debtorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                    <form id="debtorDeleteForm" action="#" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                            {{ t('general_delete', default='Delete') }}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <a id="receiptViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
-                <a id="receiptEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
-                <form id="receiptDeleteForm" action="#" method="POST" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
-                        {{ t('general_delete', default='Delete') }}
-                    </button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
-            </div>
         </div>
     </div>
-</div>
 
-<!-- Inventory Actions Modal -->
-<div class="modal fade" id="inventoryActionsModal" tabindex="-1" aria-labelledby="inventoryActionsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="inventoryActionsModalLabel">{{ t('inventory_goods_stock', default='Goods & Stock') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>{{ t('inventory_item_name', default='Item Name') }}:</strong> <span id="inventoryModalName"></span></p>
-                        <p><strong>{{ t('inventory_quantity', default='Quantity') }}:</strong> <span id="inventoryModalQuantity"></span></p>
-                        <p><strong>{{ t('inventory_unit', default='Unit') }}:</strong> <span id="inventoryModalUnit"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>{{ t('inventory_buying_price', default='Buying Price') }}:</strong> <span id="inventoryModalBuyingPrice"></span></p>
-                        <p><strong>{{ t('inventory_selling_price', default='Selling Price') }}:</strong> <span id="inventoryModalSellingPrice"></span></p>
-                        <p><strong>{{ t('inventory_threshold', default='Threshold') }}:</strong> <span id="inventoryModalThreshold"></span></p>
+    <!-- Payment Actions Modal -->
+    <div class="modal fade" id="paymentActionsModal" tabindex="-1" aria-labelledby="paymentActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="paymentActionsModalLabel">{{ t('payments_money_out', default='Money Out') }}</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>{{ t('payments_recipient', default='Recipient') }}:</strong> <span id="paymentModalRecipient"></span></p>
+                            <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="paymentModalAmount"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="paymentModalDescription"></span></p>
+                            <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="paymentModalDate"></span></p>
+                        </div>
                     </div>
                 </div>
+                <div class="modal-footer">
+                    <a id="paymentViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                    <a id="paymentEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                    <form id="paymentDeleteForm" action="#" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                            {{ t('general_delete', default='Delete') }}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+                </div>
             </div>
-            <div class="modal-footer">
-                <a id="inventoryViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
-                <a id="inventoryEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
-                <form id="inventoryDeleteForm" action="#" method="POST" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
-                        {{ t('general_delete', default='Delete') }}
+        </div>
+    </div>
+
+    <!-- Receipt Actions Modal -->
+    <div class="modal fade" id="receiptActionsModal" tabindex="-1" aria-labelledby="receiptActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="receiptActionsModalLabel">{{ t('receipts_money_in', default='Money In') }}</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>{{ t('receipts_payer', default='Payer') }}:</strong> <span id="receiptModalPayer"></span></p>
+                            <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="receiptModalAmount"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="receiptModalDescription"></span></p>
+                            <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="receiptModalDate"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a id="receiptViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                    <a id="receiptEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                    <form id="receiptDeleteForm" action="#" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                            {{ t('general_delete', default='Delete') }}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Actions Modal -->
+    <div class="modal fade" id="inventoryActionsModal" tabindex="-1" aria-labelledby="inventoryActionsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inventoryActionsModalLabel">{{ t('inventory_goods_stock', default='Goods & Stock') }}</h5>
+                    <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>{{ t('inventory_item_name', default='Item Name') }}:</strong> <span id="inventoryModalName"></span></p>
+                            <p><strong>{{ t('inventory_quantity', default='Quantity') }}:</strong> <span id="inventoryModalQuantity"></span></p>
+                            <p><strong>{{ t('inventory_unit', default='Unit') }}:</strong> <span id="inventoryModalUnit"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>{{ t('inventory_buying_price', default='Buying Price') }}:</strong> <span id="inventoryModalBuyingPrice"></span></p>
+                            <p><strong>{{ t('inventory_selling_price', default='Selling Price') }}:</strong> <span id="inventoryModalSellingPrice"></span></p>
+                            <p><strong>{{ t('inventory_threshold', default='Threshold') }}:</strong> <span id="inventoryModalThreshold"></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a id="inventoryViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                    <a id="inventoryEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                    <form id="inventoryDeleteForm" action="#" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                            {{ t('general_delete', default='Delete') }}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminder Modal -->
+    <div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reminderModalLabel">{{ t('general_send_reminder', default='Send Reminder') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reminderForm">
+                        <div class="mb-3">
+                            <label for="reminderType" class="form-label">{{ t('general_reminder_type', default='Reminder Type') }}</label>
+                            <select class="form-select" id="reminderType" required>
+                                <option value="sms">{{ t('general_sms', default='SMS') }}</option>
+                                <option value="whatsapp">{{ t('general_whatsapp', default='WhatsApp') }}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reminderMessage" class="form-label">{{ t('general_message', default='Message') }}</label>
+                            <textarea class="form-control" id="reminderMessage" rows="4" required></textarea>
+                            <div class="form-text">{{ t('general_reminder_cost', default='Cost: 2 coins per reminder') }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="sendReminderBtn">
+                        {{ t('general_send_reminder', default='Send Reminder') }}
                     </button>
-                </form>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ t('general_cancel', default='Cancel') }}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Reminder Modal -->
-<div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="reminderModalLabel">{{ t('general_send_reminder', default='Send Reminder') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <form id="reminderForm">
-                    <div class="mb-3">
-                        <label for="reminderType" class="form-label">{{ t('general_reminder_type', default='Reminder Type') }}</label>
-                        <select class="form-select" id="reminderType" required>
-                            <option value="sms">{{ t('general_sms', default='SMS') }}</option>
-                            <option value="whatsapp">{{ t('general_whatsapp', default='WhatsApp') }}</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="reminderMessage" class="form-label">{{ t('general_message', default='Message') }}</label>
-                        <textarea class="form-control" id="reminderMessage" rows="4" required></textarea>
-                        <div class="form-text">{{ t('general_reminder_cost', default='Cost: 2 coins per reminder') }}</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="sendReminderBtn">
-                    {{ t('general_send_reminder', default='Send Reminder') }}
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ t('general_cancel', default='Cancel') }}
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Snooze Modal -->
-<div class="modal fade" id="snoozeModal" tabindex="-1" aria-labelledby="snoozeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="snoozeModalLabel">{{ t('general_snooze_reminder', default='Snooze Reminder') }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
-            </div>
-            <div class="modal-body">
-                <form id="snoozeForm">
-                    <div class="mb-3">
-                        <label for="snoozeDays" class="form-label">{{ t('general_snooze_duration', default='Snooze Duration') }}</label>
-                        <select class="form-select" id="snoozeDays" required>
-                            <option value="1">{{ t('general_1_day', default='1 Day') }}</option>
-                            <option value="3">{{ t('general_3_days', default='3 Days') }}</option>
-                            <option value="7">{{ t('general_7_days', default='7 Days') }}</option>
-                            <option value="14">{{ t('general_14_days', default='14 Days') }}</option>
-                        </select>
-                        <div class="form-text">{{ t('general_snooze_cost', default='Cost: 1 coin per snooze') }}</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="snoozeReminderBtn">
-                    {{ t('general_snooze', default='Snooze') }}
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    {{ t('general_cancel', default='Cancel') }}
-                </button>
+    <!-- Snooze Modal -->
+    <div class="modal fade" id="snoozeModal" tabindex="-1" aria-labelledby="snoozeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="snoozeModalLabel">{{ t('general_snooze_reminder', default='Snooze Reminder') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="snoozeForm">
+                        <div class="mb-3">
+                            <label for="snoozeDays" class="form-label">{{ t('general_snooze_duration', default='Snooze Duration') }}</label>
+                            <select class="form-select" id="snoozeDays" required>
+                                <option value="1">{{ t('general_1_day', default='1 Day') }}</option>
+                                <option value="3">{{ t('general_3_days', default='3 Days') }}</option>
+                                <option value="7">{{ t('general_7_days', default='7 Days') }}</option>
+                                <option value="14">{{ t('general_14_days', default='14 Days') }}</option>
+                            </select>
+                            <div class="form-text">{{ t('general_snooze_cost', default='Cost: 1 coin per snooze') }}</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="snoozeReminderBtn">
+                        {{ t('general_snooze', default='Snooze') }}
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ t('general_cancel', default='Cancel') }}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block page_scripts %}
 <script>
