@@ -20,7 +20,7 @@
             <label for="role-filter">{{ t('learning_hub_role_filter', default='Filter by Role', lang=lang) }}</label>
             <select id="role-filter" name="role">
                 <option value="all" {% if role_filter == 'all' %}selected{% endif %}>{{ t('learning_hub_all_roles', default='All Roles', lang=lang) }}</option>
-                <option value="trader" {% if role_filter == 'trader' %}selected{% endif %}>{{ t('learning_hub_trader', default='Civil Servant', lang=lang) }}</option>
+                <option value="trader" {% if role_filter == 'trader' %}selected{% endif %}>{{ t('learning_hub_trader', default='Trader', lang=lang) }}</option>
                 <option value="personal" {% if role_filter == 'personal' %}selected{% endif %}>{{ t('learning_hub_personal', default='personal', lang=lang) }}</option>
                 <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>{{ t('learning_hub_agent', default='Agent', lang=lang) }}</option>
             </select>
@@ -57,7 +57,7 @@
             <label for="role_filter">{{ t('role_filter', default='Filter by Role:', lang=lang) }}</label>
             <select id="role_filter" name="role">
                 <option value="all" {% if role_filter == 'all' %}selected{% endif %}>{{ t('role_all', default='All', lang=lang) }}</option>
-                <option value="trader" {% if role_filter == 'trader' %}selected{% endif %}>{{ t('role_trader', default='Civil Servant', lang=lang) }}</option>
+                <option value="trader" {% if role_filter == 'trader' %}selected{% endif %}>{{ t('role_trader', default='Trader', lang=lang) }}</option>
                 <option value="personal" {% if role_filter == 'personal' %}selected{% endif %}>{{ t('role_personal', default='personal', lang=lang) }}</option>
                 <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>{{ t('role_agent', default='Agent', lang=lang) }}</option>
             </select>
