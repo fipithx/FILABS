@@ -168,7 +168,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -201,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reminder button functionality
     document.querySelectorAll('.reminder-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Reminder button clicked:', button.dataset.id); // Debug
             const name = button.dataset.name;
             const amount = parseFloat(button.dataset.amount).toLocaleString();
             const date = button.dataset.date;
@@ -223,7 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send reminder functionality
     document.getElementById('sendReminderBtn').addEventListener('click', function() {
-        if (!currentCreditorData) return;
+        if (!currentCreditorData) {
+            console.error('No creditor data available');
+            return;
+        }
         
         const reminderType = document.getElementById('reminderType').value;
         const message = document.getElementById('reminderMessage').value;
@@ -240,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
                 debtId: currentCreditorData._id,
@@ -272,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Snooze button functionality
     document.querySelectorAll('.snooze-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Snooze button clicked:', button.dataset.id); // Debug
             currentCreditorData = {
                 _id: button.dataset.id,
                 name: button.dataset.name
@@ -283,7 +290,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Snooze reminder functionality
     document.getElementById('snoozeReminderBtn').addEventListener('click', function() {
-        if (!currentCreditorData) return;
+        if (!currentCreditorData) {
+            console.error('No creditor data available');
+            return;
+        }
         
         const snoozeDays = parseInt(document.getElementById('snoozeDays').value);
         
@@ -294,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
                 debtId: currentCreditorData._id,
@@ -324,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Share IOU functionality
     document.querySelectorAll('.share-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Share button clicked:', button.dataset.id); // Debug
             const debtId = button.dataset.id;
             const contact = button.dataset.contact;
             
