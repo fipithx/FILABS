@@ -133,7 +133,9 @@ html, body {
     position: static !important;
     overflow-x: hidden !important;
     box-sizing: border-box;
+    overflow-x: hidden;
 }
+
 
 body {
     display: flex;
@@ -143,7 +145,10 @@ body {
     font-weight: 500;
     line-height: 1.65;
     letter-spacing: -0.01em;
-    padding-bottom: var(--bottom-nav-height);
+    padding: 0 0 var(--bottom-nav-height) 0;
+}
+html:has(.table-responsive), body:has(.table-responsive) {
+    overflow-x: visible !important;
 }
 
 /* Make your containers truly full-width */
@@ -182,12 +187,12 @@ section, header, footer, main {
     background: #fff;
     border-radius: 10px;
     padding: 2rem;
-    margin-bottom: 2rem;
+    margin: 0 0 2rem 0;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .page-container {
-    padding: 1rem 1rem 2rem; /* Increased padding for better spacing */
+    padding: 0 1rem 2rem; /* Increased padding for better spacing */
     box-sizing: border-box;
     max-width: 1200px; /* Centered content */
     margin: 0 auto;
@@ -211,13 +216,16 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    padding-top: 0; !important
+    padding-top: 0;
+    margin-top: var(--navbar-height);
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
     min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
     position: static !important;
     overflow-x: hidden !important;
 }
-
+.main-content:has(.table-responsive) {
+    overflow-x: visible !important;
+}
 .main-content > .page-container:first-child,
 .main-content > .section-card:first-child {
   margin-top: 0 !important;
@@ -227,7 +235,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 /* --- Homepage Specific Styles --- */
 /* Top Header */
 .top-header {
-    position: relative;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -242,6 +250,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     box-sizing: border-box;
     flex-wrap: wrap;
     margin-bottom: 0 !important;
+    margin: 0 !important;
 }
 
 .welcome-text {
@@ -460,6 +469,9 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     text-align: center;
     box-sizing: border-box;
+}
+.snapshots:has(.table-responsive) {
+    overflow-x: visible !important;
 }
 
 /* Financial Summary */
@@ -1909,8 +1921,8 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     }
 } 
 @media (max-width: 576px) {
-    .table th:nth-child(6), .table td:nth-child(6) {
-        min-width: 150px;
+    .table th:nth-child(6), .table td:nth-child(6) { /* Actions column */
+        min-width: 200px; /* Adjust for mobile */
     }
 }
 
@@ -2131,14 +2143,14 @@ h2.card-title {
 
 /* Tables */
 .table-responsive {
-    overflow-x: auto; /* Enable horizontal scrolling for tables */
+    overflow-x: auto !important; /* Enable horizontal scrolling for tables */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
     max-width: 100%; /* Fit within parent container */
     position: relative; /* Ensure the table-responsive creates a new stacking context */
-    overflow: visible;
 }
 
 .table {
+    min-width: 870px;
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
@@ -2174,7 +2186,8 @@ h2.card-title {
     white-space: normal; /* Allow wrapping in table cells */
     word-break: break-word;
     overflow-wrap: anywhere;
-    max-width: 200px; /* Limit cell width for wrapping */
+    max-width: none;
+    overflow: visible;
 }
 
 .table-striped tbody tr:nth-of-type(even) {
@@ -2223,7 +2236,15 @@ h2.card-title {
     min-width: 100px;
 }
 .table th:nth-child(6), .table td:nth-child(6) { /* Actions */
-    min-width: 250px; /* Wider for button group */
+    min-width: 150px;
+    max-width: none; /* Prevent truncation */
+    overflow: visible; /* Allow dropdowns and full content */
+    white-space: nowrap; /* Wider for button group */
+}
+@media (max-width: 576px) {
+    .table th:nth-child(6), .table td:nth-child(6) {
+        min-width: 150px; /* Keep consistent or adjust with clear rationale */
+    }
 }
 
 /* Dark mode overrides */
@@ -2382,14 +2403,14 @@ h2.card-title {
         display: none !important;
     }
     .main-content {
-        padding-top: 0.5rem !important;
+        padding-top: 0 !important;
          padding-bottom: 2rem !important; 
     }
 }
 
 @media (max-width: 768px) {
     .page-container {
-        padding: 0 1rem 2rem;
+        padding: 0 0.5rem 1.5rem;
     }
 
     .navbar-brand {
@@ -2409,8 +2430,8 @@ h2.card-title {
     }
 
     .hero, .financial-snapshots, .quick-actions, .recent-activity, .roles-section, .tools-section, .why-section, .testimonials-section, .faq-section, .cta-section, .navigation-cards, .explore-section {
-        padding: 1.5rem;
-        margin: 1.5rem 0;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
     }
 
     .summary-cards,
@@ -2994,8 +3015,12 @@ h2.card-title {
 
 /* Ensure parent containers don't clip dropdowns */
 .page-container, .section-card, .main-content {
-    overflow: visible !important;
+    overflow: visible;
 }
+.page-container:has(.table-responsive) {
+    overflow-x: visible;
+}
+
 
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
@@ -3062,7 +3087,7 @@ h2.card-title {
 .main-content > .navigation-cards,
 .main-content > .explore-section {
     margin-top: 0 !important;
-    padding-top: 1rem !important;
+    padding-top: 0!important;
 }
 .main-content h1,
 .main-content h2,
@@ -3077,7 +3102,8 @@ h2.card-title {
 /* Mobile adjustments */
 @media (max-width: 768px) {
     .main-content {
-        padding-top: 0.5rem !important;
+        margin-top: var(--navbar-height);
+        padding: 0 0 2rem 0;
     }
 }
 
