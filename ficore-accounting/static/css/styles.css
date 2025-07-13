@@ -2146,7 +2146,8 @@ h2.card-title {
     overflow-x: auto !important; /* Enable horizontal scrolling for tables */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
     max-width: 100%; /* Fit within parent container */
-    position: relative; /* Ensure the table-responsive creates a new stacking context */
+    position: relative;
+    z-index: 1;/* Ensure the table-responsive creates a new stacking context */
 }
 
 .table {
@@ -2982,11 +2983,13 @@ h2.card-title {
     border: 1px solid var(--card-border);
     border-radius: 10px;
     box-shadow: var(--card-shadow);
+    transform: translateY(2px);
 }
 
 .table td:has(.dropdown) {
     overflow: visible;
     max-width: none;
+    position: relative;
 }
 
 /* Alternative for older browsers */
@@ -2999,6 +3002,14 @@ h2.card-title {
     padding: 0.5rem 1rem;
     font-size: clamp(0.75rem, 1.5vw, 0.875rem);
     min-width: 100px;
+    text-align: center;
+    background: var(--button-secondary-bg);
+    border: 1px solid var(--button-secondary-border);
+    border-radius: 8px;
+    transition: var(--transition-base);
+}
+.table .dropdown-toggle:hover {
+    background: var(--button-secondary-hover);
 }
 
 /* Responsive adjustments */
