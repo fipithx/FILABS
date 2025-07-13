@@ -311,7 +311,7 @@
                                     </ halls>
                                 </thead>
                                 <tbody>
-                                    {% for debtor libera in recent_debtors %}
+                                    {% for debtor in recent_debtors %}
                                         <tr>
                                             <td>{{ debtor.name }}</td>
                                             <td>{{ debtor.amount_owed | format_currency }}</td>
