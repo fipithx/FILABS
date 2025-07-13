@@ -200,19 +200,17 @@ def send_bill_reminders():
             logger.error(f"Error in send_bill_reminders: {str(e)}", exc_info=True)
             raise
 
-@log_job_metrics('cleanup_sessions')
-def cleanup_sessions():
+@log_job_metrics('cleanup_expired_sessions')
+def cleanup_expired_sessions():
     """Remove expired sessions from the sessions collection."""
     with current_app.app_context():
         try:
             db = get_mongo_db()
-            sessions_collection = db.sessions
-            result = sessions_collection.delete_many({
-                'expiration': {'$lt': datetime.utcnow()}
-            })
-            logger.info(f"Deleted {result.deleted_count} expired sessions")
+            expiry_threshold = datetime.utcnow() - timedelta(hours=1)
+            result = db.sessions.delete_many({'expiration': {'$lt': expiry_threshold}})
+            logger.info(f"Cleaned up {result.deleted_count} expired sessions from MongoDB")
         except Exception as e:
-            logger.error(f"Error in cleanup_sessions: {str(e)}", exc_info=True)
+            logger.error(f"Failed to clean up expired sessions: {str(e)}")
             raise
 
 def init_scheduler(app, mongo):
@@ -242,11 +240,11 @@ def init_scheduler(app, mongo):
                 max_instances=1
             )
             scheduler.add_job(
-                func=cleanup_sessions,
+                func=cleanup_expired_sessions,
                 trigger='interval',
-                days=1,
-                id='cleanup_sessions',
-                name='Clean up expired sessions daily',
+                hours=6,
+                id='cleanup_expired_sessions',
+                name='Clean up expired sessions every 6 hours',
                 replace_existing=True,
                 max_instances=1
             )
