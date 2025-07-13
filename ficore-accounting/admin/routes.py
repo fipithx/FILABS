@@ -19,7 +19,7 @@ import csv
 import re
 from models import get_budgets, get_bills, get_emergency_funds, get_net_worth, get_quiz_results
 from learning_hub.models import get_progress
-from personal.learning_hub import UploadForm
+from learning_hub import UploadForm
 from werkzeug.utils import secure_filename
 import os
 
