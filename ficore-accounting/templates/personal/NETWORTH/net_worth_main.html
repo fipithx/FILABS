@@ -40,12 +40,12 @@
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="netWorthTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="calculator-tab" data-bs-toggle="tab" data-bs-target="#calculator" type="button" role="tab" aria-controls="calculator" aria-selected="true">
+            <button class="nav-link {{ 'active' if active_tab == 'calculator' else '' }}" id="calculator-tab" data-bs-toggle="tab" data-bs-target="#calculator" type="button" role="tab" aria-controls="calculator" aria-selected="{{ 'true' if active_tab == 'calculator' else 'false' }}">
                 <i class="fas fa-calculator me-1"></i> {{ t('net_worth_calculator', default='Calculator', lang=lang) }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="false">
+            <button class="nav-link {{ 'active' if active_tab == 'dashboard' else '' }}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}">
                 <i class="fas fa-chart-line me-1"></i> {{ t('net_worth_dashboard', default='Dashboard', lang=lang) }}
             </button>
         </li>
@@ -54,7 +54,7 @@
     <!-- Tab Content -->
     <div class="tab-content" id="netWorthTabContent">
         <!-- Calculator Tab -->
-        <div class="tab-pane fade show active" id="calculator" role="tabpanel" aria-labelledby="calculator-tab">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'calculator' else '' }}" id="calculator" role="tabpanel" aria-labelledby="calculator-tab">
             <form method="POST" action="{{ url_for('personal.net_worth.main') }}" id="netWorthForm" class="validate-form needs-validation" novalidate>
                 {{ form.csrf_token }}
                 <input type="hidden" name="action" value="calculate_net_worth">
@@ -97,26 +97,26 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="mb-3">
-                                    <label for="{{ form.cash_savings.id }}" class="form-label">{{ t('net_worth_cash_and_savings', default='Cash & Savings', lang=lang) }}</label>
-                                    {{ form.cash_savings(class="form-control number-input", placeholder=t('net_worth_cash_savings_placeholder', default='e.g., 500,000', lang=lang), required=True) }}
+                                    <label for="{{ form.cash_savings.id }}" class="form-label">{{ t('net_worth_cash_savings', default='Cash & Savings', lang=lang) }}</label>
+                                    {{ form.cash_savings(class="form-control number-input", placeholder=t('net_worth_cash_savings_placeholder', default='e.g., 500000.00', lang=lang), required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_cash_savings_invalid', default='Cash & Savings must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('net_worth_cash_savings_tooltip', default='Money in bank accounts, cash, Ajo/Esusu/Adashe', lang=lang) }}</div>
+                                    <div class="form-text">{{ t('net_worth_cash_savings_help', default='Enter amount without commas (e.g., 500000 or 500000.00)', lang=lang) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="{{ form.investments.id }}" class="form-label">{{ t('net_worth_investments', default='Investments', lang=lang) }}</label>
-                                    {{ form.investments(class="form-control number-input", placeholder=t('net_worth_investments_placeholder', default='e.g., 1,000,000', lang=lang), required=True) }}
+                                    {{ form.investments(class="form-control number-input", placeholder=t('net_worth_investments_placeholder', default='e.g., 1000000.00', lang=lang), required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_investments_invalid', default='Investments must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('net_worth_investments_tooltip', default='Value of stocks, bonds, farming, or other investments', lang=lang) }}</div>
+                                    <div class="form-text">{{ t('net_worth_investments_help', default='Enter amount without commas (e.g., 1000000 or 1000000.00)', lang=lang) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="{{ form.property.id }}" class="form-label">{{ t('net_worth_physical_property', default='Physical Property', lang=lang) }}</label>
-                                    {{ form.property(class="form-control number-input", placeholder=t('net_worth_property_placeholder', default='e.g., 5,000,000', lang=lang), required=True) }}
+                                    {{ form.property(class="form-control number-input", placeholder=t('net_worth_property_placeholder', default='e.g., 5000000.00', lang=lang), required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_property_invalid', default='Physical Property must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('net_worth_property_tooltip', default='Value of houses, real estate, or land you own', lang=lang) }}</div>
+                                    <div class="form-text">{{ t('net_worth_property_help', default='Enter amount without commas (e.g., 5000000 or 5000000.00)', lang=lang) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -133,9 +133,9 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.loans.id }}" class="form-label">{{ t('net_worth_loans', default='Loans & Debts', lang=lang) }}</label>
-                                    {{ form.loans(class="form-control number-input", placeholder=t('net_worth_loans_placeholder', default='e.g., 200,000', lang=lang)) }}
+                                    {{ form.loans(class="form-control number-input", placeholder=t('net_worth_loans_placeholder', default='e.g., 200000.00', lang=lang)) }}
                                     <div class="invalid-feedback">{{ t('net_worth_loans_invalid', default='Loans must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('net_worth_loans_tooltip', default='Money borrowed from friends, banks, colleagues, or mobile money', lang=lang) }}</div>
+                                    <div class="form-text">{{ t('net_worth_loans_help', default='Enter amount without commas (e.g., 200000 or 200000.00)', lang=lang) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -155,8 +155,8 @@
         </div>
 
         <!-- Dashboard Tab -->
-        <div class="tab-pane fade" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
-            {% if latest_record and latest_record.net_worth != 0 %}
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'dashboard' else '' }}" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+            {% if records %}
                 <!-- Summary Cards -->
                 <div class="row mb-4">
                     <div class="col-md-4">
@@ -176,7 +176,7 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card bg-{{ 'success' if latest_record.net_worth >= 0 else 'warning' }} text-white">
+                        <div class="card bg-{{ 'success' if latest_record.net_worth_raw >= 0 else 'warning' }} text-white">
                             <div class="card-body text-center">
                                 <h6>{{ t('net_worth_net_worth', default='Net Worth', lang=lang) }}</h6>
                                 <h3>{{ latest_record.net_worth_formatted }}</h3>
@@ -224,7 +224,7 @@
                             <div class="card-body">
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between">
-                                        <span>{{ t('net_worth_cash_and_savings', default='Cash & Savings', lang=lang) }}</span>
+                                        <span>{{ t('net_worth_cash_savings', default='Cash & Savings', lang=lang) }}</span>
                                         <strong>{{ latest_record.cash_savings_formatted }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
@@ -237,7 +237,7 @@
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('net_worth_created_at', default='Created At', lang=lang) }}</span>
-                                        <strong>{{ latest_record.created_at | format_datetime }}</strong>
+                                        <strong>{{ latest_record.created_at }}</strong>
                                     </li>
                                 </ul>
                             </div>
@@ -315,8 +315,8 @@
                                     <tbody>
                                         {% for record_id, record in records %}
                                             <tr>
-                                                <td>{{ record.created_at | format_datetime }}</td>
-                                                <td class="{% if record.net_worth >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                <td>{{ record.created_at }}</td>
+                                                <td class="{% if record.net_worth_raw >= 0 %}text-success{% else %}text-danger{% endif %}">
                                                     {{ record.net_worth_formatted }}
                                                 </td>
                                                 <td>{{ record.total_assets_formatted }}</td>
@@ -366,6 +366,107 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Number input validation and formatting with comma separation
+    function formatNumberInput(input) {
+        input.addEventListener('input', function(e) {
+            // Store cursor position
+            const cursorPosition = e.target.selectionStart;
+            const oldLength = e.target.value.length;
+
+            // Remove all non-numeric characters except decimal point
+            let value = e.target.value.replace(/[^0-9.]/g, '');
+            if (!value) {
+                e.target.value = '';
+                return;
+            }
+
+            // Handle currency fields (allow decimals)
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            if (parts.length > 1) {
+                parts[1] = parts[1].slice(0, 2);
+                value = parts[0] + (parts[1] ? '.' + parts[1] : '');
+            }
+            const numericValue = parseFloat(value) || 0;
+            if (numericValue > 10000000000) {
+                value = '10000000000';
+                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
+            }
+            const formattedValue = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            e.target.value = formattedValue;
+
+            // Adjust cursor position to account for added/removed commas
+            const newLength = e.target.value.length;
+            const cursorAdjustment = newLength - oldLength;
+            e.target.selectionStart = e.target.selectionEnd = cursorPosition + cursorAdjustment;
+
+            // Show warning if invalid characters were entered
+            if (/[^0-9.]/.test(e.target.value)) {
+                const warning = document.createElement('div');
+                warning.className = 'invalid-feedback';
+                warning.textContent = '{{ t('net_worth_number_only', default='Please enter numbers only (e.g., 5000 or 5000.00)', lang=lang) }}';
+                warning.style.display = 'block';
+                e.target.parentNode.appendChild(warning);
+                setTimeout(() => warning.remove(), 3000);
+            }
+        });
+
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            let pasted = (e.clipboardData || window.clipboardData).getData('text');
+            let clean = pasted.replace(/[^0-9.]/g, '');
+            if (!clean) return;
+
+            const parts = clean.split('.');
+            if (parts.length > 2) {
+                clean = parts[0] + '.' + parts.slice(1).join('');
+            }
+            if (parts.length > 1) {
+                parts[1] = parts[1].slice(0, 2);
+                clean = parts[0] + (parts[1] ? '.' + parts[1] : '');
+            }
+            let numericValue = parseFloat(clean) || 0;
+            if (numericValue > 10000000000) {
+                numericValue = 10000000000;
+                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
+            }
+            e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        });
+
+        input.addEventListener('blur', function() {
+            if (e.target.value) {
+                let value = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = value.split('.');
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                if (parts.length > 1) {
+                    parts[1] = parts[1].slice(0, 2);
+                    value = parts[0] + (parts[1] ? '.' + parts[1] : '');
+                }
+                let numericValue = parseFloat(value) || 0;
+                if (numericValue > 10000000000) numericValue = 10000000000;
+                e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        });
+    }
+
+    // Apply formatting to all number inputs
+    document.querySelectorAll('.number-input').forEach(formatNumberInput);
+
+    // Clean inputs before form submission
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+            form.querySelectorAll('.number-input').forEach(input => {
+                if (input.value) {
+                    input.value = input.value.replace(/,/g, '');
+                }
+            });
+        });
+    });
+
     // Client-side form validation
     const form = document.getElementById('netWorthForm');
     form.addEventListener('submit', function(event) {
@@ -374,53 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
             event.stopPropagation();
         }
         form.classList.add('was-validated');
-        document.querySelectorAll('.number-input').forEach(function(input) {
-            if (input.value) {
-                input.value = input.value.replace(/,/g, '');
-            }
-        });
-    });
-
-    // Number formatting
-    document.querySelectorAll('.number-input').forEach(input => {
-        input.addEventListener('input', () => {
-            let value = input.value.replace(/,/g, '');
-            if (!value) return;
-            if (isNaN(parseFloat(value))) {
-                input.classList.add('is-invalid');
-                return;
-            }
-            if (parseFloat(value) > 10000000000) {
-                value = '10000000000';
-                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed ₦10 billion', lang=lang) | escape }}');
-            }
-            input.value = parseFloat(value).toLocaleString('en-NG', { maximumFractionDigits: 0 });
-            input.classList.remove('is-invalid');
-        });
-
-        input.addEventListener('paste', (e) => {
-            e.preventDefault();
-            let pasted = (e.clipboardData || window.clipboardData).getData('text');
-            let clean = pasted.replace(/[^0-9.]/g, '');
-            if (!isNaN(parseFloat(clean))) {
-                input.value = parseFloat(clean).toLocaleString('en-NG', { maximumFractionDigits: 0 });
-                input.classList.remove('is-invalid');
-            } else {
-                input.classList.add('is-invalid');
-            }
-        });
-
-        input.addEventListener('blur', () => {
-            if (input.value) {
-                let value = input.value.replace(/,/g, '');
-                if (!isNaN(parseFloat(value))) {
-                    input.value = parseFloat(value).toLocaleString('en-NG', { maximumFractionDigits: 0 });
-                    input.classList.remove('is-invalid');
-                } else {
-                    input.classList.add('is-invalid');
-                }
-            }
-        });
     });
 
     // Email validation based on send_email checkbox
@@ -439,13 +493,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    {% if latest_record and latest_record.net_worth != 0 %}
+    // Tab persistence with sessionStorage
+    const tabs = document.querySelectorAll('#netWorthTabs .nav-link');
+    tabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const activeTabId = e.target.id.replace('-tab', '');
+            sessionStorage.setItem('activeNetWorthTab', activeTabId);
+            // Update URL with tab query parameter
+            const url = new URL(window.location);
+            url.searchParams.set('tab', activeTabId);
+            window.history.replaceState({}, '', url);
+        });
+    });
+
+    // Restore active tab from sessionStorage or server-provided active_tab
+    const savedTab = sessionStorage.getItem('activeNetWorthTab') || '{{ active_tab }}';
+    if (savedTab) {
+        const tabButton = document.getElementById(`${savedTab}-tab`);
+        if (tabButton) {
+            const bsTab = new bootstrap.Tab(tabButton);
+            bsTab.show();
+        }
+    }
+
+    {% if records %}
     // Net Worth Chart
     const ctx = document.getElementById('netWorthChart').getContext('2d');
     const dataValues = [
-        {{ latest_record.total_assets | default(0) }},
-        {{ latest_record.total_liabilities | default(0) }},
-        {{ latest_record.net_worth | default(0) }}
+        {{ latest_record.total_assets_raw | default(0) }},
+        {{ latest_record.total_liabilities_raw | default(0) }},
+        {{ latest_record.net_worth_raw | default(0) }}
     ];
     const maxValue = Math.max(...dataValues) * 1.2;
 
@@ -472,7 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     suggestedMax: maxValue > 0 ? maxValue : 1000,
                     ticks: {
                         callback: function(value) {
-                            return `{{ latest_record.currency | default('NGN') }}${value.toLocaleString('en-NG')}`;
+                            return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                         }
                     }
                 }
@@ -482,7 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.dataset.label}: {{ latest_record.currency | default('NGN') }}${context.parsed.y.toLocaleString('en-NG')}`;
+                            return `${context.dataset.label}: ${context.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                         }
                     }
                 },
@@ -490,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     anchor: 'end',
                     align: 'top',
                     formatter: function(value) {
-                        return `{{ latest_record.currency | default('NGN') }}${value.toLocaleString('en-NG')}`;
+                        return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     },
                     color: '#333',
                     font: { size: 12, weight: 'bold' }
