@@ -8,9 +8,9 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, SelectField, BooleanField, SubmitField, FileField, validators
 from gridfs import GridFS
 from io import BytesIO
+from PIL import Image
 import logging
 import utils
-import imghdr
 
 logger = logging.getLogger(__name__)
 
@@ -252,10 +252,15 @@ def upload_profile_picture():
                 return jsonify({"success": False, "message": trans('settings_image_too_large', default='Image size must be less than 5MB.')}), 400
             file.seek(0)  # Reset file pointer
 
-            # Validate file type
-            file_content = file.read()
-            file_type = imghdr.what(None, file_content)
-            if file_type not in ['jpeg', 'png', 'gif']:
+            # Validate file type using PIL
+            try:
+                file_content = file.read()
+                img = Image.open(BytesIO(file_content))
+                file_format = img.format.lower()
+                if file_format not in ['jpeg', 'png', 'gif']:
+                    return jsonify({"success": False, "message": trans('general_invalid_image_format', default='Only JPG, PNG, and GIF files are allowed.')}), 400
+            except Exception as e:
+                logger.error(f"Error validating image file: {str(e)}")
                 return jsonify({"success": False, "message": trans('general_invalid_image_format', default='Only JPG, PNG, and GIF files are allowed.')}), 400
 
             # Delete existing profile picture if it exists
