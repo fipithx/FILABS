@@ -155,6 +155,42 @@
 {% endblock %}
 
 {% block page_scripts %}
+<style>
+/* Ensure consistent button styling in modals */
+.modal-footer .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: clamp(0.875rem, 2vw, 0.9375rem);
+    box-shadow: var(--card-shadow);
+    transition: var(--transition-base);
+}
+
+/* Handle two-button case: prioritize first visible button as primary */
+.modal-footer.two-buttons .btn:first-child:not([data-bs-dismiss="modal"]) {
+    background: var(--button-primary-bg);
+    color: #ffffff;
+    border: none;
+}
+.modal-footer.two-buttons .btn:first-child:not([data-bs-dismiss="modal"]):hover,
+.modal-footer.two-buttons .btn:first-child:not([data-bs-dismiss="modal"]):focus {
+    background: var(--button-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+}
+.modal-footer.two-buttons .btn:last-child {
+    background: var(--button-secondary-bg);
+    color: var(--button-secondary-border);
+    border: 2px solid var(--button-secondary-border);
+}
+.modal-footer.two-buttons .btn:last-child:hover,
+.modal-footer.two-buttons .btn:last-child:focus {
+    background: var(--button-secondary-hover);
+    color: var(--text-color);
+    transform: translateY(-2px);
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -162,6 +198,47 @@ document.addEventListener('DOMContentLoaded', () => {
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
 
     let currentDebtData = null;
+
+    // Function to update modal button classes based on visibility
+    function updateModalButtonClasses() {
+        const modalFooter = document.querySelector('#actionsModal .modal-footer');
+        const visibleButtons = Array.from(modalFooter.querySelectorAll('.btn')).filter(btn => btn.style.display !== 'none');
+        
+        // Remove two-buttons class
+        modalFooter.classList.remove('two-buttons');
+
+        // If exactly two buttons are visible, apply primary/secondary styling
+        if (visibleButtons.length === 2) {
+            modalFooter.classList.add('two-buttons');
+            // Ensure first non-close button is primary, close is secondary
+            visibleButtons.forEach((btn, index) => {
+                if (index === 0 && !btn.dataset.bsDismiss) {
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-primary');
+                } else if (btn.dataset.bsDismiss) {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-secondary');
+                }
+            });
+        } else {
+            // Restore original classes for more than two buttons
+            const viewBtn = document.getElementById('viewBtn');
+            const reminderBtn = document.getElementById('reminderBtn');
+            const snoozeBtn = document.getElementById('snoozeBtn');
+            const shareBtn = document.getElementById('shareBtn');
+            const closeBtn = modalFooter.querySelector('[data-bs-dismiss="modal"]');
+            [viewBtn, reminderBtn, snoozeBtn, shareBtn].forEach(btn => {
+                if (btn) {
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-primary');
+                }
+            });
+            if (closeBtn) {
+                closeBtn.classList.remove('btn-primary');
+                closeBtn.classList.add('btn-secondary');
+            }
+        }
+    }
 
     // Actions button functionality
     document.querySelectorAll('.actions-btn').forEach(button => {
@@ -185,11 +262,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modalDate').textContent = currentDebtData.created_at;
             document.getElementById('modalReminders').textContent = currentDebtData.reminders;
 
-            // Update action buttons
-            document.getElementById('viewBtn').href = `/debtors/view/${currentDebtData._id}`;
+            // Update action buttons visibility
             document.getElementById('reminderBtn').style.display = currentDebtData.contact ? 'inline-block' : 'none';
             document.getElementById('snoozeBtn').style.display = currentDebtData.contact ? 'inline-block' : 'none';
             document.getElementById('shareBtn').style.display = currentDebtData.contact ? 'inline-block' : 'none';
+            document.getElementById('viewBtn').href = `/debtors/view/${currentDebtData._id}`;
+
+            // Update button classes based on visibility
+            updateModalButtonClasses();
         });
     });
 
