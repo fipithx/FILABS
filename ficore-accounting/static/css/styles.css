@@ -2884,7 +2884,30 @@ h2.card-title {
     background: var(--button-secondary-hover);
     color: var(--accent-blue);
 }
+/* Ensure dropdown menu visibility when toggled */
+.dropdown-menu.show {
+    display: block;
+}
 
+/* Optional: Enhance dropdown toggle appearance */
+.dropdown-toggle::after {
+    display: inline-block;
+    margin-left: 0.255em;
+    vertical-align: 0.255em;
+    content: "";
+    border-top: 0.3em solid;
+    border-right: 0.3em solid transparent;
+    border-bottom: 0;
+    border-left: 0.3em solid transparent;
+}
+
+/* Ensure dropdown container is positioned correctly */
+.dropdown {
+    position: relative;
+}
+.dropdown-menu.show {
+    display: block !important;
+}
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
 .notification-description,
