@@ -836,3 +836,9 @@ img {
 
 .gamification p {
     font-size:
+@media (max-width: 600px) {
+    .gamification {
+        flex-direction: column; /* Stack image and text on small screens */
+        text-align: center;
+    }
+}
