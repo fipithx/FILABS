@@ -1525,8 +1525,15 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 }
 
 .bottom-nav .nav-item.active {
+    display: inline-flex;
     color: var(--accent-blue);
     background: rgba(58, 134, 255, 0.15);
+    padding: 0.3rem 0.75rem;  /* add horizontal padding */
+    border-radius: 8px;       /* rounded edges */
+    box-sizing: border-box;   /* include padding in width */
+    max-width: fit-content;   /* shrink to content */
+    overflow: hidden;         /* prevent overflow */
+
 }
 
 .bottom-nav .nav-item:active {
