@@ -281,7 +281,7 @@ _BUSINESS_TOOLS = [
         "label_key": "creditors_dashboard",
         "description_key": "creditors_dashboard_desc",
         "tooltip_key": "creditors_tooltip",
-        "icon": "bi-journal-minus"
+        "icon": "bi-arrow-up-circle"
     },
     {
         "endpoint": "taxation_bp.calculate_tax",
@@ -391,7 +391,7 @@ _BUSINESS_EXPLORE_FEATURES = [
         "label_key": "creditors_dashboard",
         "description_key": "creditors_dashboard_desc",
         "tooltip_key": "creditors_tooltip",
-        "icon": "bi-person-lines"
+        "icon": "bi-arrow-up-circle"
     },
     {
         "endpoint": "news_bp.news_list",
@@ -724,7 +724,7 @@ def get_explore_features():
                     "label_key": "creditors_dashboard",
                     "description_key": "creditors_dashboard_desc",
                     "tooltip_key": "creditors_tooltip",
-                    "icon": "bi-person-lines",
+                    "icon": "bi-arrow-up-circle",
                     "category": "Business"
                 },
                 {
