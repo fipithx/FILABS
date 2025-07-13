@@ -8,7 +8,7 @@
     </div>
     <div class="d-flex gap-2 mb-4">
         <a href="{{ url_for('inventory.add') }}" class="btn btn-primary">{{ t('inventory_add_title', default='Add Goods & Stock') }}</a>
-        <a href="{{ url_for('inventory.low_stock') }}" class="btn btn-warning">{{ t('inventory_low_stock', default='Low Stock') }}</a>
+        <a href="{{ url_for('inventory.low_stock') }}" class="btn btn-primary">{{ t('inventory_low_stock', default='Low Stock') }}</a>
         <a href="{{ url_for('inventory.manage') }}" class="btn btn-secondary">{{ t('inventory_manage_title', default='Manage Inventory') }}</a>
     </div>
     {% if items|length > 0 %}
@@ -85,8 +85,8 @@
             </div>
             <div class="modal-footer">
                 <a id="viewBtn" class="btn btn-primary" href="#">{{ t('general_view', default='View') }}</a>
-                <a id="addStockBtn" class="btn btn-success" href="#">{{ t('inventory_add_stock', default='Add Stock') }}</a>
-                <a id="removeStockBtn" class="btn btn-warning" href="#">{{ t('inventory_remove_stock', default='Remove Stock') }}</a>
+                <a id="addStockBtn" class="btn btn-primary" href="#">{{ t('inventory_add_stock', default='Add Stock') }}</a>
+                <a id="removeStockBtn" class="btn btn-primary" href="#">{{ t('inventory_remove_stock', default='Remove Stock') }}</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
             </div>
         </div>
