@@ -2006,10 +2006,11 @@ h2.card-title {
 
 /* Tables */
 .table-responsive {
-    overflow: visible !important;
+    overflow-x: auto !important;
     position: relative;
     z-index: 1;
-    max-width: 100%; /* Fit within parent container */
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -2020,36 +2021,39 @@ h2.card-title {
     border: 1px solid var(--table-border);
     border-radius: 10px;
     overflow: hidden;
-    table-layout: auto; /* Allow columns to adjust based on content */
+    table-layout: auto;
 }
 
 .table th, .table td {
-    padding: 1rem 1.25rem; /* Increased padding for better spacing */
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--table-border);
     text-align: left;
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
     vertical-align: middle;
-    color: var(--table-text); /* Ensure consistent text color */
+    color: var(--table-text);
     position: relative;
-    white-space: nowrap; /* Prevent wrapping in headers by default */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .table th {
     background: var(--table-header-bg);
-    color: var(--table-header-text); /* Explicit header text color */
-    font-weight: 700; /* Bolder headers for emphasis */
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); /* Subtle shadow for readability */
-    min-width: 100px; /* Minimum width for headers */
+    color: var(--table-header-text);
+    font-weight: 700;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+    min-width: 100px;
 }
 
 .table td {
-    color: var(--table-text); /* Reinforce text color for cells */
-    white-space: normal; /* Allow wrapping in table cells */
+    color: var(--table-text);
+    white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
+    max-width: 200px;
     position: relative;
-    max-width: 200px; /* Limit cell width for wrapping */
 }
+
 
 .table-striped tbody tr:nth-of-type(even) {
     background: var(--table-striped-bg);
@@ -2450,118 +2454,6 @@ h2.card-title {
     }
 }
 
-/* Hero Section */
-.hero {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.5)), 
-                url('/static/img/hero-financial-africa.jpg') center/cover no-repeat,
-                linear-gradient(135deg, var(--button-primary-bg), var(--button-success-bg));
-    padding: 1.5rem 1.5rem;
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    border-radius: 0.75rem;
-    box-shadow: var(--card-shadow);
-    position: relative;
-    overflow: hidden;
-    animation: fadeIn 1s ease-in-out;
-}
-
-.hero .lead.text-muted.mb-4 {
-    color: #ffffff;
-}
-
-@keyframes fadeIn {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
-.hero::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent 70%);
-    z-index: 1;
-    pointer-events: none;
-}
-
-.hero .container-fluid {
-    position: relative;
-    z-index: 2;
-    padding: 0 1rem;
-    pointer-events: auto;
-    color: #ffffff; 
-    text-align: center;
-}
-
-.hero h1 {
-    font-size: clamp(2rem, 5vw, 2.8rem);
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 1rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.hero p.lead {
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
-    color: #f1f5f9;
-    max-width: 700px;
-    margin: 0 auto 1.5rem;
-    line-height: 1.5;
-    font-weight: 400;
-}
-
-.hero .btn-lg, .hero .dropdown-toggle {
-    padding: 0.75rem 2rem;
-    font-size: clamp(1rem, 2vw, 1.1rem);
-    font-weight: 600;
-    border-radius: 0.5rem;
-    transform: translateY(0);
-    box-shadow: var(--card-shadow);
-}
-
-.hero .btn-lg:hover, .hero .dropdown-toggle:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-    filter: brightness(1.1);
-}
-
-.hero .dropdown-menu {
-    min-width: 180px;
-    border-radius: 0.5rem;
-    box-shadow: var(--card-shadow);
-    animation: slideIn 0.3s ease-out;
-    position: relative;
-    z-index: 1;
-}
-
-@keyframes slideIn {
-    0% { opacity: 0; transform: translateY(-10px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 576px) {
-    .hero {
-        padding: 2rem 1rem;
-        min-height: 300px;
-    }
-    .hero h1 { font-size: clamp(1.6rem, 4vw, 2rem); }
-    .hero p.lead { font-size: clamp(0.85rem, 2vw, 1rem); }
-    .hero .btn-lg, .hero .dropdown-toggle { padding: 0.6rem 1.5rem; font-size: 0.9rem; }
-}
-
-@media (max-width: 360px) {
-    .hero { padding: 1.5rem 0.75rem; min-height: 250px; }
-    .hero h1 { font-size: clamp(1.4rem, 3.5vw, 1.8rem); }
-    .hero p.lead { font-size: clamp(0.8rem, 1.8vw, 0.9rem); }
-    .hero .btn-lg, .hero .dropdown-toggle { padding: 0.5rem 1rem; font-size: 0.85rem; }
-}
-
 /* Role cards */
 .role-card {
     background: #fff;
@@ -2675,28 +2567,6 @@ h2.card-title {
     .faq-section .accordion-body { font-size: 0.85rem; }
 }
 
-/* CTA section */
-.cta-section {
-    background: #f8f9fa;
-    padding: 3rem;
-    border-radius: 12px;
-}
-.cta-section .section-title {
-    font-size: 2rem;
-}
-.cta-section .btn {
-    padding: 0.75rem 1.5rem;
-    font-size: 1.1rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .hero .section-title {
-        font-size: 2rem;
-    }
-    .hero .lead {
-        font-size: 1rem;
-    }
     .tools-section .tool-card h4 {
         font-size: 1.1rem;
     }
@@ -2721,77 +2591,36 @@ h2.card-title {
     background-color: #0d6efd;
     color: #fff;
 }
-/* Dropdown Menu for CTA Section */
-.cta-section .dropdown {
-    position: relative;
-    z-index: 1050; /* Ensure dropdown appears above overlapping sections */
-}
 
-.cta-section .dropdown-menu {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    box-shadow: var(--card-shadow);
-    min-width: 200px;
-    z-index: 1055;
-    padding: 0.5rem 0;
+/* CTA section */
+.cta-section {
+    background: #f8f9fa;
+    padding: 3rem;
+    border-radius: 12px;
 }
-
-.cta-section .dropdown-item {
-    color: var(--text-color);
-    padding: 0.5rem 1rem;
-    font-size: clamp(0.875rem, 2vw, 0.9375rem);
-    transition: var(--transition-base);
-    background: transparent;
-    border-radius: 4px;
-    margin: 0.125rem 0.5rem;
+.cta-section .section-title {
+    font-size: 2rem;
 }
-
-.cta-section .dropdown-item:hover,
-.cta-section .dropdown-item:focus {
-    background: var(--button-secondary-hover);
-    color: var(--accent-blue);
-}
-
-.cta-section .dropdown-divider {
-    border-top: 1px solid var(--card-border);
-    margin: 0.5rem 0;
-}
-
-/* Dark Mode */
-.dark-mode .cta-section .dropdown-menu {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    box-shadow: var(--card-shadow);
-}
-
-.dark-mode .cta-section .dropdown-item {
-    color: var(--text-color);
-}
-
-.dark-mode .cta-section .dropdown-item:hover,
-.dark-mode .cta-section .dropdown-item:focus {
-    background: var(--button-secondary-hover);
-    color: var(--accent-blue);
-}
-
-.dark-mode .cta-section .dropdown-divider {
-    border-top: 1px solid var(--card-border);
+.cta-section .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
 }
 
 .dropdown-menu {
+    position: absolute;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 10px;
     box-shadow: var(--card-shadow);
-    min-width: 120px;
-    position: absolute;
-    bottom: 100%; /* open upwards */
+    min-width: 100%;
+    bottom: 100% !important; /* open upwards */
     max-height: 150px;
     z-index: 9999;
     overflow-y: auto;
     overflow-x: hidden;
     left: 0;
+    right: auto;
+    white-space: nowrap; /* prevent wrapping of items */
 }
 
 .dropdown-item {
@@ -2799,6 +2628,13 @@ h2.card-title {
     padding: 0.5rem 1rem;
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
     transition: var(--transition-base);
+    white-space: normal; /* allow text wrapping if needed */
+}
+
+.dropdown-container {
+    position: relative;
+    overflow: visible;
+    z-index: 9999;
 }
 
 .dropdown-item:hover, .dropdown-item:focus {
