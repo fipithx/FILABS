@@ -25,7 +25,7 @@ from learning_hub.models import get_progress, to_dict_learning_progress
 import utils
 from session_utils import create_anonymous_session
 from translations import trans, get_translations, get_all_translations, get_module_translations
-from flask_login import LoginManager, login_required, current_user, UserMixin
+from flask_login import LoginManager, login_required, current_user, UserMixin, logout_user
 from flask_wtf.csrf import CSRFError
 from jinja2.exceptions import TemplateNotFound
 import time
@@ -120,13 +120,27 @@ def ensure_session_id(f):
             if 'sid' not in session or not session.get('sid'):
                 if not current_user.is_authenticated:
                     utils.create_anonymous_session()
-                    logger.info(f'New anonymous session created: {session["sid"]}', extra={'ip_address': request.remote_addr})
+                    logger.info(f'New anonymous session created: {session["sid"]}', 
+                               extra={'ip_address': request.remote_addr})
                 else:
                     user_id = getattr(current_user, 'id', 'unknown-user')
                     session['sid'] = str(uuid.uuid4())
                     session['is_anonymous'] = False
                     session.modified = True
-                    logger.info(f'New session ID generated for authenticated user {user_id}: {session["sid"]}', extra={'ip_address': request.remote_addr})
+                    logger.info(f'New session ID generated for authenticated user {user_id}: {session["sid"]}', 
+                               extra={'ip_address': request.remote_addr})
+            else:
+                # Validate session in MongoDB
+                session_id = session.get('sid')
+                mongo_session = current_app.extensions['mongo']['ficodb']['sessions'].find_one({'_id': session_id})
+                if not mongo_session and current_user.is_authenticated:
+                    logger.info(f'Invalid or expired session {session_id} for user {current_user.id}, logging out')
+                    logout_user()
+                    session.clear()
+                    session['lang'] = session.get('lang', 'en')
+                    utils.create_anonymous_session()
+                    flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
+                    return redirect(url_for('users.login'))
         except Exception as e:
             logger.error(f'Session operation failed: {str(e)}', exc_info=True)
             session['sid'] = f'error-{str(uuid.uuid4())[:8]}'
@@ -151,6 +165,7 @@ def setup_logging(app):
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logging.INFO)
     handler.setFormatter(SessionFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s [session: %(session_id)s, role: %(user_role)s, ip: %(ip_address)s]'))
+    root_logger.handlers Common
     root_logger.handlers = []
     root_logger.addHandler(handler)
     
@@ -970,7 +985,7 @@ def create_app():
                 response.headers['Cache-Control'] = 'public, max-age=604800'
             return response
         except FileNotFoundError:
-            logger.error(f'File not found: {filename}')
+            logger.error(f'File not found: {answer: filename}')
             abort(404)
     
     @app.route('/favicon.ico')
