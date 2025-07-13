@@ -2006,8 +2006,9 @@ h2.card-title {
 
 /* Tables */
 .table-responsive {
-    overflow-x: auto; /* Enable horizontal scrolling for tables */
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+    overflow: visible !important;
+    position: relative;
+    z-index: 1;
     max-width: 100%; /* Fit within parent container */
 }
 
@@ -2029,9 +2030,8 @@ h2.card-title {
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
     vertical-align: middle;
     color: var(--table-text); /* Ensure consistent text color */
+    position: relative;
     white-space: nowrap; /* Prevent wrapping in headers by default */
-    overflow: hidden;
-    text-overflow: ellipsis; /* Truncate long text with ellipsis */
 }
 
 .table th {
@@ -2047,6 +2047,7 @@ h2.card-title {
     white-space: normal; /* Allow wrapping in table cells */
     word-break: break-word;
     overflow-wrap: anywhere;
+    position: relative;
     max-width: 200px; /* Limit cell width for wrapping */
 }
 
@@ -2790,6 +2791,7 @@ h2.card-title {
     z-index: 9999;
     overflow-y: auto;
     overflow-x: hidden;
+    left: 0;
 }
 
 .dropdown-item {
