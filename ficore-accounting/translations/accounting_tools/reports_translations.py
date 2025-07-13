@@ -8,7 +8,9 @@ REPORTS_TRANSLATIONS = {
         'reports_financial_reports': 'Financial Reports',
         # Reports
         'reports_start_date': 'Start Date',
+        'business_reports': 'Business Reports',
         'reports_end_date': 'End Date',
+        'reports_index': 'Reports Dashboard',
         'reports_profit_loss': 'Profit & Loss',
         'reports_balance_sheet': 'Balance Sheet',
         'reports_cash_flow': 'Cash Flow Statement',
@@ -91,6 +93,8 @@ REPORTS_TRANSLATIONS = {
         'reports_subtitle': 'Bayanan Rahotanni',
         'reports_inventory': 'Rahoton Kaya',
         'reports_department': 'Sashe',
+        'business_reports': 'Rahotanni Kasuwanci',
+        'reports_index': 'Allon Rahotanni',
         'reports_project': 'Aiki',
         'reports_title': 'Rahotanni',
         'reports_desc': 'Duba da bincika rahotannin kasuwancin ku',
