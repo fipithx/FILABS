@@ -71,7 +71,7 @@ def initialize_app_data(app):
                                 '_id': {'bsonType': 'string'},
                                 'email': {'bsonType': 'string', 'pattern': r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'},
                                 'password_hash': {'bsonType': 'string'},
-                                'role': {'enum': ['personal', 'trader', 'agent', 'admin', 'civil_servant', 'nysc']},
+                                'role': {'enum': ['personal', 'trader', 'agent', 'admin', 'trader', 'personal']},
                                 'coin_balance': {'bsonType': 'int', 'minimum': 0},
                                 'language': {'enum': ['en', 'ha']},
                                 'created_at': {'bsonType': 'date'},
@@ -253,7 +253,7 @@ def initialize_app_data(app):
                             'bsonType': 'object',
                             'required': ['role', 'min_income', 'max_income', 'rate', 'description'],
                             'properties': {
-                                'role': {'enum': ['personal', 'trader', 'agent', 'company', 'civil_servant', 'nysc']},
+                                'role': {'enum': ['personal', 'trader', 'agent', 'company', 'trader', 'personal']},
                                 'min_income': {'bsonType': 'number'},
                                 'max_income': {'bsonType': 'number'},
                                 'rate': {'bsonType': 'number', 'minimum': 0, 'maximum': 1},
