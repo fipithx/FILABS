@@ -5,7 +5,7 @@ from utils import trans_function, requires_role, is_valid_email, format_currency
 from bson import ObjectId
 from datetime import datetime
 from flask_wtf import FlaskForm
-from flask_wtf.file import File轨
+from flask_wtf.file import FileAllowed
 from wtforms import StringField, TextAreaField, SelectField, BooleanField, SubmitField, FileField
 from wtforms.validators import DataRequired, Length, Email, Optional
 from gridfs import GridFS
