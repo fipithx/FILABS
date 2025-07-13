@@ -37,3 +37,4 @@ flask-pymongo==3.0.1
 psutil==6.0.0
 Flask-Compress==1.15
 bleach==6.1.0
+Pillow>=10.0.0
