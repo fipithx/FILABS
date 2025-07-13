@@ -8,9 +8,9 @@ from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
 from bson import ObjectId
 from translations import trans
-from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, format_currency, limiter, clean_currency
-from models import log_tool_usage
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage
 from session_utils import create_anonymous_session
+import re
 
 emergency_fund_bp = Blueprint(
     'emergency_fund',
@@ -30,6 +30,41 @@ def custom_login_required(f):
             return f(*args, **kwargs)
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
+
+def clean_currency(value):
+    """Strip commas and handle edge cases for numeric inputs."""
+    if not value or value == '0':
+        return '0'
+    if isinstance(value, str):
+        value = re.sub(r'[^\d.]', '', value.strip())
+        parts = value.split('.')
+        if len(parts) > 2:
+            value = parts[0] + '.' + ''.join(parts[1:])
+        if not value or value == '.':
+            return '0'
+        try:
+            float_value = float(value)
+            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
+            return str(float_value)
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+            return '0'
+    return str(float(value))
+
+def format_currency(value):
+    """Format a numeric value with comma separation, no currency symbol."""
+    try:
+        if isinstance(value, str):
+            cleaned_value = clean_currency(value)
+            numeric_value = float(cleaned_value)
+        else:
+            numeric_value = float(value)
+        formatted = f"{numeric_value:,.2f}"
+        current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
+        return formatted
+    except (ValueError, TypeError) as e:
+        current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return "0.00"
 
 class CommaSeparatedFloatField(FloatField):
     def process_formdata(self, valuelist):
@@ -122,6 +157,7 @@ class EmergencyFundForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 def main():
     """Main emergency fund interface with tabbed layout."""
+    active_tab = request.args.get('tab', 'create-plan')
     db = get_mongo_db()
     try:
         activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
@@ -206,16 +242,16 @@ def main():
                     'email': form.email.data,
                     'email_opt_in': form.email_opt_in.data,
                     'lang': session.get('lang', 'en'),
-                    'monthly_expenses': form.monthly_expenses.data,
-                    'monthly_income': form.monthly_income.data,
-                    'current_savings': form.current_savings.data or 0,
+                    'monthly_expenses': float(clean_currency(form.monthly_expenses.data)),
+                    'monthly_income': float(clean_currency(form.monthly_income.data)) if form.monthly_income.data else None,
+                    'current_savings': float(clean_currency(form.current_savings.data or 0)),
                     'risk_tolerance_level': form.risk_tolerance_level.data,
                     'dependents': form.dependents.data or 0,
                     'timeline': months,
                     'recommended_months': recommended_months,
-                    'target_amount': target_amount,
-                    'savings_gap': gap,
-                    'monthly_savings': monthly_savings,
+                    'target_amount': float(clean_currency(target_amount)),
+                    'savings_gap': float(clean_currency(gap)),
+                    'monthly_savings': float(clean_currency(monthly_savings)),
                     'percent_of_income': percent_of_income,
                     'badges': badges,
                     'created_at': datetime.utcnow()
@@ -225,58 +261,48 @@ def main():
                     db.emergency_funds.insert_one(emergency_fund)
                     current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
+                    if form.email_opt_in.data and form.email.data:
+                        try:
+                            config = EMAIL_CONFIG["emergency_fund"]
+                            subject = trans(config["subject_key"], default='Your Emergency Fund Plan')
+                            template = config["template"]
+                            created_at_str = emergency_fund['created_at'].strftime('%Y-%m-%d') if emergency_fund.get('created_at') else 'N/A'
+                            send_email(
+                                app=current_app,
+                                logger=current_app.logger,
+                                to_email=form.email.data,
+                                subject=subject,
+                                template_name=template,
+                                data={
+                                    'first_name': form.first_name.data,
+                                    'lang': session.get('lang', 'en'),
+                                    'monthly_expenses': format_currency(emergency_fund['monthly_expenses']),
+                                    'monthly_income': format_currency(emergency_fund['monthly_income']) if emergency_fund['monthly_income'] else 'N/A',
+                                    'current_savings': format_currency(emergency_fund['current_savings']),
+                                    'risk_tolerance_level': emergency_fund['risk_tolerance_level'],
+                                    'dependents': emergency_fund['dependents'],
+                                    'timeline': emergency_fund['timeline'],
+                                    'recommended_months': emergency_fund['recommended_months'],
+                                    'target_amount': format_currency(emergency_fund['target_amount']),
+                                    'savings_gap': format_currency(emergency_fund['savings_gap']),
+                                    'monthly_savings': format_currency(emergency_fund['monthly_savings']),
+                                    'percent_of_income': f"{emergency_fund['percent_of_income']:.2f}%" if emergency_fund['percent_of_income'] else 'N/A',
+                                    'badges': emergency_fund['badges'],
+                                    'created_at': created_at_str,
+                                    'cta_url': url_for('emergency_fund.main', _external=True),
+                                    'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
+                                },
+                                lang=session.get('lang', 'en')
+                            )
+                            current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session.get('sid', 'unknown')})
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
+                    return redirect(url_for('emergency_fund.main', tab='dashboard'))
                 except Exception as e:
                     current_app.logger.error(f"Failed to save emergency fund record to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_storage_error', default='Error saving emergency fund plan.'), 'danger')
-                    return render_template(
-                        'personal/EMERGENCYFUND/emergency_fund_main.html',
-                        form=form,
-                        records=[],
-                        latest_record={},
-                        insights=[],
-                        cross_tool_insights=[],
-                        tips=[],
-                        activities=activities,
-                        tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
-                    )
-
-                if form.email_opt_in.data and form.email.data:
-                    try:
-                        config = EMAIL_CONFIG["emergency_fund"]
-                        subject = trans(config["subject_key"], default='Your Emergency Fund Plan')
-                        template = config["template"]
-                        created_at_str = emergency_fund['created_at'].strftime('%Y-%m-%d') if emergency_fund.get('created_at') else 'N/A'
-                        send_email(
-                            app=current_app,
-                            logger=current_app.logger,
-                            to_email=form.email.data,
-                            subject=subject,
-                            template_name=template,
-                            data={
-                                'first_name': form.first_name.data,
-                                'lang': session.get('lang', 'en'),
-                                'monthly_expenses': format_currency(form.monthly_expenses.data),
-                                'monthly_income': format_currency(form.monthly_income.data) if form.monthly_income.data else 'N/A',
-                                'current_savings': format_currency(form.current_savings.data or 0),
-                                'risk_tolerance_level': form.risk_tolerance_level.data,
-                                'dependents': form.dependents.data or 0,
-                                'timeline': months,
-                                'recommended_months': recommended_months,
-                                'target_amount': format_currency(target_amount),
-                                'savings_gap': format_currency(gap),
-                                'monthly_savings': format_currency(monthly_savings),
-                                'percent_of_income': f"{percent_of_income:.2f}%" if percent_of_income else 'N/A',
-                                'badges': badges,
-                                'created_at': created_at_str,
-                                'cta_url': url_for('emergency_fund.main', _external=True),
-                                'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
-                            },
-                            lang=session.get('lang', 'en')
-                        )
-                        current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session.get('sid', 'unknown')})
-                    except Exception as e:
-                        current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                        flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
+                    return redirect(url_for('emergency_fund.main', tab='create-plan'))
 
         user_data = db.emergency_funds.find(filter_kwargs).sort('created_at', -1)
         user_data = list(user_data)
@@ -299,15 +325,21 @@ def main():
                 'email_opt_in': record.get('email_opt_in'),
                 'lang': record.get('lang'),
                 'monthly_expenses': format_currency(record.get('monthly_expenses', 0)),
+                'monthly_expenses_raw': float(record.get('monthly_expenses', 0)),
                 'monthly_income': format_currency(record.get('monthly_income', 0)) if record.get('monthly_income') else 'N/A',
+                'monthly_income_raw': float(record.get('monthly_income', 0)) if record.get('monthly_income') else None,
                 'current_savings': format_currency(record.get('current_savings', 0)),
+                'current_savings_raw': float(record.get('current_savings', 0)),
                 'risk_tolerance_level': record.get('risk_tolerance_level'),
                 'dependents': record.get('dependents', 0),
                 'timeline': record.get('timeline', 0),
                 'recommended_months': record.get('recommended_months', 0),
                 'target_amount': format_currency(record.get('target_amount', 0)),
+                'target_amount_raw': float(record.get('target_amount', 0)),
                 'savings_gap': format_currency(record.get('savings_gap', 0)),
+                'savings_gap_raw': float(record.get('savings_gap', 0)),
                 'monthly_savings': format_currency(record.get('monthly_savings', 0)),
+                'monthly_savings_raw': float(record.get('monthly_savings', 0)),
                 'percent_of_income': f"{record.get('percent_of_income'):.2f}%" if record.get('percent_of_income') else 'N/A',
                 'badges': record.get('badges', []),
                 'created_at': created_at_str
@@ -316,15 +348,21 @@ def main():
 
         latest_record = records[-1][1] if records else {
             'monthly_expenses': format_currency(0),
+            'monthly_expenses_raw': 0.0,
             'monthly_income': 'N/A',
+            'monthly_income_raw': None,
             'current_savings': format_currency(0),
+            'current_savings_raw': 0.0,
             'risk_tolerance_level': '',
             'dependents': 0,
             'timeline': 0,
             'recommended_months': 0,
             'target_amount': format_currency(0),
+            'target_amount_raw': 0.0,
             'savings_gap': format_currency(0),
+            'savings_gap_raw': 0.0,
             'monthly_savings': format_currency(0),
+            'monthly_savings_raw': 0.0,
             'percent_of_income': 'N/A',
             'badges': [],
             'created_at': 'N/A'
@@ -332,15 +370,13 @@ def main():
 
         insights = []
         try:
-            target_amount_float = float(clean_currency(latest_record['target_amount']) or 0)
-            savings_gap_float = float(clean_currency(latest_record['savings_gap']) or 0)
-            if latest_record and target_amount_float > 0:
-                if savings_gap_float <= 0:
+            if latest_record and latest_record['target_amount_raw'] > 0:
+                if latest_record['savings_gap_raw'] <= 0:
                     insights.append(trans('emergency_fund_insight_fully_funded', default='Your emergency fund is fully funded! Great job!'))
                 else:
                     insights.append(trans('emergency_fund_insight_savings_gap', default='You need to save {savings_gap} over {months} months.', savings_gap=latest_record.get('savings_gap'), months=latest_record.get('timeline')))
                     if latest_record.get('percent_of_income') != 'N/A':
-                        percent_float = float(clean_currency(latest_record['percent_of_income'].replace('%', '')) or 0)
+                        percent_float = float(latest_record['percent_of_income'].replace('%', '')) if latest_record['percent_of_income'] != 'N/A' else 0
                         if percent_float > 30:
                             insights.append(trans('emergency_fund_insight_high_income_percentage', default='Your monthly savings goal is over 30% of your income. Consider extending your timeline.'))
                     if latest_record.get('dependents', 0) > 2:
@@ -352,7 +388,7 @@ def main():
         filter_kwargs_budget = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         budget_data = db.budgets.find(filter_kwargs_budget).sort('created_at', -1)
         budget_data = list(budget_data)
-        if budget_data and latest_record and savings_gap_float > 0:
+        if budget_data and latest_record and latest_record['savings_gap_raw'] > 0:
             latest_budget = budget_data[0]
             if latest_budget.get('income') and latest_budget.get('fixed_expenses'):
                 savings_possible = latest_budget['income'] - latest_budget['fixed_expenses']
@@ -373,7 +409,8 @@ def main():
                 trans('budget_tip_monthly_savings', default='Set a monthly savings goal to stay on track.')
             ],
             activities=activities,
-            tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
+            tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator'),
+            active_tab=active_tab
         )
     except Exception as e:
         current_app.logger.error(f"Error in emergency_fund.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -384,15 +421,21 @@ def main():
             records=[],
             latest_record={
                 'monthly_expenses': format_currency(0),
+                'monthly_expenses_raw': 0.0,
                 'monthly_income': 'N/A',
+                'monthly_income_raw': None,
                 'current_savings': format_currency(0),
+                'current_savings_raw': 0.0,
                 'risk_tolerance_level': '',
                 'dependents': 0,
                 'timeline': 0,
                 'recommended_months': 0,
                 'target_amount': format_currency(0),
+                'target_amount_raw': 0.0,
                 'savings_gap': format_currency(0),
+                'savings_gap_raw': 0.0,
                 'monthly_savings': format_currency(0),
+                'monthly_savings_raw': 0.0,
                 'percent_of_income': 'N/A',
                 'badges': [],
                 'created_at': 'N/A'
@@ -401,7 +444,8 @@ def main():
             cross_tool_insights=[],
             tips=[],
             activities=activities,
-            tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator')
+            tool_title=trans('emergency_fund_title', default='Emergency Fund Calculator'),
+            active_tab=active_tab
         ), 500
 
 @emergency_fund_bp.route('/summary')
@@ -417,14 +461,14 @@ def summary():
         latest_record = list(latest_record)
         if not latest_record:
             current_app.logger.info(f"No emergency fund record found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-            return jsonify({'targetAmount': 0.0, 'savingsGap': 0.0})
-        target_amount = float(clean_currency(str(latest_record[0].get('target_amount', 0.0))) or 0.0)
-        savings_gap = float(clean_currency(str(latest_record[0].get('savings_gap', 0.0))) or 0.0)
+            return jsonify({'targetAmount': format_currency(0.0), 'savingsGap': format_currency(0.0)})
+        target_amount = float(clean_currency(str(latest_record[0].get('target_amount', 0.0))))
+        savings_gap = float(clean_currency(str(latest_record[0].get('savings_gap', 0.0))))
         current_app.logger.info(f"Fetched emergency fund summary for user {current_user.id}: target_amount={target_amount}, savings_gap={savings_gap}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'targetAmount': target_amount, 'savingsGap': savings_gap})
+        return jsonify({'targetAmount': format_currency(target_amount), 'savingsGap': format_currency(savings_gap)})
     except Exception as e:
         current_app.logger.error(f"Error in emergency_fund.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'targetAmount': 0.0, 'savingsGap': 0.0}), 500
+        return jsonify({'targetAmount': format_currency(0.0), 'savingsGap': format_currency(0.0)}), 500
 
 @emergency_fund_bp.route('/unsubscribe/<email>')
 @custom_login_required
@@ -463,15 +507,15 @@ def unsubscribe(email):
         else:
             current_app.logger.warning(f"No records found to unsubscribe email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("emergency_fund_unsubscribe_error", default='No email notifications found for this email.'), "danger")
-        return redirect(url_for('personal.index'))
+        return redirect(url_for('emergency_fund.main', tab='dashboard'))
     except Exception as e:
         current_app.logger.error(f"Error in emergency_fund.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("emergency_fund_unsubscribe_error", default='Error unsubscribing from email notifications.'), "danger")
-        return redirect(url_for('personal.index'))
+        return redirect(url_for('emergency_fund.main', tab='dashboard'))
 
 @emergency_fund_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
     """Handle CSRF errors with user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('emergency_fund_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
-    return redirect(url_for('personal.index')), 400
+    return redirect(url_for('emergency_fund.main', tab='create-plan')), 400
