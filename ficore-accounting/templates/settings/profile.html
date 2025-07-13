@@ -6,8 +6,9 @@
         <a href="{{ url_for('dashboard.index') }}" class="back-arrow me-3">←</a>
         <h1>{{ t('settings_hello_user', default='Hello') }}, {{ user.display_name or user._id }}!</h1>
         <div class="profile-pic-container ms-auto">
-            <img src="{{ url_for('static', filename='img/default_profile.png') }}" alt="{{ t('settings_profile_picture', default='Profile Picture') }}" class="profile-pic" onerror="this.src='{{ url_for('static', filename='img/ficore_records_logo.png') }}';">
-            <span class="edit-profile-pic-icon">✎</span>
+            <img src="{% if user.profile_picture %}{{ url_for('settings.get_profile_picture', user_id=user._id) }}{% else %}{{ url_for('static', filename='img/default_profile.png') }}{% endif %}" alt="{{ t('settings_profile_picture', default='Profile Picture') }}" class="profile-pic" onerror="this.src='{{ url_for('static', filename='img/ficore_records_logo.png') }}';">
+            <label for="profile_picture" class="edit-profile-pic-icon">✎</label>
+            <input type="file" id="profile_picture" name="profile_picture" accept="image/*" style="display: none;">
         </div>
     </div>
 
@@ -62,7 +63,7 @@
     <section class="profile-section mb-4">
         <h2>{{ t('settings_personal_data', default='Personal Data') }}</h2>
         <div class="card card-body">
-            <form method="POST" action="{{ url_for('settings.profile') }}">
+            <form method="POST" action="{{ url_for('settings.profile') }}" enctype="multipart/form-data">
                 {{ form.csrf_token }}
 
                 <div class="form-group mb-3">
@@ -439,10 +440,19 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Handle settings toggles
         document.querySelectorAll('.form-check-input[type="checkbox"]').forEach(toggle => {
             toggle.addEventListener('change', function() {
                 const settingName = this.id;
                 const value = this.checked;
+
+                if (settingName.includes('fingerprint') && value) {
+                    if (!navigator.credentials || !window.PublicKeyCredential) {
+                        alert('{{ t('settings_fingerprint_not_supported', default='Fingerprint authentication is not supported on this device.') }}');
+                        this.checked = false;
+                        return;
+                    }
+                }
 
                 fetch('/settings/api/update-user-setting', {
                     method: 'POST',
@@ -467,6 +477,44 @@
                     alert('{{ t('general_error_occurred', default='An error occurred. Please try again.') }}');
                     this.checked = !value;
                 });
+            });
+        });
+
+        // Handle profile picture upload
+        document.getElementById('profile_picture').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('{{ t('settings_invalid_image', default='Please upload a valid image file.') }}');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                alert('{{ t('settings_image_too_large', default='Image size must be less than 5MB.') }}');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+            formData.append('csrf_token', '{{ csrf_token() }}');
+
+            fetch('/settings/api/upload-profile-picture', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.querySelector('.profile-pic').src = data.image_url;
+                    alert('{{ t('settings_profile_picture_updated', default='Profile picture updated successfully.') }}');
+                } else {
+                    alert('{{ t('settings_failed_to_upload_picture', default='Failed to upload profile picture') }}: ' + (data.message || '{{ t('general_unknown_error', default='Unknown error') }}'));
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading profile picture:', error);
+                alert('{{ t('general_error_occurred', default='An error occurred. Please try again.') }}');
             });
         });
     });
