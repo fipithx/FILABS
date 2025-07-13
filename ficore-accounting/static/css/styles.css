@@ -20,16 +20,16 @@
     --footer-link-color: #4a5568;
     --alert-success-bg: #f6ffed;
     --alert-success-border: #b7eb8f;
-    --alert-success-text: #237804;
+    --alert-success-text:  #1a5c03;
     --alert-danger-bg: #fff0f6;
     --alert-danger-border: #ffadd2;
-    --alert-danger-text: #a8071a;
+    --alert-danger-text: #7a0513;
     --alert-warning-bg: #fffbe6;
     --alert-warning-border: #ffe58f;
-    --alert-warning-text: #ad8b00;
+    --alert-warning-text: #7a5c00;
     --alert-info-bg: #e6f7ff;
     --alert-info-border: #91d5ff;
-    --alert-info-text: #0050b3;
+    --alert-info-text:  #003d8c;
     --text-color: #1e293b;
     --text-muted: #6b7280; /* Slightly darker for better contrast */
     --text-secondary: #4a5568;
@@ -78,16 +78,16 @@
     --footer-link-color: #cbd5e0;
     --alert-success-bg: #0a2d1f;
     --alert-success-border: #4caf50;
-    --alert-success-text: #a8e8b0;
+    --alert-success-text:  #7edba0;
     --alert-danger-bg: #3c0c16;
     --alert-danger-border: #ef5350;
-    --alert-danger-text: #ffcdd2;
+    --alert-danger-text:  #ffadb7;
     --alert-warning-bg: #3f2f0a;
     --alert-warning-border: #ffeb3b;
-    --alert-warning-text: #ffe082;
+    --alert-warning-text: #ffd166;
     --alert-info-bg: #0c2040;
     --alert-info-border: #4d8ce8;
-    --alert-info-text: #d4e8ff;
+    --alert-info-text: #b3d4ff;
     --text-color: #f1f5f9;
     --text-muted: #9ca3af;
     --text-secondary: #94a3b8;
@@ -1653,20 +1653,23 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     margin-left: auto;
     margin-right: auto;
     position: relative;
-    margin-top: 0 !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.5rem;
 }
 
 .alert {
     position: relative;
-    padding: 1rem;
+    padding: 1rem 2.5rem 1rem 1rem; /* Increased right padding to accommodate visible close button */
     margin: 0.5rem 0;
-    border-radius: 0.25rem;
+    border-radius: 8px; /* Slightly larger radius for modern look */
+    border: 1px solid transparent; /* Default border, overridden by specific alert types */
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     font-size: clamp(0.875rem, 2vw, 0.9375rem);
-    margin-bottom: 0.5rem !important;
+    font-weight: 500;
+    line-height: 1.5;
+    box-shadow: var(--shadow-sm); /* Subtle shadow for depth */
+    transition: var(--transition-base);
 }
 
 .alert-success {
@@ -1693,12 +1696,78 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     border-color: var(--alert-info-border);
 }
 
+/* Close Button */
 .alert .btn-close {
     position: absolute;
-    top: 0.5rem;
-    right: 1rem;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    background: var(--bs-btn-close-bg); /* Use the defined SVG background */
+    background-size: 1.25em; /* Larger size for better visibility */
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    opacity: 0.8;
+    cursor: pointer;
+    transition: var(--transition-base), background-color 0.3s ease, opacity 0.3s ease;
 }
 
+.alert .btn-close:hover {
+    background-color: rgba(0, 0, 0, 0.1); /* Subtle hover background in light mode */
+    opacity: 1;
+}
+
+.dark-mode .alert .btn-close {
+    background-image: var(--bs-btn-close-bg); /* Ensure dark mode SVG is used */
+    background-size: 1.25em;
+}
+
+.dark-mode .alert .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.15); /* Subtle hover background in dark mode */
+}
+
+/* Icon for Alerts */
+.alert::before {
+    content: "\f188"; /* Bootstrap Icons: bi-info-circle for info, overridden for specific alerts */
+    font-family: "bootstrap-icons";
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+    color: var(--alert-info-text);
+}
+
+.alert-success::before {
+    content: "\f26a"; /* Bootstrap Icons: bi-check-circle */
+    color: var(--alert-success-text);
+}
+
+.alert-danger::before {
+    content: "\f2a2"; /* Bootstrap Icons: bi-exclamation-circle */
+    color: var(--alert-danger-text);
+}
+
+.alert-warning::before {
+    content: "\f2a2"; /* Bootstrap Icons: bi-exclamation-circle */
+    color: var(--alert-warning-text);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+    .alert {
+        padding: 0.75rem 2rem 0.75rem 0.75rem;
+        font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    }
+
+    .alert .btn-close {
+        right: 0.5rem;
+        background-size: 1em;
+        width: 1.25em;
+        height: 1.25em;
+    }
+
+    .alert::before {
+        font-size: 1rem;
+    }
+}
 .notification-modal .modal-content {
     border-radius: 0.5rem;
 }
