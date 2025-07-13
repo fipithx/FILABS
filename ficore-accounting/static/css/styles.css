@@ -3026,12 +3026,17 @@ h2.card-title {
 
 /* Ensure parent containers don't clip dropdowns */
 .page-container, .section-card, .main-content {
-    overflow: visible;
+    overflow: visible !important;
 }
 .page-container:has(.table-responsive) {
     overflow-x: visible;
 }
-
+.page-container:has(._dropdown-menu.show),
+.section-card:has(.dropdown-menu.show),
+.main-content:has(.dropdown-menu.show) {
+    overflow: visible !important;
+    z-index: 1; /* Ensure parent container doesn’t interfere with dropdown z-index */
+}
 
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
