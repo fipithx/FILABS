@@ -9,6 +9,8 @@ CREDITORS_TRANSLATIONS = {
         'creditors_tooltip': 'Manage your debts to creditors.',
         'creditors_list': 'Creditors List',
         'they_owe_title': 'They Owe',
+        'creditors_recent_creditors': 'Recent Creditors',
+        'creditors_no_recent_creditors': 'No Recent Creditors',
         # Creditors
         'creditors_amount_owed': 'Amount Owed',
         'creditors_add_creditor': 'Add Creditor',
@@ -102,6 +104,8 @@ CREDITORS_TRANSLATIONS = {
         'creditors_aging_report': 'Rahoton Tsufa',
         'creditors_create_what_you_owe': 'Ƙirƙiri Abin da Kake Bashi',
         'creditors_what_you_owe': 'Abin da Kake Bashi',
+        'creditors_recent_creditors': 'Masu Ba da Bashi na Kwanan Nan',
+        'creditors_no_recent_creditors': 'Babu Masu Ba da Bashi na Kwanan Nan',
         'creditors_insufficient_coins': 'Ba isassun kuɗaɗe don ƙara mai bashi',
         'creditors_what_you_owe_subtext': 'Bi diddigin basusukanka',
         'creditors_tooltip': 'Sarrafa bashinka ga masu bashi.',
