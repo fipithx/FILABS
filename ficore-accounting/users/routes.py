@@ -735,16 +735,12 @@ def agent_setup_wizard():
 def logout():
     user_id = current_user.id
     lang = session.get('lang', 'en')
-    sid = session.sid if hasattr(session, 'sid') else 'no-session-id'
+    sid = session.get('sid', 'no-session-id')  # Use session['sid'] to match ensure_session_id
     logger.info(f"Before logout - User: {user_id}, Session: {dict(session)}, Authenticated: {current_user.is_authenticated}")
     try:
         # Clear Flask-Login session
         logout_user()
-        # Clear session data
-        session.clear()
-        # Explicitly mark as anonymous
-        session['lang'] = lang
-        session['is_anonymous'] = True
+        
         # Delete MongoDB session if used
         if current_app.config.get('SESSION_TYPE') == 'mongodb':
             try:
@@ -753,9 +749,19 @@ def logout():
                 logger.info(f"Deleted MongoDB session for user {user_id}, SID: {sid}")
             except Exception as e:
                 logger.error(f"Failed to delete MongoDB session for SID {sid}: {str(e)}")
+        
+        # Clear session data
+        session.clear()
+        
+        # Preserve language and create new anonymous session
+        session['lang'] = lang
+        utils.create_anonymous_session()  # Create new anonymous session with new sid
+        logger.info(f"New anonymous session created after logout: {session['sid']}")
+        
         # Log audit action
         log_audit_action('logout', {'user_id': user_id, 'session_id': sid})
         logger.info(f"User {user_id} logged out successfully. After logout - Session: {dict(session)}, Authenticated: {current_user.is_authenticated}")
+        
         # Create response with no-cache headers and clear session cookie
         response = make_response(redirect(url_for('general_bp.landing')))
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
