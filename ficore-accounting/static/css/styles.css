@@ -235,12 +235,12 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 /* --- Homepage Specific Styles --- */
 /* Top Header */
 .top-header {
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
   width: 100%;
   height:  3rem;
-  background-color: rgba(255, 255, 255, 0.7); /* More opacity for clarity */
+  background-color: transparent; /* More opacity for clarity */
   backdrop-filter: blur(6px); /* Softer blur */
   border-bottom: 1px solid var(--card-border);
   z-index: 1000;
