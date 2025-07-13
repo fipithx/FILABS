@@ -638,7 +638,7 @@ def manage_courses():
             form.file.data.save(file_path)
             
             course_id = form.course_id.data
-            roles = [form.roles.data] if form.roles.data != 'all' else ['civil_servant', 'nysc', 'agent']
+            roles = [form.roles.data] if form.roles.data != 'all' else ['trader', 'personal', 'agent']
             course_data = {
                 'type': 'course',
                 'id': course_id,
