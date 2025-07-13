@@ -1085,9 +1085,24 @@ def create_app():
     
     @app.before_request
     def check_session_timeout():
+        # Skip session timeout check for static routes to avoid unnecessary processing
+        if request.path.startswith('/static/') or request.path in ['/favicon.ico', '/manifest.json', '/service-worker.js']:
+            return
+
         if current_user.is_authenticated and 'last_activity' in session:
             last_activity = session.get('last_activity')
             timeout_minutes = 30  # Adjust as needed
+
+            # Convert last_activity to datetime if it's a string
+            if isinstance(last_activity, str):
+                try:
+                    last_activity = datetime.fromisoformat(last_activity.replace(' ', 'T'))  # Handle space-separated datetime strings
+                except ValueError:
+                    logger.warning(f"Invalid last_activity format: {last_activity}, resetting to now")
+                    last_activity = datetime.utcnow()
+                    session['last_activity'] = last_activity
+
+            # Check if session has timed out
             if (datetime.utcnow() - last_activity).total_seconds() > timeout_minutes * 60:
                 user_id = current_user.id
                 sid = session.get('sid', 'no-session-id')
@@ -1108,9 +1123,18 @@ def create_app():
                 logger.info(f"New anonymous session created after timeout: {session['sid']}")
                 flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
                 response = make_response(redirect(url_for('users.login')))
-                response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
+                response.set_cookie(
+                    current_app.config['SESSION_COOKIE_NAME'],
+                    '',
+                    expires=0,
+                    httponly=True,
+                    secure=current_app.config.get('SESSION_COOKIE_SECURE', True)
+                )
                 return response
-        session['last_activity'] = datetime.utcnow()
+
+        # Update last_activity for authenticated users or initialize for new sessions
+        if current_user.is_authenticated:
+            session['last_activity'] = datetime.utcnow()
 
     scheduler_shutdown_done = False
     mongo_client_closed = False
