@@ -243,7 +243,8 @@ def assign_badges(score, lang='en'):
 @requires_role(['personal', 'admin'])
 def main():
     """Main quiz interface with tabbed layout."""
-    db = get_mongo_db()  # Initialize database connection
+    active_tab = request.args.get('tab', 'take-quiz')
+    db = get_mongo_db()
     try:
         activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
         current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
@@ -332,7 +333,7 @@ def main():
                 except Exception as e:
                     current_app.logger.error(f"Failed to save quiz result to MongoDB: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans('quiz_storage_error', default='Error saving quiz results.'), 'danger')
-                    return redirect(url_for('quiz.main', course_id=course_id))
+                    return redirect(url_for('quiz.main', course_id=course_id, tab='take-quiz'))
 
                 if form.send_email.data and form.email.data:
                     try:
@@ -364,6 +365,8 @@ def main():
                     except Exception as e:
                         current_app.logger.error(f"Failed to send quiz results email: {str(e)}", extra={'session_id': session['sid']})
                         flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
+
+                return redirect(url_for('quiz.main', course_id=course_id, tab='results'))
 
         quiz_results = list(get_mongo_db().quiz_responses.find(filter_criteria).sort('created_at', -1))
         
@@ -411,15 +414,16 @@ def main():
         filter_kwargs_net_worth = {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
         net_worth_data = get_mongo_db().net_worth_data.find(filter_kwargs_net_worth).sort('created_at', -1)
         net_worth_data = list(net_worth_data)
-        if net_worth_data and latest_record and latest_record.get('score', 0) < 13:
+        if net_worth_data:
             latest_net_worth = net_worth_data[0]
             try:
-                net_worth_float = float(format_currency(latest_net_worth.get('net_worth', '0')) or 0)
+                net_worth_float = float(latest_net_worth.get('net_worth', 0))
                 if net_worth_float > 0:
                     cross_tool_insights.append(trans(
                         'quiz_cross_tool_net_worth',
-                        default='Your net worth is positive, indicating good financial health despite lower quiz scores.',
-                        lang=lang
+                        default='Your net worth is positive at {amount}, indicating good financial health despite lower quiz scores.',
+                        lang=lang,
+                        amount=format_currency(net_worth_float)
                     ))
             except (ValueError, TypeError) as e:
                 current_app.logger.warning(f"Error parsing net_worth for cross-tool insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
@@ -513,7 +517,8 @@ def main():
             average_score=average_score,
             activities=activities,
             t=trans,
-            tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
+            tool_title=trans('quiz_title', default='Financial Quiz', lang=lang),
+            active_tab=active_tab
         )
 
     except Exception as e:
@@ -544,7 +549,8 @@ def main():
             average_score=0,
             activities=[],
             t=trans,
-            tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
+            tool_title=trans('quiz_title', default='Financial Quiz', lang=lang),
+            active_tab=active_tab
         ), 500
 
 @quiz_bp.route('/unsubscribe/<email>')
@@ -552,7 +558,7 @@ def main():
 @requires_role(['personal', 'admin'])
 def unsubscribe(email):
     """Unsubscribe user from quiz emails using MongoDB."""
-    db = get_mongo_db()  # Initialize database connection
+    db = get_mongo_db()
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
@@ -574,7 +580,7 @@ def unsubscribe(email):
         if not existing_record:
             current_app.logger.warning(f"No matching record found for email {email} to unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='No matching email found or already unsubscribed'), 'danger')
-            return redirect(url_for('personal.index'))
+            return redirect(url_for('quiz.main', tab='results'))
 
         result = get_mongo_db().quiz_responses.update_many(
             filter_criteria,
@@ -586,11 +592,11 @@ def unsubscribe(email):
         else:
             current_app.logger.warning(f"No records updated for email {email} during unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='Failed to unsubscribe. Email not found or already unsubscribed.'), 'danger')
-        return redirect(url_for('personal.index'))
+        return redirect(url_for('quiz.main', tab='results'))
     except Exception as e:
-        current_app.logger.error(f"Error in quiz.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        current_app.logger.error(f"Error in quiz.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
         flash(trans('quiz_unsubscribe_error', default='Error processing unsubscribe request'), 'danger')
-        return redirect(url_for('personal.index'))
+        return redirect(url_for('quiz.main', tab='results'))
 
 @quiz_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
@@ -598,30 +604,4 @@ def handle_csrf_error(e):
     lang = session.get('lang', 'en')
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('quiz_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
-    return render_template('personal/QUIZ/quiz_main.html',
-        form=QuizForm(lang=lang),
-        questions=[],
-        records=[],
-        latest_record={
-            'score': 0,
-            'personality': '',
-            'description': '',
-            'badges': [],
-            'insights': [],
-            'tips': [],
-            'created_at': 'N/A',
-            'course_id': 'financial_quiz'
-        },
-        insights=[],
-        cross_tool_insights=[],
-        tips=[],
-        course_id='financial_quiz',
-        lang=lang,
-        max_score=30,
-        rank=0,
-        total_users=0,
-        average_score=0,
-        activities=[],
-        t=trans,
-        tool_title=trans('quiz_title', default='Financial Quiz', lang=lang)
-    ), 400
+    return redirect(url_for('quiz.main', tab='take-quiz')), 400
