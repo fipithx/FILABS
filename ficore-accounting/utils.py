@@ -919,12 +919,13 @@ def get_limiter():
     """
     return limiter
 
-def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None):
+def log_tool_usage(action, tool_name=None, details=None, user_id=None, db=None, session_id=None):
     """
     Log tool usage to MongoDB tool_usage collection with improved error handling and session support.
     
     Args:
         action (str): The action performed (e.g., 'main_view', 'add_bill').
+        tool_name (str, optional): The name of the tool used. Defaults to action if None.
         details (dict, optional): Additional details about the action.
         user_id (str, optional): ID of the user performing the action.
         db (MongoDB database, optional): MongoDB database instance. If None, fetched via get_mongo_db().
