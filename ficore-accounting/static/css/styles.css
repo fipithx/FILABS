@@ -1923,6 +1923,10 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 @media (max-width: 576px) {
     .table th:nth-child(6), .table td:nth-child(6) { /* Actions column */
         min-width: 200px; /* Adjust for mobile */
+        max-width: none;
+        overflow: visible !important;
+        position: relative; /* Ensure stacking context for dropdowns */
+        white-space: nowrap;
     }
 }
 
@@ -2239,7 +2243,8 @@ h2.card-title {
 .table th:nth-child(6), .table td:nth-child(6) { /* Actions */
     min-width: 150px;
     max-width: none; /* Prevent truncation */
-    overflow: visible; /* Allow dropdowns and full content */
+    overflow: visible !important; /* Allow dropdowns and full content */
+    position: relative;
     white-space: nowrap; /* Wider for button group */
 }
 @media (max-width: 576px) {
@@ -3017,10 +3022,14 @@ h2.card-title {
     .table .dropdown-menu {
         min-width: 120px;
         font-size: 0.875rem;
+        transform: translateY(0);
+        left: auto;
+        right: 0;
     }
     .table .dropdown-toggle {
         padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
+        font-size: clamp(0.7rem, 1.4vw, 0.8rem);
+        min-width: 80px;
     }
 }
 
