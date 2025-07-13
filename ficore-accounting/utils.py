@@ -256,14 +256,6 @@ _PERSONAL_EXPLORE_FEATURES = [
         "tooltip_key": "learning_hub_tooltip",
         "icon": "bi-book"
     },
-    {
-        "endpoint": "reports.index",
-        "label": "Reports",
-        "label_key": "personal_reports",
-        "description_key": "personal_reports_desc",
-        "tooltip_key": "personal_reports_tooltip",
-        "icon": "bi-journal-minus"
-    },
 ]
 
 _BUSINESS_TOOLS = [
