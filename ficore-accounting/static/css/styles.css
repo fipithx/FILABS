@@ -235,25 +235,25 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 /* --- Homepage Specific Styles --- */
 /* Top Header */
 .top-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: var(--navbar-height);
-    /*background-color: transparent;  /* Setting background-color: transparent makes the header see-through, allowing content beneath it to be visible as the page scrolls.*/
-    background-color: rgba(255, 255, 255, 0.1); /* Slight opacity for visibility */
-    backdrop-filter: blur(10px); /* Blurs content behind the header */
-    border-bottom: 1px solid var(--card-border);
-    z-index: 1000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    box-sizing: border-box;
-    flex-wrap: wrap;
-    margin-bottom: 0 !important;
-    margin: 0 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height:  3rem;
+  background-color: rgba(255, 255, 255, 0.7); /* More opacity for clarity */
+  backdrop-filter: blur(6px); /* Softer blur */
+  border-bottom: 1px solid var(--card-border);
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  margin: 0 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05); /* Subtle shadow instead of hard border */
 }
+
 
 .welcome-text {
     font-size: clamp(0.75rem, 1.8vw, 0.875rem);
