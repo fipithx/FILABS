@@ -5,7 +5,7 @@
     <h1 class="text-center mb-4">{{ t('general_provide_feedback', default='Provide Feedback') }}</h1>
     <div class="card">
         <div class="card-body">
-            <form class="validate-form" method="POST" action="{{ url_for('feedback') }}">
+            <form class="validate-form" method="POST" action="{{ url_for('general_bp.feedback') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group mb-3">
                     <label for="tool_name" class="form-label">{{ t('general_select_tool', default='Select Tool') }} <span class="text-danger">*</span></label>
