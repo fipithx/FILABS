@@ -217,7 +217,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     flex-direction: column;
     gap: 2rem;
     padding-top: 0;
-    margin-top: var(--navbar-height);
+    margin-top: calc(var(--navbar-height) - 4px); /* reduce gap a bit */
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
     min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
     position: static !important;
