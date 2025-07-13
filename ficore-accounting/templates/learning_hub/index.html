@@ -1,30 +1,33 @@
 {% extends 'base.html' %}
 {% block content %}
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ tool_title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_hub.css') }}">
-</head>
-<body>
-    <header>
-        <h1>{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</h1>
-        <p>{{ t('learning_hub_welcome', default='Welcome to your journey of financial empowerment and digital literacy tailored for Northern Nigeria!', lang=lang) }}</p>
-    </header>
-
-    <nav>
+<div class="learning-hub-wrapper">
+    <aside class="sidebar">
+        <button class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+        <h2>{{ t('learning_hub_nav', default='Navigation', lang=lang) }}</h2>
         <ul>
+            <li><a href="{{ url_for('learning_hub.main') }}">{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.personal') }}">{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.business') }}">{{ t('learning_hub_business_title', default='Business Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.agents') }}">{{ t('learning_hub_agents_title', default='Agent Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.compliance') }}">{{ t('learning_hub_compliance_title', default='Compliance Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.tool_tutorials') }}">{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</a></li>
+            <li><a href="{{ url_for('learning_hub.profile') }}">{{ t('learning_hub_profile_title', default='Profile', lang=lang) }}</a></li>
+            {% if current_user.is_authenticated and is_admin() %}
+                <li><a href="#upload">{{ t('learning_hub_upload_content', default='Upload Content', lang=lang) }}</a></li>
+            {% endif %}
         </ul>
-    </nav>
+        <div class="role-filter">
+            <label for="role-filter">{{ t('learning_hub_role_filter', default='Filter by Role', lang=lang) }}</label>
+            <select id="role-filter" name="role">
+                <option value="all" {% if role_filter == 'all' %}selected{% endif %}>{{ t('learning_hub_all_roles', default='All Roles', lang=lang) }}</option>
+                <option value="civil_servant" {% if role_filter == 'civil_servant' %}selected{% endif %}>{{ t('learning_hub_civil_servant', default='Civil Servant', lang=lang) }}</option>
+                <option value="nysc" {% if role_filter == 'nysc' %}selected{% endif %}>{{ t('learning_hub_nysc', default='NYSC', lang=lang) }}</option>
+                <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>{{ t('learning_hub_agent', default='Agent', lang=lang) }}</option>
+            </select>
+        </div>
+    </aside>
 
-    <div class="container">
+    <main class="container">
         <div class="section-title">{{ t('learning_hub_explore', default='Explore Our Learning Paths', lang=lang) }}</div>
         <div class="card">
             <h3>{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</h3>
@@ -55,16 +58,11 @@
             <img src="{{ url_for('static', filename='img/coin.png') }}" alt="Coin">
             <p>{{ t('gamification_start', default='Earn coins and badges as you learn!', lang=lang) }}</p>
         </div>
-    </div>
+    </main>
 
     <div class="language-toggle">
         <a href="?lang=en">{{ t('lang_english', default='English', lang=lang) }}</a> |
         <a href="?lang=ha">{{ t('lang_hausa', default='Hausa', lang=lang) }}</a>
     </div>
-
-    <footer>
-        <p>{{ t('footer_text', default='Empowering Northern Nigeria through Financial Education', lang=lang) }}</p>
-    </footer>
-</body>
-</html>
+</div>
 {% endblock %}
