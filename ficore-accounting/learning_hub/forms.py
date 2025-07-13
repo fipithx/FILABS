@@ -60,8 +60,8 @@ class UploadForm(FlaskForm):
     roles = SelectField(
         trans('learning_hub_roles', default='Roles'),
         choices=[
-            ('all', 'All Roles'), ('civil_servant', 'Civil Servant'),
-            ('nysc', 'NYSC Member'), ('agent', 'Agent')
+            ('all', 'All Roles'), ('trader', 'Trader'),
+            ('personal', 'personal Member'), ('agent', 'Agent')
         ],
         validators=[Optional()],
         description="Select the roles that can access this content."
@@ -121,8 +121,8 @@ class LearningHubProfileForm(FlaskForm):
     role = SelectField(
         'Role',
         choices=[
-            ('civil_servant', 'Civil Servant'),
-            ('nysc', 'NYSC Member'),
+            ('trader', 'Trader'),
+            ('personal', 'personal Member'),
             ('agent', 'Agent')
         ],
         validators=[DataRequired()],
