@@ -306,6 +306,14 @@ _BUSINESS_TOOLS = [
         "description_key": "learning_hub_desc",
         "tooltip_key": "learning_hub_tooltip",
         "icon": "bi-book"
+    }, 
+    {
+        "endpoint": "news_bp.news_list",
+        "label": "News",
+        "label_key": "news_list",
+        "description_key": "news_list_desc",
+        "tooltip_key": "news_tooltip",
+        "icon": "bi-newspaper"
     },
 ]
 
