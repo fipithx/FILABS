@@ -27,17 +27,17 @@
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="billTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="add-bill-tab" data-bs-toggle="tab" data-bs-target="#add-bill" type="button" role="tab" aria-controls="add-bill" aria-selected="true">
+            <button class="nav-link {{ 'active' if active_tab == 'add-bill' else '' }}" id="add-bill-tab" data-bs-toggle="tab" data-bs-target="#add-bill" type="button" role="tab" aria-controls="add-bill" aria-selected="{{ 'true' if active_tab == 'add-bill' else 'false' }}">
                 <i class="fas fa-plus"></i> {{ t('bill_add_bill', default='Add Bill') }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="manage-bills-tab" data-bs-toggle="tab" data-bs-target="#manage-bills" type="button" role="tab" aria-controls="manage-bills" aria-selected="false">
+            <button class="nav-link {{ 'active' if active_tab == 'manage-bills' else '' }}" id="manage-bills-tab" data-bs-toggle="tab" data-bs-target="#manage-bills" type="button" role="tab" aria-controls="manage-bills" aria-selected="{{ 'true' if active_tab == 'manage-bills' else 'false' }}">
                 <i class="fas fa-list"></i> {{ t('bill_manage_bills', default='Manage Bills') }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="false">
+            <button class="nav-link {{ 'active' if active_tab == 'dashboard' else '' }}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}">
                 <i class="fas fa-tachometer-alt"></i> {{ t('bill_dashboard', default='Dashboard') }}
             </button>
         </li>
@@ -46,7 +46,7 @@
     <!-- Tab Content -->
     <div class="tab-content" id="billTabContent">
         <!-- Add Bill Tab -->
-        <div class="tab-pane fade show active" id="add-bill" role="tabpanel" aria-labelledby="add-bill-tab">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'add-bill' else '' }}" id="add-bill" role="tabpanel" aria-labelledby="add-bill-tab">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-plus-circle"></i> {{ t('bill_add_new_bill', default='Add New Bill') }}</h5>
@@ -86,8 +86,9 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="amount" class="form-label">{{ t('bill_amount', default='Amount') }}</label>
-                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., ₦5000')) }}
+                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5,000.00')) }}
                                     <div class="invalid-feedback">{{ t('bill_amount_required', default='Valid amount is required') }}</div>
+                                    <div class="form-text">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -153,7 +154,7 @@
         </div>
 
         <!-- Manage Bills Tab -->
-        <div class="tab-pane fade" id="manage-bills" role="tabpanel" aria-labelledby="manage-bills-tab">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'manage-bills' else '' }}" id="manage-bills" role="tabpanel" aria-labelledby="manage-bills-tab">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-edit"></i> {{ t('bill_manage_bills', default='Manage Bills') }}</h5>
@@ -163,7 +164,7 @@
                         {% for bill_id, bill, edit_form in bills_data %}
                             <div class="card mb-3">
                                 <div class="card-body">
-                                    <h6 class="card-title">{{ bill.bill_name }} ({{ bill.amount | format_currency }})</h6>
+                                    <h6 class="card-title">{{ bill.bill_name }} ({{ bill.amount }})</h6>
                                     <form method="POST" action="{{ url_for('personal.bill.main') }}" class="bill-edit-form">
                                         {{ edit_form.csrf_token }}
                                         <input type="hidden" name="bill_id" value="{{ bill_id }}">
@@ -225,7 +226,7 @@
         </div>
 
         <!-- Dashboard Tab -->
-        <div class="tab-pane fade" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'dashboard' else '' }}" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
             <div class="card">
                 <div class="card-header">
                     <h5><i class="fas fa-chart-line"></i> {{ t('bill_dashboard', default='Bill Dashboard') }}</h5>
@@ -262,11 +263,27 @@
                                 <div class="card bg-info text-white">
                                     <div class="card-body">
                                         <h6>{{ t('bill_total_bills', default='Total Bills') }}</h6>
-                                        <h4>{{ total_bills | format_currency }}</h4>
+                                        <h4>{{ total_bills }}</h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Category Breakdown Chart -->
+                        {% if categories and categories|length > 0 %}
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h6>{{ t('bill_category_breakdown', default='Category Breakdown') }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="categoryChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center">
+                                <p>{{ t('bill_no_categories', default='No bill data available for the chart.') }}</p>
+                            </div>
+                        {% endif %}
 
                         <!-- Bills Table -->
                         <div class="table-responsive">
@@ -284,7 +301,7 @@
                                     {% for bill_id, bill, edit_form in bills_data %}
                                         <tr>
                                             <td>{{ bill.bill_name }}</td>
-                                            <td>{{ bill.amount | format_currency }}</td>
+                                            <td>{{ bill.amount }}</td>
                                             <td>{{ bill.due_date | format_date }}</td>
                                             <td>{{ t('bill_category_' + bill.category, default=bill.category) }}</td>
                                             <td>
@@ -335,29 +352,127 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Number formatting for amount inputs
+    // Number input validation and formatting with comma separation
     function formatNumberInput(input) {
-        const format = (val) => {
-            let clean = val.replace(/[^0-9.]/g, '');
-            if (!clean) return '';
-            let parts = clean.split('.');
-            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-            return parts.join('.');
-        };
-        
         input.addEventListener('input', function(e) {
-            let cursor = input.selectionStart;
-            let oldLength = input.value.length;
-            input.value = format(input.value);
-            let newLength = input.value.length;
-            input.setSelectionRange(cursor + (newLength - oldLength), cursor + (newLength - oldLength));
+            // Store cursor position
+            const cursorPosition = e.target.selectionStart;
+            const oldLength = e.target.value.length;
+
+            // Remove all non-numeric characters except decimal point
+            let value = e.target.value.replace(/[^0-9.]/g, '');
+            // Ensure only one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            // Limit to two decimal places
+            if (parts.length > 1) {
+                parts[1] = parts[1].slice(0, 2);
+                value = parts[0] + (parts[1] ? '.' + parts[1] : '');
+            }
+            // Add comma separation for integer part
+            const [integerPart, decimalPart] = value.split('.');
+            const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            e.target.value = decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+
+            // Adjust cursor position to account for added/removed commas
+            const newLength = e.target.value.length;
+            const cursorAdjustment = newLength - oldLength;
+            e.target.selectionStart = e.target.selectionEnd = cursorPosition + cursorAdjustment;
+
+            // Show warning if invalid characters were entered
+            if (e.target.value !== e.target.value.match(/[0-9,.]+/)) {
+                const warning = document.createElement('div');
+                warning.className = 'invalid-feedback';
+                warning.textContent = '{{ t('bill_number_only', default='Please enter numbers only (e.g., 5000 or 5000.00)') }}';
+                warning.style.display = 'block';
+                e.target.parentNode.appendChild(warning);
+                setTimeout(() => warning.remove(), 3000);
+            }
         });
     }
 
-    // Apply number formatting to amount inputs
+    // Apply formatting to all number inputs
     document.querySelectorAll('.number-input').forEach(formatNumberInput);
+
+    // Clean input before form submission
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+            form.querySelectorAll('.number-input').forEach(input => {
+                if (input.value) {
+                    input.value = input.value.replace(/,/g, '');
+                }
+            });
+        });
+    });
+
+    // Tab persistence with sessionStorage
+    const tabs = document.querySelectorAll('#billTabs .nav-link');
+    tabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const activeTabId = e.target.id.replace('-tab', '');
+            sessionStorage.setItem('activeBillTab', activeTabId);
+            // Update URL with tab query parameter
+            const url = new URL(window.location);
+            url.searchParams.set('tab', activeTabId);
+            window.history.replaceState({}, '', url);
+        });
+    });
+
+    // Restore active tab from sessionStorage or server-provided active_tab
+    const savedTab = sessionStorage.getItem('activeBillTab') || '{{ active_tab }}';
+    if (savedTab) {
+        const tabButton = document.getElementById(`${savedTab}-tab`);
+        if (tabButton) {
+            const bsTab = new bootstrap.Tab(tabButton);
+            bsTab.show();
+        }
+    }
+
+    // Chart rendering with try-catch
+    {% if categories and categories|length > 0 %}
+    try {
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ categories.keys() | list | tojson }},
+                datasets: [{
+                    data: {{ categories.values() | list | tojson }},
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                        '#FF6347', '#FFD700', '#6A5ACD', '#20B2AA', '#FF4500', '#4682B4',
+                        '#9ACD32', '#DC143C'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw || 0;
+                                return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error rendering category chart:', error);
+        alert('{{ t('bill_chart_error', default='Error rendering category chart. Please try again later.') }}');
+    }
+    {% endif %}
 
     // Handle reminder email toggle
     const sendEmailCheckbox = document.getElementById('send_email');
@@ -378,18 +493,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (container) {
                 container.style.display = this.checked ? 'block' : 'none';
             }
-        });
-    });
-
-    // Form submission handling
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function() {
-            // Strip commas from number inputs before submission
-            form.querySelectorAll('.number-input').forEach(input => {
-                if (input.value) {
-                    input.value = input.value.replace(/,/g, '');
-                }
-            });
         });
     });
 
