@@ -20,7 +20,7 @@ courses_data = {
         "title_key": "learning_hub_course_budgeting101_title",
         "desc_key": "learning_hub_course_budgeting101_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -81,7 +81,7 @@ courses_data = {
         "title_key": "learning_hub_course_islamic_finance_title",
         "desc_key": "learning_hub_course_islamic_finance_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -112,7 +112,7 @@ courses_data = {
         "title_key": "learning_hub_course_savings_basics_title",
         "desc_key": "learning_hub_course_savings_basics_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -154,7 +154,7 @@ courses_data = {
         "title_key": "learning_hub_course_business_budgeting_title",
         "desc_key": "learning_hub_course_business_budgeting_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -185,7 +185,7 @@ courses_data = {
         "title_key": "learning_hub_course_marketing_title",
         "desc_key": "learning_hub_course_marketing_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -216,7 +216,7 @@ courses_data = {
         "title_key": "learning_hub_course_compliance_title",
         "desc_key": "learning_hub_course_compliance_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "agent"],
+        "roles": ["trader", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -340,7 +340,7 @@ courses_data = {
         "title_key": "learning_hub_course_tax_reforms_2025_title",
         "desc_key": "learning_hub_course_tax_reforms_2025_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "agent"],
+        "roles": ["trader", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -406,7 +406,7 @@ courses_data = {
         "title_key": "learning_hub_course_regulatory_compliance_title",
         "desc_key": "learning_hub_course_regulatory_compliance_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "agent"],
+        "roles": ["trader", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -437,7 +437,7 @@ courses_data = {
         "title_key": "learning_hub_course_aml_title",
         "desc_key": "learning_hub_course_aml_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "agent"],
+        "roles": ["trader", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -468,7 +468,7 @@ courses_data = {
         "title_key": "learning_hub_digital_foundations_title",
         "desc_key": "learning_hub_digital_foundations_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -546,7 +546,7 @@ courses_data = {
         "title_key": "learning_hub_course_spreadsheets_title",
         "desc_key": "learning_hub_course_spreadsheets_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -577,7 +577,7 @@ courses_data = {
         "title_key": "learning_hub_course_online_banking_title",
         "desc_key": "learning_hub_course_online_banking_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
@@ -608,7 +608,7 @@ courses_data = {
         "title_key": "learning_hub_course_financial_quiz_title",
         "desc_key": "learning_hub_course_financial_quiz_desc",
         "is_premium": False,
-        "roles": ["civil_servant", "nysc", "agent"],
+        "roles": ["trader", "personal", "agent"],
         "modules": [
             {
                 "id": "module-1",
