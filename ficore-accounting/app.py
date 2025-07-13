@@ -189,8 +189,8 @@ def setup_session(app):
                     app.config['SESSION_MONGODB'] = app.extensions['mongo']
                     app.config['SESSION_MONGODB_DB'] = 'ficodb'
                     app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
-                    app.config['SESSION_PERMANENT'] = True
-                    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+                    app.config['SESSION_PERMANENT'] = False
+                    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
                     app.config['SESSION_USE_SIGNER'] = True
                     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
                     app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV', 'development') == 'production'
@@ -452,6 +452,19 @@ def create_app():
                 logger.info(f'Admin user created with email: {admin_email}')
             else:
                 logger.info(f'Admin user already exists with email: {admin_email}')
+
+    @app.before_request
+    def check_session_timeout():
+        if current_user.is_authenticated and 'last_activity' in session:
+            last_activity = session.get('last_activity')
+            timeout_minutes = 30  # Adjust as needed
+            if (datetime.utcnow() - last_activity).total_seconds() > timeout_minutes * 60:
+                logger.info(f"Session timeout for user {current_user.id}, logging out")
+                logout_user()
+                session.clear()
+                flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
+                return redirect(url_for('users.login'))
+        session['last_activity'] = datetime.utcnow()
 
             from users.routes import users_bp
             from agents.routes import agents_bp
