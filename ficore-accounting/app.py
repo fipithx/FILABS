@@ -143,8 +143,11 @@ def ensure_session_id(f):
                     return redirect(url_for('users.login'))
         except Exception as e:
             logger.error(f'Session operation failed: {str(e)}', exc_info=True)
-            session['sid'] = f'error-{str(uuid.uuid4())[:8]}'
-            session.modified = True
+            session.clear()
+            session['lang'] = session.get('lang', 'en')
+            utils.create_anonymous_session()
+            flash(utils.trans('session_error', default='An error occurred with your session. Please log in again.'), 'danger')
+            return redirect(url_for('users.login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -165,8 +168,7 @@ def setup_logging(app):
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logging.INFO)
     handler.setFormatter(SessionFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s [session: %(session_id)s, role: %(user_role)s, ip: %(ip_address)s]'))
-    root_logger.handlers Common
-    root_logger.handlers = []
+    root_logger.handlers = []  # Clear existing handlers
     root_logger.addHandler(handler)
     
     flask_logger = logging.getLogger('flask')
@@ -474,79 +476,92 @@ def create_app():
             last_activity = session.get('last_activity')
             timeout_minutes = 30  # Adjust as needed
             if (datetime.utcnow() - last_activity).total_seconds() > timeout_minutes * 60:
-                logger.info(f"Session timeout for user {current_user.id}, logging out")
+                user_id = current_user.id
+                sid = session.get('sid', 'no-session-id')
+                logger.info(f"Session timeout for user {user_id}, logging out")
                 logout_user()
+                # Delete MongoDB session
+                if current_app.config.get('SESSION_TYPE') == 'mongodb':
+                    try:
+                        db = current_app.extensions['mongo']['ficodb']
+                        db.sessions.delete_one({'_id': sid})
+                        logger.info(f"Deleted MongoDB session for user {user_id}, SID: {sid}")
+                    except Exception as e:
+                        logger.error(f"Failed to delete MongoDB session for SID {sid}: {str(e)}")
+                # Clear session and create new anonymous session
                 session.clear()
+                session['lang'] = session.get('lang', 'en')
+                utils.create_anonymous_session()
+                logger.info(f"New anonymous session created after timeout: {session['sid']}")
                 flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
-                return redirect(url_for('users.login'))
+                response = make_response(redirect(url_for('users.login')))
+                response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
+                return response
         session['last_activity'] = datetime.utcnow()
 
-            from users.routes import users_bp
-            from agents.routes import agents_bp
-            from creditors.routes import creditors_bp
-            from dashboard.routes import dashboard_bp
-            from debtors.routes import debtors_bp
-            from inventory.routes import inventory_bp
-            from payments.routes import payments_bp
-            from receipts.routes import receipts_bp
-            from reports.routes import reports_bp
-            from settings.routes import settings_bp
-            from personal import personal_bp
-            from general.routes import general_bp
-            from admin.routes import admin_bp
-            from news.routes import news_bp
-            from taxation.routes import taxation_bp
-            from learning_hub import learning_hub_bp
-            
-            app.register_blueprint(users_bp, url_prefix='/users')
-            logger.info('Registered users blueprint')
-            app.register_blueprint(agents_bp, url_prefix='/agents')
-            logger.info('Registered agents blueprint')
-            app.register_blueprint(news_bp, url_prefix='/news')
-            logger.info('Registered news blueprint')
-            app.register_blueprint(taxation_bp, url_prefix='/taxation')
-            logger.info('Registered taxation blueprint')
-            try:
-                app.register_blueprint(coins_bp, url_prefix='/coins')
-                logger.info('Registered coins blueprint and initialized limiter')
-            except Exception as e:
-                logger.warning(f'Could not import coins blueprint: {str(e)}')
-            app.register_blueprint(creditors_bp, url_prefix='/creditors')
-            logger.info('Registered creditors blueprint')
-            app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
-            logger.info('Registered dashboard blueprint')
-            app.register_blueprint(debtors_bp, url_prefix='/debtors')
-            logger.info('Registered debtors blueprint')
-            app.register_blueprint(inventory_bp, url_prefix='/inventory')
-            logger.info('Registered inventory blueprint')
-            app.register_blueprint(payments_bp, url_prefix='/payments')
-            logger.info('Registered payments blueprint')
-            app.register_blueprint(receipts_bp, url_prefix='/receipts')
-            logger.info('Registered receipts blueprint')
-            app.register_blueprint(reports_bp, url_prefix='/reports')
-            logger.info('Registered reports blueprint')
-            app.register_blueprint(settings_bp, url_prefix='/settings')
-            logger.info('Registered settings blueprint')
-            try:
-                app.register_blueprint(admin_bp, url_prefix='/admin')
-                logger.info('Registered admin blueprint')
-            except Exception as e:
-                logger.warning(f'Could not import admin blueprint: {str(e)}')
-            app.register_blueprint(personal_bp)
-            logger.info('Registered personal blueprint with url_prefix="/personal"')
-            app.register_blueprint(general_bp, url_prefix='/general')
-            logger.info('Registered general blueprint')
-            app.register_blueprint(learning_hub_bp, url_prefix='/learning_hub')
-            logger.info('Registered learning hub blueprint with url_prefix="/learning_hub"')
-            app.register_blueprint(business, url_prefix='/business')
-            logger.info('Registered business blueprint with url_prefix="/business"')
-
-            utils.initialize_tools_with_urls(app)
-            logger.info('Initialized tools and navigation with resolved URLs')
-
+    # Register blueprints
+    from users.routes import users_bp
+    from agents.routes import agents_bp
+    from creditors.routes import creditors_bp
+    from dashboard.routes import dashboard_bp
+    from debtors.routes import debtors_bp
+    from inventory.routes import inventory_bp
+    from payments.routes import payments_bp
+    from receipts.routes import receipts_bp
+    from reports.routes import reports_bp
+    from settings.routes import settings_bp
+    from personal import personal_bp
+    from general.routes import general_bp
+    from admin.routes import admin_bp
+    from news.routes import news_bp
+    from taxation.routes import taxation_bp
+    from learning_hub import learning_hub_bp
+    
+    app.register_blueprint(users_bp, url_prefix='/users')
+    logger.info('Registered users blueprint')
+    app.register_blueprint(agents_bp, url_prefix='/agents')
+    logger.info('Registered agents blueprint')
+    app.register_blueprint(news_bp, url_prefix='/news')
+    logger.info('Registered news blueprint')
+    app.register_blueprint(taxation_bp, url_prefix='/taxation')
+    logger.info('Registered taxation blueprint')
+    try:
+        app.register_blueprint(coins_bp, url_prefix='/coins')
+        logger.info('Registered coins blueprint and initialized limiter')
     except Exception as e:
-        logger.error(f'Error in create_app: {str(e)}', exc_info=True)
-        raise
+        logger.warning(f'Could not import coins blueprint: {str(e)}')
+    app.register_blueprint(creditors_bp, url_prefix='/creditors')
+    logger.info('Registered creditors blueprint')
+    app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
+    logger.info('Registered dashboard blueprint')
+    app.register_blueprint(debtors_bp, url_prefix='/debtors')
+    logger.info('Registered debtors blueprint')
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
+    logger.info('Registered inventory blueprint')
+    app.register_blueprint(payments_bp, url_prefix='/payments')
+    logger.info('Registered payments blueprint')
+    app.register_blueprint(receipts_bp, url_prefix='/receipts')
+    logger.info('Registered receipts blueprint')
+    app.register_blueprint(reports_bp, url_prefix='/reports')
+    logger.info('Registered reports blueprint')
+    app.register_blueprint(settings_bp, url_prefix='/settings')
+    logger.info('Registered settings blueprint')
+    try:
+        app.register_blueprint(admin_bp, url_prefix='/admin')
+        logger.info('Registered admin blueprint')
+    except Exception as e:
+        logger.warning(f'Could not import admin blueprint: {str(e)}')
+    app.register_blueprint(personal_bp)
+    logger.info('Registered personal blueprint with url_prefix="/personal"')
+    app.register_blueprint(general_bp, url_prefix='/general')
+    logger.info('Registered general blueprint')
+    app.register_blueprint(learning_hub_bp, url_prefix='/learning_hub')
+    logger.info('Registered learning hub blueprint with url_prefix="/learning_hub"')
+    app.register_blueprint(business, url_prefix='/business')
+    logger.info('Registered business blueprint with url_prefix="/business"')
+
+    utils.initialize_tools_with_urls(app)
+    logger.info('Initialized tools and navigation with resolved URLs')
 
     app.jinja_env.globals.update(
         FACEBOOK_URL=app.config.get('FACEBOOK_URL', 'https://facebook.com/ficoreafrica'),
@@ -973,19 +988,30 @@ def create_app():
     @app.route('/static_personal/<path:filename>')
     def static_personal(filename):
         allowed_extensions = {'.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}
+        allowed_mime_types = {
+            '.css': 'text/css',
+            '.js': 'application/javascript',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.ico': 'image/x-icon',
+            '.svg': 'image/svg+xml'
+        }
         file_ext = os.path.splitext(filename)[1].lower()
         if '..' in filename or filename.startswith('/') or file_ext not in allowed_extensions:
             logger.warning(f'Invalid personal file path or ext: {filename}')
             abort(404)
         try:
             response = send_from_directory('static_personal', filename)
+            response.headers['Content-Type'] = allowed_mime_types.get(file_ext, 'application/octet-stream')
             if file_ext in {'.css', '.js'}:
                 response.headers['Cache-Control'] = 'public, max-age=3600'
             elif file_ext in {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg'}:
                 response.headers['Cache-Control'] = 'public, max-age=604800'
             return response
         except FileNotFoundError:
-            logger.error(f'File not found: {answer: filename}')
+            logger.error(f'File not found: {filename}')
             abort(404)
     
     @app.route('/favicon.ico')
