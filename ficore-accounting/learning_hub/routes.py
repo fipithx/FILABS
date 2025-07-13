@@ -213,7 +213,7 @@ def learning_hub_main():
                     
                     # Update MongoDB
                     course_id = upload_form.course_id.data
-                    roles = [upload_form.roles.data] if upload_form.roles.data != 'all' else ['civil_servant', 'nysc', 'agent']
+                    roles = [upload_form.roles.data] if upload_form.roles.data != 'all' else ['trader', 'personal', 'agent']
                     course_data = {
                         'type': 'course',
                         'id': course_id,
@@ -599,7 +599,7 @@ def set_role_filter():
     """Set role filter for course display."""
     try:
         role = request.form.get('role')
-        if role not in ['all', 'civil_servant', 'nysc', 'agent']:
+        if role not in ['all', 'trader', 'personal', 'agent']:
             return jsonify({'success': False, 'message': trans('learning_hub_invalid_role', default='Invalid role selected')}), 400
         session['role_filter'] = role
         session.permanent = True
