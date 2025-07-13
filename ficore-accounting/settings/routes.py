@@ -1,13 +1,16 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, send_file
 from flask_login import login_required, current_user
 from translations import trans
 from utils import trans_function, requires_role, is_valid_email, format_currency, get_mongo_db, is_admin, get_user_query, initialize_tools_with_urls
 from bson import ObjectId
 from datetime import datetime
 from flask_wtf import FlaskForm
-from wtforms import StringField, TextAreaField, SelectField, BooleanField, SubmitField, validators
+from wtforms import StringField, TextAreaField, SelectField, BooleanField, SubmitField, FileField, validators
+from gridfs import GridFS
+from io import BytesIO
 import logging
 import utils
+import imghdr
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +29,10 @@ class ProfileForm(FlaskForm):
         validators.Optional(),
         validators.Length(max=20, message=trans('general_phone_length', default='Phone number too long'))
     ], render_kw={'class': 'form-control'})
+    profile_picture = FileField(trans('general_profile_picture', default='Profile Picture'), [
+        validators.Optional(),
+        validators.FileAllowed(['jpg', 'jpeg', 'png', 'gif'], message=trans('general_invalid_image_format', default='Only JPG, PNG, and GIF files are allowed'))
+    ], render_kw={'accept': 'image/*'})
     first_name = StringField(trans('general_first_name', default='First Name'), [
         validators.Optional(),
         validators.Length(max=50, message=trans('general_first_name_length', default='First name too long'))
@@ -118,6 +125,7 @@ def profile():
     """Unified profile management page."""
     try:
         db = get_mongo_db()
+        fs = GridFS(db)  # Initialize GridFS for file storage
         user_id = request.args.get('user_id', current_user.id) if is_admin() and request.args.get('user_id') else current_user.id
         user_query = get_user_query(user_id)
         user = db.users.find_one(user_query)
@@ -204,7 +212,8 @@ def profile():
             'business_details': user.get('business_details', {}),
             'agent_details': user.get('agent_details', {}),
             'settings': user.get('settings', {}),
-            'security_settings': user.get('security_settings', {})
+            'security_settings': user.get('security_settings', {}),
+            'profile_picture': user.get('profile_picture', None)
         }
         return render_template(
             'settings/profile.html',
@@ -216,6 +225,77 @@ def profile():
         logger.error(f"Error in profile settings for user {current_user.id}: {str(e)}")
         flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
         return redirect(url_for('index'))
+
+@settings_bp.route('/api/upload-profile-picture', methods=['POST'])
+@login_required
+def upload_profile_picture():
+    """API endpoint to handle profile picture uploads."""
+    try:
+        db = get_mongo_db()
+        fs = GridFS(db)
+        user_query = get_user_query(str(current_user.id))
+        user = db.users.find_one(user_query)
+        if not user:
+            return jsonify({"success": False, "message": trans('general_user_not_found', default='User not found.')}), 404
+
+        if 'profile_picture' not in request.files:
+            return jsonify({"success": False, "message": trans('general_no_file_uploaded', default='No file uploaded.')}), 400
+
+        file = request.files['profile_picture']
+        if file.filename == '':
+            return jsonify({"success": False, "message": trans('general_no_file_selected', default='No file selected.')}), 400
+
+        if file:
+            # Validate file size (5MB limit)
+            file.seek(0, 2)  # Move to end of file
+            if file.tell() > 5 * 1024 * 1024:
+                return jsonify({"success": False, "message": trans('settings_image_too_large', default='Image size must be less than 5MB.')}), 400
+            file.seek(0)  # Reset file pointer
+
+            # Validate file type
+            file_content = file.read()
+            file_type = imghdr.what(None, file_content)
+            if file_type not in ['jpeg', 'png', 'gif']:
+                return jsonify({"success": False, "message": trans('general_invalid_image_format', default='Only JPG, PNG, and GIF files are allowed.')}), 400
+
+            # Delete existing profile picture if it exists
+            if user.get('profile_picture'):
+                fs.delete(ObjectId(user['profile_picture']))
+
+            # Store new profile picture
+            file_id = fs.put(file_content, filename=file.filename, content_type=file.content_type)
+            db.users.update_one(user_query, {'$set': {
+                'profile_picture': str(file_id),
+                'updated_at': datetime.utcnow()
+            }})
+
+            return jsonify({
+                "success": True,
+                "message": trans('settings_profile_picture_updated', default='Profile picture updated successfully.'),
+                "image_url": url_for('settings.get_profile_picture', user_id=user['_id'])
+            })
+    except Exception as e:
+        logger.error(f"Error uploading profile picture for user {current_user.id}: {str(e)}")
+        return jsonify({"success": False, "message": trans('general_something_went_wrong', default='An error occurred.')}), 500
+
+@settings_bp.route('/profile-picture/<user_id>')
+@login_required
+def get_profile_picture(user_id):
+    """Serve the user's profile picture."""
+    try:
+        db = get_mongo_db()
+        fs = GridFS(db)
+        user_query = get_user_query(user_id)
+        user = db.users.find_one(user_query)
+        if not user or not user.get('profile_picture'):
+            return redirect(url_for('static', filename='img/default_profile.png'))
+        
+        file_id = ObjectId(user['profile_picture'])
+        grid_out = fs.get(file_id)
+        return send_file(BytesIO(grid_out.read()), mimetype=grid_out.content_type)
+    except Exception as e:
+        logger.error(f"Error retrieving profile picture for user {user_id}: {str(e)}")
+        return redirect(url_for('static', filename='img/default_profile.png'))
 
 @settings_bp.route('/notifications', methods=['GET', 'POST'])
 @login_required
@@ -294,7 +374,7 @@ def update_user_setting():
         setting_name = data.get('setting')
         value = data.get('value')
         if setting_name not in ['showKoboToggle', 'incognitoModeToggle', 'appSoundsToggle', 
-                               'FingerprintPasswordToggle', 'fingerprintPinToggle', 'hideSensitiveDataToggle']:
+                               'fingerprintPasswordToggle', 'fingerprintPinToggle', 'hideSensitiveDataToggle']:
             return jsonify({"success": False, "message": trans('general_invalid_setting', default='Invalid setting name.')}), 400
         db = get_mongo_db()
         user_query = get_user_query(str(current_user.id))
