@@ -2936,12 +2936,16 @@ h2.card-title {
 .dropdown-menu {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
+    bottom: 100%; /* open upwards */
+    top: auto;
     border-radius: 10px;
     box-shadow: var(--card-shadow);
     min-width: 120px;
     position: absolute;
     z-index: 9999;
     display: none;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .dropdown-item {
@@ -2978,7 +2982,7 @@ h2.card-title {
     z-index: 2000;
 }
 .table .dropdown-menu {
-    position: absolute;
+    position: relative;
     top: 100%;
     left: 0;
     z-index: 2000;
