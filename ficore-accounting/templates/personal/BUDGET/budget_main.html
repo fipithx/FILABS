@@ -77,9 +77,9 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">{{ t('budget_monthly_income', default='Monthly Income') }}</label>
-                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500000')) }}
+                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500,000.00')) }}
                             <div class="invalid-feedback">{{ t('budget_income_required', default='Income is required') }}</div>
-                            <div class="form-text">{{ t('budget_income_help', default='Enter your monthly income without commas or currency symbols (e.g., 500000)') }}</div>
+                            <div class="form-text">{{ t('budget_income_help', default='Enter your monthly income without commas (e.g., 500000 or 500000.00)') }}</div>
                         </div>
                     </div>
                 </div>
@@ -94,15 +94,17 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_housing_rent', default='Housing/Rent') }}</label>
-                                    {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100000')) }}
+                                    {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_housing_required', default='Housing cost is required') }}</div>
+                                    <div class="form-text">{{ t('budget_housing_help', default='Enter housing cost without commas (e.g., 100000 or 100000.00)') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_food', default='Food') }}</label>
-                                    {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50000')) }}
+                                    {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_food_required', default='Food cost is required') }}</div>
+                                    <div class="form-text">{{ t('budget_food_help', default='Enter food cost without commas (e.g., 50000 or 50000.00)') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -110,15 +112,17 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_transport', default='Transport') }}</label>
-                                    {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20000')) }}
+                                    {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_transport_required', default='Transport cost is required') }}</div>
+                                    <div class="form-text">{{ t('budget_transport_help', default='Enter transport cost without commas (e.g., 20000 or 20000.00)') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_dependents_support', default='Dependents Support') }}</label>
-                                    {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30000')) }}
+                                    {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_dependents_required', default='Dependents support cost is required') }}</div>
+                                    <div class="form-text">{{ t('budget_dependents_help', default='Enter dependents cost without commas (e.g., 30000 or 30000.00)') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -126,15 +130,17 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_miscellaneous', default='Miscellaneous') }}</label>
-                                    {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10000')) }}
+                                    {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_miscellaneous_required', default='Miscellaneous cost is required') }}</div>
+                                    <div class="form-text">{{ t('budget_miscellaneous_help', default='Enter miscellaneous cost without commas (e.g., 10000 or 10000.00)') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_others', default='Others') }}</label>
-                                    {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15000')) }}
+                                    {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15,000.00')) }}
                                     <div class="invalid-feedback">{{ t('budget_others_required', default='Other expenses are required') }}</div>
+                                    <div class="form-text">{{ t('budget_others_help', default='Enter other expenses without commas (e.g., 15000 or 15000.00)') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -149,9 +155,9 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">{{ t('budget_monthly_savings_goal', default='Monthly Savings Goal') }}</label>
-                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50000')) }}
+                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50,000.00')) }}
                             <div class="invalid-feedback">{{ t('budget_savings_goal_required', default='Savings goal is required') }}</div>
-                            <div class="form-text">{{ t('budget_savings_goal_help', default='Enter your monthly savings goal without commas or currency symbols (e.g., 50000)') }}</div>
+                            <div class="form-text">{{ t('budget_savings_goal_help', default='Enter your monthly savings goal without commas (e.g., 50000 or 50000.00)') }}</div>
                         </div>
                     </div>
                 </div>
@@ -169,13 +175,13 @@
                     <h5><i class="fas fa-chart-pie"></i> {{ t('budget_summary', default='Financial Summary') }}</h5>
                 </div>
                 <div class="card-body">
-                    {% if latest_budget and latest_budget.get('income_raw', 0.0) > 0 %}
+                    {% if latest_budget and latest_budget.get('id') %}
                         <div class="row text-center mb-4">
                             <div class="col-md-4">
                                 <div class="card bg-success text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_income', default='Income') }}</h6>
-                                        <h4>{{ latest_budget.get('income', '0') | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('income', '0') }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -183,7 +189,7 @@
                                 <div class="card bg-danger text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_expenses', default='Total Expenses') }}</h6>
-                                        <h4>{{ latest_budget.get('fixed_expenses', '0') | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('fixed_expenses', '0') }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -191,14 +197,14 @@
                                 <div class="card bg-{{ 'success' if latest_budget.get('surplus_deficit', 0)|float >= 0 else 'warning' }} text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_surplus_deficit', default='Surplus/Deficit') }}</h6>
-                                        <h4>{{ latest_budget.get('surplus_deficit_formatted', '0') | format_currency }}</h4>
+                                        <h4>{{ latest_budget.get('surplus_deficit_formatted', '0') }}</h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Expense Breakdown Chart -->
-                        {% if categories %}
+                        {% if categories and categories|length > 0 %}
                             <div class="card mb-4">
                                 <div class="card-header">
                                     <h6>{{ t('budget_expense_breakdown', default='Expense Breakdown') }}</h6>
@@ -206,6 +212,10 @@
                                 <div class="card-body">
                                     <canvas id="expenseChart" height="200"></canvas>
                                 </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center">
+                                <p>{{ t('budget_no_expenses', default='No expense data available for the chart.') }}</p>
                             </div>
                         {% endif %}
 
@@ -231,10 +241,10 @@
                                                 {% for budget_id, budget in budgets.items() %}
                                                     <tr>
                                                         <td>{{ budget.get('created_at', 'N/A') | format_datetime }}</td>
-                                                        <td>{{ budget.get('income', '0') | format_currency }}</td>
-                                                        <td>{{ budget.get('fixed_expenses', '0') | format_currency }}</td>
+                                                        <td>{{ budget.get('income', '0') }}</td>
+                                                        <td>{{ budget.get('fixed_expenses', '0') }}</td>
                                                         <td class="{% if budget.get('surplus_deficit', 0)|float >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                            {{ budget.get('surplus_deficit_formatted', '0') | format_currency }}
+                                                            {{ budget.get('surplus_deficit_formatted', '0') }}
                                                         </td>
                                                         <td>
                                                             <form method="POST" action="{{ url_for('personal.budget.main') }}" style="display: inline;">
@@ -251,6 +261,10 @@
                                         </table>
                                     </div>
                                 </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center">
+                                <p>{{ t('budget_no_history', default='No budget history available.') }}</p>
                             </div>
                         {% endif %}
                     {% else %}
@@ -286,29 +300,55 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Number input validation and cleaning
-    function cleanNumberInput(input) {
+    // Number input validation and formatting with comma separation
+    function formatNumberInput(input) {
         input.addEventListener('input', function(e) {
-            // Allow only numbers and decimal points
+            // Store cursor position
+            const cursorPosition = e.target.selectionStart;
+            const oldLength = e.target.value.length;
+
+            // Remove all non-numeric characters except decimal point
             let value = e.target.value.replace(/[^0-9.]/g, '');
             // Ensure only one decimal point
             const parts = value.split('.');
             if (parts.length > 2) {
                 value = parts[0] + '.' + parts.slice(1).join('');
             }
-            // Update input value
-            e.target.value = value;
+            // Limit to two decimal places
+            if (parts.length > 1) {
+                parts[1] = parts[1].slice(0, 2);
+                value = parts[0] + (parts[1] ? '.' + parts[1] : '');
+            }
+            // Add comma separation for integer part
+            const [integerPart, decimalPart] = value.split('.');
+            const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            e.target.value = decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+
+            // Adjust cursor position to account for added/removed commas
+            const newLength = e.target.value.length;
+            const cursorAdjustment = newLength - oldLength;
+            e.target.selectionStart = e.target.selectionEnd = cursorPosition + cursorAdjustment;
+
+            // Show warning if invalid characters were entered
+            if (e.target.value !== e.target.value.match(/[0-9,.]+/)) {
+                const warning = document.createElement('div');
+                warning.className = 'invalid-feedback';
+                warning.textContent = '{{ t('budget_number_only', default='Please enter numbers only (e.g., 500000 or 500000.00)') }}';
+                warning.style.display = 'block';
+                e.target.parentNode.appendChild(warning);
+                setTimeout(() => warning.remove(), 3000);
+            }
         });
     }
 
-    // Apply cleaning to all number inputs
-    document.querySelectorAll('.number-input').forEach(cleanNumberInput);
+    // Apply formatting to all number inputs
+    document.querySelectorAll('.number-input').forEach(formatNumberInput);
 
-    // Form submission
+    // Clean input before form submission
     document.getElementById('budgetForm').addEventListener('submit', function(e) {
         document.querySelectorAll('.number-input').forEach(function(input) {
-            // Remove any remaining non-numeric characters (though input event should handle this)
-            input.value = input.value.replace(/[^0-9.]/g, '');
+            // Remove commas for backend submission
+            input.value = input.value.replace(/,/g, '');
         });
     });
 
@@ -336,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Chart rendering with try-catch
-    {% if categories %}
+    {% if categories and categories|length > 0 %}
     try {
         const expenseCtx = document.getElementById('expenseChart').getContext('2d');
         new Chart(expenseCtx, {
@@ -361,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             label: function(context) {
                                 let label = context.label || '';
                                 let value = context.raw || 0;
-                                return `${label}: ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(value)}`;
+                                return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                             }
                         }
                     }
