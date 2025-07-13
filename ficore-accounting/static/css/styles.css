@@ -210,8 +210,8 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 2rem; /* Increased gap for better separation */
-    padding-top: 0.3rem;
+    gap: 2rem;
+    padding-top: 0; !important
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
     min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
     position: static !important;
