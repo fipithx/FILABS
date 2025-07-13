@@ -2150,8 +2150,7 @@ h2.card-title {
 /* Tables */
 .table-responsive {
     overflow-x: auto !important; /* Enable horizontal scrolling for tables */
-    -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
-    max-width: 100%; /* Fit within parent container */
+    overflow-y: visible !important;
     position: relative;
     z-index: 1;/* Ensure the table-responsive creates a new stacking context */
 }
@@ -2164,7 +2163,7 @@ h2.card-title {
     background: var(--table-light-bg);
     border: 1px solid var(--table-border);
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible !important;
     table-layout: auto; /* Allow columns to adjust based on content */
 }
 
@@ -2941,7 +2940,8 @@ h2.card-title {
     box-shadow: var(--card-shadow);
     min-width: 120px;
     position: absolute;
-    z-index: 1055;
+    z-index: 9999;
+    display: none;
 }
 
 .dropdown-item {
@@ -2957,7 +2957,7 @@ h2.card-title {
 }
 /* Ensure dropdown menu visibility when toggled */
 .dropdown-menu.show {
-    display: block;
+    display: block !important;
 }
 
 /* Optional: Enhance dropdown toggle appearance */
@@ -2975,9 +2975,7 @@ h2.card-title {
 /* Ensure dropdown container is positioned correctly */
 .dropdown {
     position: relative;
-}
-.dropdown-menu.show {
-    display: block !important;
+    z-index: 2000;
 }
 .table .dropdown-menu {
     position: absolute;
@@ -2994,9 +2992,10 @@ h2.card-title {
 }
 
 .table td:has(.dropdown) {
-    overflow: visible;
+    overflow: visible !important;
     max-width: none;
     position: relative;
+    z-index: 2000;
 }
 
 /* Alternative for older browsers */
@@ -3038,6 +3037,7 @@ h2.card-title {
 /* Ensure parent containers don't clip dropdowns */
 .page-container, .section-card, .main-content {
     overflow: visible !important;
+    position: relative;
 }
 .page-container:has(.table-responsive) {
     overflow-x: visible;
