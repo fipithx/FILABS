@@ -5,9 +5,9 @@ from utils import trans_function, requires_role, is_valid_email, format_currency
 from bson import ObjectId
 from datetime import datetime
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileAllowed
+from flask_wtf.file import File轨
 from wtforms import StringField, TextAreaField, SelectField, BooleanField, SubmitField, FileField
-from wtforms.validators import DataRequired, Length, Email
+from wtforms.validators import DataRequired, Length, Email, Optional
 from gridfs import GridFS
 from io import BytesIO
 from PIL import Image
@@ -28,43 +28,55 @@ class ProfileForm(FlaskForm):
         Email(message=trans('general_email_invalid', default='Invalid email address'))
     ], render_kw={'class': 'form-control'})
     phone = StringField(trans('general_phone', default='Phone'), [
-        Length(max=20, message=trans('general_phone_length', default='Phone number too long'), allow_blank=True)
+        Optional(),
+        Length(max=20, message=trans('general_phone_length', default='Phone number too long'))
     ], render_kw={'class': 'form-control'})
     profile_picture = FileField(trans('general_profile_picture', default='Profile Picture'), [
         FileAllowed(['jpg', 'jpeg', 'png', 'gif'], message=trans('general_invalid_image_format', default='Only JPG, PNG, and GIF files are allowed'))
     ], render_kw={'accept': 'image/*'})
     first_name = StringField(trans('general_first_name', default='First Name'), [
-        Length(max=50, message=trans('general_first_name_length', default='First name too long'), allow_blank=True)
+        Optional(),
+        Length(max=50, message=trans('general_first_name_length', default='First name too long'))
     ], render_kw={'class': 'form-control'})
     last_name = StringField(trans('general_last_name', default='Last Name'), [
-        Length(max=50, message=trans('general_last_name_length', default='Last name too long'), allow_blank=True)
+        Optional(),
+        Length(max=50, message=trans('general_last_name_length', default='Last name too long'))
     ], render_kw={'class': 'form-control'})
     personal_address = TextAreaField(trans('general_address', default='Address'), [
-        Length(max=500, message=trans('general_address_length', default='Address too long'), allow_blank=True)
+        Optional(),
+        Length(max=500, message=trans('general_address_length', default='Address too long'))
     ], render_kw={'class': 'form-control'})
     business_name = StringField(trans('general_business_name', default='Business Name'), [
-        Length(max=100, message=trans('general_business_name_length', default='Business name too long'), allow_blank=True)
+        Optional(),
+        Length(max=100, message=trans('general_business_name_length', default='Business name too long'))
     ], render_kw={'class': 'form-control'})
     business_address = TextAreaField(trans('general_business_address', default='Business Address'), [
-        Length(max=500, message=trans('general_business_address_length', default='Business address too long'), allow_blank=True)
+        Optional(),
+        Length(max=500, message=trans('general_business_address_length', default='Business address too long'))
     ], render_kw={'class': 'form-control'})
     industry = StringField(trans('general_industry', default='Industry'), [
-        Length(max=50, message=trans('general_industry_length', default='Industry name too long'), allow_blank=True)
+        Optional(),
+        Length(max=50, message=trans('general_industry_length', default='Industry name too long'))
     ], render_kw={'class': 'form-control'})
     products_services = StringField(trans('general_products_services', default='Products/Services'), [
-        Length(max=200, message=trans('general_products_services_length', default='Products/Services description too long'), allow_blank=True)
+        Optional(),
+        Length(max=200, message=trans('general_products_services_length', default='Products/Services description too long'))
     ], render_kw={'class': 'form-control'})
     agent_name = StringField(trans('agents_agent_name', default='Agent Name'), [
-        Length(max=100, message=trans('agents_agent_name_length', default='Agent name too long'), allow_blank=True)
+        Optional(),
+        Length(max=100, message=trans('agents_agent_name_length', default='Agent name too long'))
     ], render_kw={'class': 'form-control'})
     agent_id = StringField(trans('agents_agent_id', default='Agent ID'), [
-        Length(max=50, message=trans('agents_agent_id_length', default='Agent ID too long'), allow_blank=True)
+        Optional(),
+        Length(max=50, message=trans('agents_agent_id_length', default='Agent ID too long'))
     ], render_kw={'class': 'form-control'})
     area = StringField(trans('agents_area', default='Area'), [
-        Length(max=100, message=trans('agents_area_length', default='Area too long'), allow_blank=True)
+        Optional(),
+        Length(max=100, message=trans('agents_area_length', default='Area too long'))
     ], render_kw={'class': 'form-control'})
     agent_role = StringField(trans('agents_role', default='Role'), [
-        Length(max=50, message=trans('agents_role_length', default='Role too long'), allow_blank=True)
+        Optional(),
+        Length(max=50, message=trans('agents_role_length', default='Role too long'))
     ], render_kw={'class': 'form-control'})
     submit = SubmitField(trans('general_save_changes', default='Save Changes'), render_kw={'class': 'btn btn-primary w-100'})
 
