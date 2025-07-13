@@ -114,7 +114,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="reminderModalLabel">{{ t('debtors_send_reminder', default='Send Reminder') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
             </div>
             <div class="modal-body">
                 <form id="reminderForm">
@@ -150,7 +150,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="snoozeModalLabel">{{ t('debtors_snooze_reminder', default='Snooze Reminder') }}</h5>
-                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
             </div>
             <div class="modal-body">
                 <form id="snoozeForm">
@@ -177,7 +177,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -189,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reminder button functionality
     document.querySelectorAll('.reminder-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Reminder button clicked:', button.dataset.id); // Debug
             const name = button.dataset.name;
             const amount = parseFloat(button.dataset.amount).toLocaleString();
             const date = button.dataset.date;
@@ -211,7 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send reminder functionality
     document.getElementById('sendReminderBtn').addEventListener('click', function() {
-        if (!currentDebtData) return;
+        if (!currentDebtData) {
+            console.error('No debt data available');
+            return;
+        }
         
         const reminderType = document.getElementById('reminderType').value;
         const message = document.getElementById('reminderMessage').value;
@@ -228,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
                 debtId: currentDebtData._id,
@@ -260,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Snooze button functionality
     document.querySelectorAll('.snooze-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Snooze button clicked:', button.dataset.id); // Debug
             currentDebtData = {
                 _id: button.dataset.id,
                 name: button.dataset.name
@@ -271,7 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Snooze reminder functionality
     document.getElementById('snoozeReminderBtn').addEventListener('click', function() {
-        if (!currentDebtData) return;
+        if (!currentDebtData) {
+            console.error('No debt data available');
+            return;
+        }
         
         const snoozeDays = parseInt(document.getElementById('snoozeDays').value);
         
@@ -282,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
                 debtId: currentDebtData._id,
@@ -312,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Share IOU functionality
     document.querySelectorAll('.share-btn').forEach(button => {
         button.addEventListener('click', () => {
+            console.log('Share button clicked:', button.dataset.id); // Debug
             const debtId = button.dataset.id;
             const contact = button.dataset.contact;
             
