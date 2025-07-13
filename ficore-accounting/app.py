@@ -469,35 +469,9 @@ def create_app():
                 logger.info(f'Admin user created with email: {admin_email}')
             else:
                 logger.info(f'Admin user already exists with email: {admin_email}')
-
-    @app.before_request
-    def check_session_timeout():
-        if current_user.is_authenticated and 'last_activity' in session:
-            last_activity = session.get('last_activity')
-            timeout_minutes = 30  # Adjust as needed
-            if (datetime.utcnow() - last_activity).total_seconds() > timeout_minutes * 60:
-                user_id = current_user.id
-                sid = session.get('sid', 'no-session-id')
-                logger.info(f"Session timeout for user {user_id}, logging out")
-                logout_user()
-                # Delete MongoDB session
-                if current_app.config.get('SESSION_TYPE') == 'mongodb':
-                    try:
-                        db = current_app.extensions['mongo']['ficodb']
-                        db.sessions.delete_one({'_id': sid})
-                        logger.info(f"Deleted MongoDB session for user {user_id}, SID: {sid}")
-                    except Exception as e:
-                        logger.error(f"Failed to delete MongoDB session for SID {sid}: {str(e)}")
-                # Clear session and create new anonymous session
-                session.clear()
-                session['lang'] = session.get('lang', 'en')
-                utils.create_anonymous_session()
-                logger.info(f"New anonymous session created after timeout: {session['sid']}")
-                flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
-                response = make_response(redirect(url_for('users.login')))
-                response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
-                return response
-        session['last_activity'] = datetime.utcnow()
+    except Exception as e:
+        logger.error(f'Error in create_app initialization: {str(e)}', exc_info=True)
+        raise
 
     # Register blueprints
     from users.routes import users_bp
@@ -1109,6 +1083,35 @@ def create_app():
                 title=utils.trans('server_error', lang=session.get('lang', 'en'))
             ), 500
     
+    @app.before_request
+    def check_session_timeout():
+        if current_user.is_authenticated and 'last_activity' in session:
+            last_activity = session.get('last_activity')
+            timeout_minutes = 30  # Adjust as needed
+            if (datetime.utcnow() - last_activity).total_seconds() > timeout_minutes * 60:
+                user_id = current_user.id
+                sid = session.get('sid', 'no-session-id')
+                logger.info(f"Session timeout for user {user_id}, logging out")
+                logout_user()
+                # Delete MongoDB session
+                if current_app.config.get('SESSION_TYPE') == 'mongodb':
+                    try:
+                        db = current_app.extensions['mongo']['ficodb']
+                        db.sessions.delete_one({'_id': sid})
+                        logger.info(f"Deleted MongoDB session for user {user_id}, SID: {sid}")
+                    except Exception as e:
+                        logger.error(f"Failed to delete MongoDB session for SID {sid}: {str(e)}")
+                # Clear session and create new anonymous session
+                session.clear()
+                session['lang'] = session.get('lang', 'en')
+                utils.create_anonymous_session()
+                logger.info(f"New anonymous session created after timeout: {session['sid']}")
+                flash(utils.trans('session_timeout', default='Your session has timed out.'), 'warning')
+                response = make_response(redirect(url_for('users.login')))
+                response.set_cookie(current_app.config['SESSION_COOKIE_NAME'], '', expires=0, httponly=True, secure=current_app.config.get('SESSION_COOKIE_SECURE', True))
+                return response
+        session['last_activity'] = datetime.utcnow()
+
     scheduler_shutdown_done = False
     mongo_client_closed = False
 
