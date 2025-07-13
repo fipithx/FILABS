@@ -235,12 +235,14 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 /* --- Homepage Specific Styles --- */
 /* Top Header */
 .top-header {
-    position: relative;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: var(--navbar-height);
-    background-color: transparent;
+    /*background-color: transparent;  /* Setting background-color: transparent makes the header see-through, allowing content beneath it to be visible as the page scrolls.*/
+    background-color: rgba(255, 255, 255, 0.1); /* Slight opacity for visibility */
+    backdrop-filter: blur(10px); /* Blurs content behind the header */
     border-bottom: 1px solid var(--card-border);
     z-index: 1000;
     display: flex;
