@@ -35,16 +35,18 @@
                             <td data-label="{{ t('inventory_selling_price', default='Selling Price') }}">{{ format_currency(item.selling_price) if item.selling_price else '-' }}</td>
                             <td data-label="{{ t('inventory_threshold', default='Threshold') }}">{{ item.threshold or 5 }}</td>
                             <td data-label="{{ t('general_actions', default='Actions') }}">
-                                <div class="dropdown">
-                                    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        {{ t('general_actions', default='Actions') }}
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="{{ url_for('inventory.edit', id=item._id) }}">{{ t('general_view', default='View') }}</a></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('inventory.add_stock', id=item._id) }}">{{ t('inventory_add_stock', default='Add Stock') }}</a></li>
-                                        <li><a class="dropdown-item" href="{{ url_for('inventory.remove_stock', id=item._id) }}">{{ t('inventory_remove_stock', default='Remove Stock') }}</a></li>
-                                    </ul>
-                                </div>
+                                <button class="btn btn-secondary btn-sm actions-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#actionsModal"
+                                        data-id="{{ item._id }}"
+                                        data-name="{{ item.item_name }}"
+                                        data-quantity="{{ item.qty }}"
+                                        data-unit="{{ item.unit or '' }}"
+                                        data-buying-price="{{ item.buying_price or '' }}"
+                                        data-selling-price="{{ item.selling_price or '' }}"
+                                        data-threshold="{{ item.threshold or 5 }}">
+                                    {{ t('general_actions', default='Actions') }}
+                                </button>
                             </td>
                         </tr>
                     {% endfor %}
@@ -58,6 +60,38 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Actions Modal -->
+<div class="modal fade" id="actionsModal" tabindex="-1" aria-labelledby="actionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionsModalLabel">{{ t('inventory_item_details', default='Item Details') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('inventory_item_name', default='Item Name') }}:</strong> <span id="modalName"></span></p>
+                        <p><strong>{{ t('inventory_quantity', default='Quantity') }}:</strong> <span id="modalQuantity"></span></p>
+                        <p><strong>{{ t('inventory_unit', default='Unit') }}:</strong> <span id="modalUnit"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('inventory_buying_price', default='Buying Price') }}:</strong> <span id="modalBuyingPrice"></span></p>
+                        <p><strong>{{ t('inventory_selling_price', default='Selling Price') }}:</strong> <span id="modalSellingPrice"></span></p>
+                        <p><strong>{{ t('inventory_threshold', default='Threshold') }}:</strong> <span id="modalThreshold"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="viewBtn" class="btn btn-primary" href="#">{{ t('general_view', default='View') }}</a>
+                <a id="addStockBtn" class="btn btn-success" href="#">{{ t('inventory_add_stock', default='Add Stock') }}</a>
+                <a id="removeStockBtn" class="btn btn-warning" href="#">{{ t('inventory_remove_stock', default='Remove Stock') }}</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block page_scripts %}
@@ -66,6 +100,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
+    let currentItemData = null;
+
+    // Actions button functionality
+    document.querySelectorAll('.actions-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            console.log('Actions button clicked:', button.dataset.id); // Debug
+            currentItemData = {
+                _id: button.dataset.id,
+                item_name: button.dataset.name,
+                quantity: button.dataset.quantity,
+                unit: button.dataset.unit,
+                buying_price: button.dataset.buyingPrice ? parseFloat(button.dataset.buyingPrice).toLocaleString() : '-',
+                selling_price: button.dataset.sellingPrice ? parseFloat(button.dataset.sellingPrice).toLocaleString() : '-',
+                threshold: button.dataset.threshold
+            };
+
+            // Populate modal fields
+            document.getElementById('modalName').textContent = currentItemData.item_name;
+            document.getElementById('modalQuantity').textContent = currentItemData.quantity;
+            document.getElementById('modalUnit').textContent = currentItemData.unit || '-';
+            document.getElementById('modalBuyingPrice').textContent = currentItemData.buying_price === '-' ? '-' : `{{ t('general_currency_symbol', default='₦') }}${currentItemData.buying_price}`;
+            document.getElementById('modalSellingPrice').textContent = currentItemData.selling_price === '-' ? '-' : `{{ t('general_currency_symbol', default='₦') }}${currentItemData.selling_price}`;
+            document.getElementById('modalThreshold').textContent = currentItemData.threshold;
+
+            // Update action buttons
+            document.getElementById('viewBtn').href = `/inventory/edit/${currentItemData._id}`;
+            document.getElementById('addStockBtn').href = `/inventory/add_stock/${currentItemData._id}`;
+            document.getElementById('removeStockBtn').href = `/inventory/remove_stock/${currentItemData._id}`;
+        });
+    });
 });
 </script>
 {% endblock %}
