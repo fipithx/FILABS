@@ -1,32 +1,33 @@
 {% extends 'base.html' %}
 {% block content %}
-<!DOCTYPE html>
-<html lang="{{ lang }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ tool_title }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/learning_hub.css') }}">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-</head>
-<body>
-    <header>
-        <h1>{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</h1>
-        <p>{{ t('main_welcome', default='Your central hub for financial education and digital skills in Northern Nigeria.', lang=lang) }}</p>
-    </header>
-
-    <nav>
+<div class="learning-hub-wrapper">
+    <aside class="sidebar">
+        <button class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+        <h2>{{ t('learning_hub_nav', default='Navigation', lang=lang) }}</h2>
         <ul>
+            <li><a href="{{ url_for('learning_hub.main') }}">{{ t('learning_hub_title', default='Learning Hub', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.personal') }}">{{ t('learning_hub_personal_title', default='Personal Finance Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.business') }}">{{ t('learning_hub_business_title', default='Business Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.agents') }}">{{ t('learning_hub_agents_title', default='Agent Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.compliance') }}">{{ t('learning_hub_compliance_title', default='Compliance Learning', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.tool_tutorials') }}">{{ t('learning_hub_tool_tutorials_title', default='Tool Tutorials', lang=lang) }}</a></li>
             <li><a href="{{ url_for('learning_hub.profile') }}">{{ t('learning_hub_profile_title', default='Profile', lang=lang) }}</a></li>
+            {% if current_user.is_authenticated and is_admin() %}
+                <li><a href="#upload">{{ t('learning_hub_upload_content', default='Upload Content', lang=lang) }}</a></li>
+            {% endif %}
         </ul>
-    </nav>
+        <div class="role-filter">
+            <label for="role-filter">{{ t('learning_hub_role_filter', default='Filter by Role', lang=lang) }}</label>
+            <select id="role-filter" name="role">
+                <option value="all" {% if role_filter == 'all' %}selected{% endif %}>{{ t('learning_hub_all_roles', default='All Roles', lang=lang) }}</option>
+                <option value="civil_servant" {% if role_filter == 'civil_servant' %}selected{% endif %}>{{ t('learning_hub_civil_servant', default='Civil Servant', lang=lang) }}</option>
+                <option value="nysc" {% if role_filter == 'nysc' %}selected{% endif %}>{{ t('learning_hub_nysc', default='NYSC', lang=lang) }}</option>
+                <option value="agent" {% if role_filter == 'agent' %}selected{% endif %}>{{ t('learning_hub_agent', default='Agent', lang=lang) }}</option>
+            </select>
+        </div>
+    </aside>
 
-    <div class="container">
+    <main class="container">
         {% if error %}
             <div class="card">
                 <p style="color: red;">{{ error }}</p>
@@ -110,108 +111,106 @@
             <input type="email" name="email" required>
             <button type="submit">{{ t('register', default='Register', lang=lang) }}</button>
         </form>
-    </div>
+    </main>
 
     <div class="language-toggle">
         <a href="?lang=en">{{ t('lang_english', default='English', lang=lang) }}</a> |
         <a href="?lang=ha">{{ t('lang_hausa', default='Hausa', lang=lang) }}</a>
     </div>
+</div>
 
-    <footer>
-        <p>{{ t('footer_text', default='Empowering Northern Nigeria through Financial Education', lang=lang) }}</p>
-    </footer>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.sidebar-toggle').click(function() {
+            $('.sidebar').toggleClass('active');
+        });
 
-    <script>
-        $(document).ready(function() {
-            $('a[href*="#"]').click(function(e) {
-                e.preventDefault();
-                const target = $(this.hash);
-                if (target.length) {
-                    $('html, body').animate({ scrollTop: target.offset().top }, 500);
-                } else {
-                    // Fetch course or lesson data via AJAX
-                    const hash = this.hash.substring(1);
-                    if (hash.startsWith('course-')) {
-                        const courseId = hash.replace('course-', '');
-                        $.get('{{ url_for("learning_hub.get_course_data") }}/' + courseId, function(data) {
-                            if (data.success) {
-                                // Render course content dynamically
-                                $('#course-content').html(`
-                                    <div class="card">
-                                        <h3>${data.course.title_en}</h3>
-                                        <p>${data.course.description_en}</p>
-                                        <div class="progress-bar">
-                                            <div class="progress-bar-fill" style="width: ${data.progress.lessons_completed.length / data.course.modules.reduce((sum, m) => sum + m.lessons.length, 0) * 100}%"></div>
-                                        </div>
-                                        ${data.course.modules.map(m => `
-                                            <div>
-                                                <h4>${m.title_en}</h4>
-                                                ${m.lessons.map(l => `
-                                                    <p><a href="#lesson-${courseId}-${l.id}">${l.title_en}</a></p>
-                                                `).join('')}
-                                            </div>
-                                        `).join('')}
+        $('a[href*="#"]').click(function(e) {
+            e.preventDefault();
+            const target = $(this.hash);
+            if (target.length) {
+                $('html, body').animate({ scrollTop: target.offset().top }, 500);
+            } else {
+                const hash = this.hash.substring(1);
+                if (hash.startsWith('course-')) {
+                    const courseId = hash.replace('course-', '');
+                    $.get('{{ url_for("learning_hub.get_course_data") }}/' + courseId, function(data) {
+                        if (data.success) {
+                            $('#course-content').html(`
+                                <div class="card">
+                                    <h3>${data.course.title_en}</h3>
+                                    <p>${data.course.description_en}</p>
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" style="width: ${data.progress.lessons_completed.length / data.course.modules.reduce((sum, m) => sum + m.lessons.length, 0) * 100}%"></div>
                                     </div>
-                                `);
-                            }
-                        });
-                    } else if (hash.startsWith('lesson-')) {
-                        const [_, courseId, lessonId] = hash.split('-');
-                        $.get('{{ url_for("learning_hub.get_lesson_data") }}', { course_id: courseId, lesson_id: lessonId }, function(data) {
-                            if (data.success) {
-                                $('#course-content').html(`
-                                    <div class="card">
-                                        <h3>${data.lesson.title_en}</h3>
-                                        <p>${data.lesson.content_en}</p>
-                                        <button onclick="markLessonComplete('${courseId}', '${lessonId}')">{{ t('mark_complete', default='Mark as Complete', lang=lang) }}</button>
-                                        ${data.next_lesson_id ? `<a href="#lesson-${courseId}-${data.next_lesson_id}" class="btn">{{ t('next_lesson', default='Next Lesson', lang=lang) }}</a>` : ''}
-                                    </div>
-                                `);
-                            }
-                        });
-                    } else if (hash.startsWith('quiz-')) {
-                        const [_, courseId, quizId] = hash.split('-');
-                        $.get('{{ url_for("learning_hub.get_quiz_data") }}', { course_id: courseId, quiz_id: quizId }, function(data) {
-                            if (data.success) {
-                                $('#course-content').html(`
-                                    <div class="card">
-                                        <h3>${data.quiz.id}</h3>
-                                        <form method="POST" action="{{ url_for('learning_hub.quiz_action') }}">
-                                            <input type="hidden" name="course_id" value="${courseId}">
-                                            <input type="hidden" name="quiz_id" value="${quizId}">
-                                            <input type="hidden" name="action" value="submit_quiz">
-                                            ${data.quiz.questions.map((q, i) => `
-                                                <p>${q.question_en}</p>
-                                                ${q.options_en.map(opt => `
-                                                    <label><input type="radio" name="q${i}" value="${opt}">${opt}</label><br>
-                                                `).join('')}
+                                    ${data.course.modules.map(m => `
+                                        <div>
+                                            <h4>${m.title_en}</h4>
+                                            ${m.lessons.map(l => `
+                                                <p><a href="#lesson-${courseId}-${l.id}">${l.title_en}</a></p>
                                             `).join('')}
-                                            <button type="submit">{{ t('submit_quiz', default='Submit Quiz', lang=lang) }}</button>
-                                        </form>
-                                    </div>
-                                `);
-                            }
-                        });
-                    }
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `);
+                        }
+                    });
+                } else if (hash.startsWith('lesson-')) {
+                    const [_, courseId, lessonId] = hash.split('-');
+                    $.get('{{ url_for("learning_hub.get_lesson_data") }}', { course_id: courseId, lesson_id: lessonId }, function(data) {
+                        if (data.success) {
+                            $('#course-content').html(`
+                                <div class="card">
+                                    <h3>${data.lesson.title_en}</h3>
+                                    <p>${data.lesson.content_en}</p>
+                                    <button onclick="markLessonComplete('${courseId}', '${lessonId}')">{{ t('mark_complete', default='Mark as Complete', lang=lang) }}</button>
+                                    ${data.next_lesson_id ? `<a href="#lesson-${courseId}-${data.next_lesson_id}" class="btn">{{ t('next_lesson', default='Next Lesson', lang=lang) }}</a>` : ''}
+                                </div>
+                            `);
+                        }
+                    });
+                } else if (hash.startsWith('quiz-')) {
+                    const [_, courseId, quizId] = hash.split('-');
+                    $.get('{{ url_for("learning_hub.get_quiz_data") }}', { course_id: courseId, quiz_id: quizId }, function(data) {
+                        if (data.success) {
+                            $('#course-content').html(`
+                                <div class="card">
+                                    <h3>${data.quiz.id}</h3>
+                                    <form method="POST" action="{{ url_for('learning_hub.quiz_action') }}">
+                                        <input type="hidden" name="course_id" value="${courseId}">
+                                        <input type="hidden" name="quiz_id" value="${quizId}">
+                                        <input type="hidden" name="action" value="submit_quiz">
+                                        ${data.quiz.questions.map((q, i) => `
+                                            <p>${q.question_en}</p>
+                                            ${q.options_en.map(opt => `
+                                                <label><input type="radio" name="q${i}" value="${opt}">${opt}</label><br>
+                                            `).join('')}
+                                        `).join('')}
+                                        <button type="submit">{{ t('submit_quiz', default='Submit Quiz', lang=lang) }}</button>
+                                    </form>
+                                </div>
+                            `);
+                        }
+                    });
                 }
-            });
-
-            function markLessonComplete(courseId, lessonId) {
-                $.post('{{ url_for("learning_hub.lesson_action") }}', {
-                    course_id: courseId,
-                    lesson_id: lessonId,
-                    action: 'mark_complete'
-                }, function(data) {
-                    if (data.success) {
-                        alert(data.message + (data.coins_earned ? ' ' + data.coins_earned : '') + (data.badge_earned ? ' Badge: ' + data.badge_earned : ''));
-                        location.reload();
-                    } else {
-                        alert(data.message);
-                    }
-                });
             }
         });
-    </script>
-</body>
-</html>
+
+        function markLessonComplete(courseId, lessonId) {
+            $.post('{{ url_for("learning_hub.lesson_action") }}', {
+                course_id: courseId,
+                lesson_id: lessonId,
+                action: 'mark_complete'
+            }, function(data) {
+                if (data.success) {
+                    alert(data.message + (data.coins_earned ? ' ' + data.coins_earned : '') + (data.badge_earned ? ' Badge: ' + data.badge_earned : ''));
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
