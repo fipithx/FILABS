@@ -7,6 +7,8 @@
     <meta name="keywords" content="{% if current_user.is_authenticated and current_user.role == 'personal' %}personal finance, budgeting, savings, financial planning, Africa{% else %}business finance, inventory management, debtors, creditors, Africa{% endif %}">
     <meta name="author" content="FiCore">
     <meta name="csrf-token" content="{{ csrf_token() | e }}">
+    <meta name="robots" content="index, follow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>{% block title %}{{ t('general_ficore_africa', default='FiCore Africa') | e }}{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-9eS8W0ZGx0dZF9eT3uXZmz3C9G3B8+ZQc6KHg5Xb7dCkJ7M3v0pAn3uY8eQ3p3J2" crossorigin="anonymous">
@@ -147,13 +149,13 @@
                     <a href="{{ url_for('users.login') | e }}"><i class="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i> {{ t('general_login', default='Login') | e }}</a>
                 </div>
                 <div class="social-icons">
-                    <a href="https://linkedin.com/company/ficoreafrica" target="_blank" aria-label="{{ t('general_connect_on_linkedin', default='Connect on LinkedIn') | e }}">
+                    <a href="https://linkedin.com/company/ficoreafrica" target="_blank" rel="noopener noreferrer" aria-label="{{ t('general_connect_on_linkedin', default='Connect on LinkedIn') | e }}">
                         <i class="fab fa-linkedin"></i> LinkedIn
                     </a>
-                    <a href="https://x.com/ficoreafrica" target="_blank" aria-label="{{ t('general_follow_on_twitter', default='Follow on Twitter') | e }}">
+                    <a href="https://x.com/ficoreafrica" target="_blank" rel="noopener noreferrer" aria-label="{{ t('general_follow_on_twitter', default='Follow on Twitter') | e }}">
                         <i class="fab fa-x-twitter"></i> Twitter
                     </a>
-                    <a href="https://facebook.com/ficoreafrica" target="_blank" aria-label="{{ t('general_follow_on_facebook', default='Follow on Facebook') | e }}">
+                    <a href="https://facebook.com/ficoreafrica" target="_blank" rel="noopener noreferrer" aria-label="{{ t('general_follow_on_facebook', default='Follow on Facebook') | e }}">
                         <i class="fab fa-facebook"></i> Facebook
                     </a>
                 </div>
@@ -210,12 +212,39 @@
         .notification-time {
             font-size: 0.8rem;
         }
+        .dropdown-menu.show {
+            display: block !important;
+        }
     </style>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous" defer></script>
     <script>
+        function getCsrfToken() {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            if (!token) {
+                console.error('CSRF token not found in meta tag');
+            }
+            return token;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(tooltipTriggerEl => {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Debug dropdowns
+            document.querySelectorAll('.dropdown-toggle').forEach(button => {
+                button.addEventListener('click', () => {
+                    console.log('Dropdown button clicked:', button.id || button.className);
+                    const dropdownMenu = button.nextElementSibling;
+                    if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                        console.log('Dropdown menu found, current classes:', dropdownMenu.className);
+                    } else {
+                        console.warn('Dropdown menu not found for button:', button.id || button.className);
+                    }
+                });
+            });
 
             // Debug icons
             document.querySelectorAll('.bi').forEach(icon => {
@@ -281,7 +310,11 @@
                     '';
                 {% endif %};
                 if (!endpoint) return;
-                const response = await fetch(endpoint);
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 const badge = document.getElementById('notificationBadge');
@@ -327,7 +360,11 @@
                     `;
                     return;
                 }
-                const response = await fetch(endpoint);
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
                 if (data.error) {
@@ -415,6 +452,7 @@
         document.getElementById('notificationModal')?.addEventListener('show.bs.modal', loadNotifications);
     </script>
     {% block base_scripts %}{% endblock %}
+    {% block page_scripts %}{% endblock %}
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
