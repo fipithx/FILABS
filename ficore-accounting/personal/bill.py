@@ -2,7 +2,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import StringField, FloatField, SelectField, BooleanField, IntegerField, DateField
-from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, clean_currency, log_tool_usage
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage
 from wtforms.validators import DataRequired, NumberRange, Email, Optional
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
@@ -10,16 +10,52 @@ from datetime import datetime, date, timedelta
 from translations import trans
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
+import re
 
 bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL')
 
 csrf = CSRFProtect()
 
-def strip_commas(value):
-    """Remove commas from string values for numerical fields."""
+def clean_currency(value):
+    """Strip commas and handle edge cases for numeric inputs."""
+    if not value or value == '0':
+        return '0'
     if isinstance(value, str):
-        return value.replace(',', '')
-    return value
+        value = re.sub(r'[^\d.]', '', value.strip())
+        parts = value.split('.')
+        if len(parts) > 2:
+            value = parts[0] + '.' + ''.join(parts[1:])
+        if not value or value == '.':
+            return '0'
+        try:
+            float_value = float(value)
+            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
+            return str(float_value)
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+            return '0'
+    return str(float(value))
+
+def strip_commas(value):
+    """Strip commas from string values, delegating to clean_currency."""
+    if isinstance(value, str):
+        return clean_currency(value)
+    return str(value)
+
+def format_currency(value):
+    """Format a numeric value with comma separation, no currency symbol."""
+    try:
+        if isinstance(value, str):
+            cleaned_value = clean_currency(value)
+            numeric_value = float(cleaned_value)
+        else:
+            numeric_value = float(value)
+        formatted = f"{numeric_value:,.2f}"
+        current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
+        return formatted
+    except (ValueError, TypeError) as e:
+        current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return "0.00"
 
 def calculate_next_due_date(due_date, frequency):
     """Calculate the next due date based on frequency."""
@@ -67,6 +103,19 @@ class BillForm(FlaskForm):
     ], default='unpaid', validators=[DataRequired()])
     send_email = BooleanField(trans('general_send_email', default='Send Email Reminders'), default=False)
     reminder_days = IntegerField(trans('bill_reminder_days', default='Reminder Days'), default=7, validators=[Optional(), NumberRange(min=1, max=30)])
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators):
+            return False
+        try:
+            cleaned_amount = clean_currency(str(self.amount.data or '0'))
+            self.amount.data = float(cleaned_amount)
+            current_app.logger.debug(f"Validated amount: raw={self.amount.data}, cleaned={cleaned_amount}", extra={'session_id': session.get('sid', 'unknown')})
+        except (ValueError, TypeError) as e:
+            current_app.logger.warning(f"Invalid amount value: raw={self.amount.data}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+            self.amount.errors.append(trans('bill_amount_invalid', default='Invalid amount. Please enter a valid number.'))
+            return False
+        return True
 
 class EditBillForm(FlaskForm):
     frequency = SelectField(trans('bill_frequency', default='Frequency'), choices=[
@@ -122,6 +171,9 @@ def main():
         current_app.logger.error(f"Failed to log tool usage: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_log_error', default='Error logging bill activity. Please try again.'), 'warning')
     
+    # Get active tab from query parameter (defaults to 'add-bill')
+    active_tab = request.args.get('tab', 'add-bill')
+    
     # Fetch recent activities for the current user
     try:
         activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
@@ -159,7 +211,7 @@ def main():
                 due_date = form.due_date.data
                 if due_date < date.today():
                     flash(trans('bill_due_date_future_validation', default='Due date must be today or in the future.'), 'danger')
-                    return redirect(url_for('bill.main'))
+                    return redirect(url_for('bill.main', tab='add-bill'))
                 status = form.status.data
                 if status not in ['paid', 'pending'] and due_date < date.today():
                     status = 'overdue'
@@ -178,40 +230,53 @@ def main():
                     'reminder_days': form.reminder_days.data if form.send_email.data else None,
                     'created_at': datetime.utcnow()
                 }
-                bills_collection.insert_one(bill_data)
-                current_app.logger.info(f"Bill added successfully for {form.email.data}: {bill_data['bill_name']}")
-                flash(trans('bill_added_success', default='Bill added successfully!'), 'success')
-                if form.send_email.data and form.email.data:
-                    try:
-                        config = EMAIL_CONFIG['bill_reminder']
-                        subject = trans(config['subject_key'], default='Your Bill Reminder')
-                        send_email(
-                            app=current_app,
-                            logger=current_app.logger,
-                            to_email=form.email.data,
-                            subject=subject,
-                            template_name=config['template'],
-                            data={
-                                'first_name': form.first_name.data,
-                                'bills': [bill_data],
-                                'cta_url': url_for('bill.main', _external=True),
-                                'unsubscribe_url': url_for('bill.unsubscribe', email=form.email.data, _external=True)
-                            },
-                            lang=session.get('lang', 'en')
-                        )
-                        current_app.logger.info(f"Email sent to {form.email.data}")
-                    except Exception as e:
-                        current_app.logger.error(f"Failed to send email: {str(e)}")
-                        flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
+                try:
+                    bills_collection.insert_one(bill_data)
+                    current_app.logger.info(f"Bill added successfully for {form.email.data}: {bill_data['bill_name']}", extra={'session_id': session.get('sid', 'unknown')})
+                    flash(trans('bill_added_success', default='Bill added successfully!'), 'success')
+                    # Redirect to dashboard tab after successful bill creation
+                    if form.send_email.data and form.email.data:
+                        try:
+                            config = EMAIL_CONFIG['bill_reminder']
+                            subject = trans(config['subject_key'], default='Your Bill Reminder')
+                            send_email(
+                                app=current_app,
+                                logger=current_app.logger,
+                                to_email=form.email.data,
+                                subject=subject,
+                                template_name=config['template'],
+                                data={
+                                    'first_name': form.first_name.data,
+                                    'bills': [{
+                                        'bill_name': bill_data['bill_name'],
+                                        'amount': format_currency(bill_data['amount']),
+                                        'due_date': bill_data['due_date'],
+                                        'category': bill_data['category'],
+                                        'status': bill_data['status']
+                                    }],
+                                    'cta_url': url_for('bill.main', _external=True),
+                                    'unsubscribe_url': url_for('bill.unsubscribe', email=form.email.data, _external=True)
+                                },
+                                lang=session.get('lang', 'en')
+                            )
+                            current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session.get('sid', 'unknown')})
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
+                    return redirect(url_for('bill.main', tab='dashboard'))
+                except Exception as e:
+                    current_app.logger.error(f"Failed to save bill to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    flash(trans('bill_storage_error', default='Error saving bill.'), 'danger')
+                    return redirect(url_for('bill.main', tab='add-bill'))
             elif action in ['update_bill', 'delete_bill', 'toggle_status']:
                 bill_id = request.form.get('bill_id')
                 bill = bills_collection.find_one({'_id': ObjectId(bill_id), **filter_kwargs})
                 if not bill:
-                    current_app.logger.warning(f"Bill {bill_id} not found for update/delete/toggle")
+                    current_app.logger.warning(f"Bill {bill_id} not found for update/delete/toggle", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('bill_not_found', default='Bill not found.'), 'danger')
-                    return redirect(url_for('bill.main'))
+                    return redirect(url_for('bill.main', tab='manage-bills'))
                 if action == 'update_bill':
-                    edit_form = EditBillForm(formdata=request.form, bill=bill)
+                    edit_form = EditBillForm(formdata=request.form)
                     if edit_form.validate():
                         update_data = {
                             'frequency': edit_form.frequency.data,
@@ -221,86 +286,120 @@ def main():
                             'reminder_days': edit_form.reminder_days.data if edit_form.send_email.data else None,
                             'updated_at': datetime.utcnow()
                         }
-                        bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': update_data})
-                        current_app.logger.info(f"Bill {bill_id} updated successfully")
-                        flash(trans('bill_updated_success', default='Bill updated successfully!'), 'success')
+                        try:
+                            bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': update_data})
+                            current_app.logger.info(f"Bill {bill_id} updated successfully", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('bill_updated_success', default='Bill updated successfully!'), 'success')
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to update bill {bill_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('bill_update_failed', default='Failed to update bill.'), 'danger')
                     else:
-                        current_app.logger.error(f"Edit form validation failed: {edit_form.errors}")
+                        current_app.logger.error(f"Edit form validation failed: {edit_form.errors}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans('bill_update_failed', default='Failed to update bill.'), 'danger')
+                    return redirect(url_for('bill.main', tab='manage-bills'))
                 elif action == 'delete_bill':
-                    bills_collection.delete_one({'_id': ObjectId(bill_id), **filter_kwargs})
-                    current_app.logger.info(f"Bill {bill_id} deleted successfully")
-                    flash(trans('bill_deleted_success', default='Bill deleted successfully!'), 'success')
+                    try:
+                        bills_collection.delete_one({'_id': ObjectId(bill_id), **filter_kwargs})
+                        current_app.logger.info(f"Bill {bill_id} deleted successfully", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_deleted_success', default='Bill deleted successfully!'), 'success')
+                    except Exception as e:
+                        current_app.logger.error(f"Failed to delete bill {bill_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_delete_failed', default='Failed to delete bill.'), 'danger')
+                    return redirect(url_for('bill.main', tab='manage-bills'))
                 elif action == 'toggle_status':
                     new_status = 'paid' if bill['status'] == 'unpaid' else 'unpaid'
-                    bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': {'status': new_status, 'updated_at': datetime.utcnow()}})
-                    if new_status == 'paid' and bill['frequency'] != 'one-time':
-                        try:
-                            due_date = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
-                            new_due_date = calculate_next_due_date(due_date, bill['frequency'])
-                            new_bill = bill.copy()
-                            new_bill['_id'] = ObjectId()
-                            new_bill['due_date'] = new_due_date.isoformat()
-                            new_bill['status'] = 'unpaid'
-                            new_bill['created_at'] = datetime.utcnow()
-                            bills_collection.insert_one(new_bill)
-                            current_app.logger.info(f"Recurring bill created for {bill['bill_name']}")
-                            flash(trans('bill_new_recurring_bill_success', default='New recurring bill created for {bill_name}.').format(bill_name=bill['bill_name']), 'success')
-                        except Exception as e:
-                            current_app.logger.error(f"Error creating recurring bill: {str(e)}")
-                    current_app.logger.info(f"Bill {bill_id} status toggled to {new_status}")
-                    flash(trans('bill_status_toggled_success', default='Bill status toggled successfully!'), 'success')
-        bills = bills_collection.find(filter_kwargs)
+                    try:
+                        bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': {'status': new_status, 'updated_at': datetime.utcnow()}})
+                        if new_status == 'paid' and bill['frequency'] != 'one-time':
+                            try:
+                                due_date = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
+                                new_due_date = calculate_next_due_date(due_date, bill['frequency'])
+                                new_bill = bill.copy()
+                                new_bill['_id'] = ObjectId()
+                                new_bill['due_date'] = new_due_date.isoformat()
+                                new_bill['status'] = 'unpaid'
+                                new_bill['created_at'] = datetime.utcnow()
+                                bills_collection.insert_one(new_bill)
+                                current_app.logger.info(f"Recurring bill created for {bill['bill_name']}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('bill_new_recurring_bill_success', default='New recurring bill created for {bill_name}.').format(bill_name=bill['bill_name']), 'success')
+                            except Exception as e:
+                                current_app.logger.error(f"Error creating recurring bill: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('bill_recurring_failed', default='Failed to create recurring bill.'), 'warning')
+                        current_app.logger.info(f"Bill {bill_id} status toggled to {new_status}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_status_toggled_success', default='Bill status toggled successfully!'), 'success')
+                    except Exception as e:
+                        current_app.logger.error(f"Failed to toggle bill status {bill_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_status_toggle_failed', default='Failed to toggle bill status.'), 'danger')
+                    return redirect(url_for('bill.main', tab='manage-bills'))
+        bills = bills_collection.find(filter_kwargs).sort('created_at', -1)
         bills_data = []
         edit_forms = {}
+        paid_count = unpaid_count = overdue_count = pending_count = 0
+        total_paid = total_unpaid = total_overdue = total_bills = 0.0
+        categories = {}
+        due_today = []
+        due_week = []
+        due_month = []
+        upcoming_bills = []
+        today = date.today()
         for bill in bills:
             bill_id = str(bill['_id'])
             try:
                 bill['due_date'] = datetime.strptime(bill['due_date'], '%Y-%m-%d').date()
             except (ValueError, TypeError) as e:
-                current_app.logger.warning(f"Invalid due_date for bill {bill_id}: {bill.get('due_date')}")
-                bill['due_date'] = date.today()
-            edit_form = EditBillForm(bill=bill)
-            bills_data.append((bill_id, bill, edit_form))
+                current_app.logger.warning(f"Invalid due_date for bill {bill_id}: {bill.get('due_date')}", extra={'session_id': session.get('sid', 'unknown')})
+                bill['due_date'] = today
+            bill_data = {
+                'id': bill_id,
+                'bill_name': bill.get('bill_name', ''),
+                'amount': format_currency(float(bill.get('amount', 0.0))),
+                'amount_raw': float(bill.get('amount', 0.0)),
+                'due_date': bill['due_date'],
+                'frequency': bill.get('frequency', 'one-time'),
+                'category': bill.get('category', 'other'),
+                'status': bill.get('status', 'unpaid'),
+                'send_email': bill.get('send_email', False),
+                'reminder_days': bill.get('reminder_days', None),
+                'created_at': bill.get('created_at', datetime.utcnow()).strftime('%Y-%m-%d')
+            }
+            edit_form = EditBillForm(data={
+                'frequency': bill_data['frequency'],
+                'category': bill_data['category'],
+                'status': bill_data['status'],
+                'send_email': bill_data['send_email'],
+                'reminder_days': bill_data['reminder_days']
+            })
+            bills_data.append((bill_id, bill_data, edit_form))
             edit_forms[bill_id] = edit_form
-        paid_count = unpaid_count = overdue_count = pending_count = 0
-        total_paid = total_unpaid = total_overdue = total_bills = 0.0
-        categories = {}
-        due_today = [] 
-        due_week = []
-        due_month = [] 
-        upcoming_bills = []
-        today = date.today()
-        for bill_id, bill, edit_form in bills_data:
             try:
-                bill_amount = clean_currency(bill.get('amount', '0')) or 0.0
-                bill_amount = float(bill_amount)
+                bill_amount = float(bill_data['amount_raw'])
                 total_bills += bill_amount
-                cat = bill.get('category')
+                cat = bill_data['category']
                 categories[cat] = categories.get(cat, 0) + bill_amount
-                if bill['status'] == 'paid':
+                if bill_data['status'] == 'paid':
                     paid_count += 1
                     total_paid += bill_amount
-                elif bill['status'] == 'unpaid':
+                elif bill_data['status'] == 'unpaid':
                     unpaid_count += 1
                     total_unpaid += bill_amount
-                elif bill['status'] == 'overdue':
+                elif bill_data['status'] == 'overdue':
                     overdue_count += 1
                     total_overdue += bill_amount
-                elif bill['status'] == 'pending':
+                elif bill_data['status'] == 'pending':
                     pending_count += 1
-                bill_due_date = bill['due_date']
+                bill_due_date = bill_data['due_date']
                 if bill_due_date == today:
-                    due_today.append((bill_id, bill, edit_form))
+                    due_today.append((bill_id, bill_data, edit_form))
                 if today <= bill_due_date <= (today + timedelta(days=7)):
-                    due_week.append((bill_id, bill, edit_form))
+                    due_week.append((bill_id, bill_data, edit_form))
                 if today <= bill_due_date <= (today + timedelta(days=30)):
-                    due_month.append((bill_id, bill, edit_form))
+                    due_month.append((bill_id, bill_data, edit_form))
                 if today < bill_due_date:
-                    upcoming_bills.append((bill_id, bill, edit_form))
+                    upcoming_bills.append((bill_id, bill_data, edit_form))
             except (ValueError, TypeError) as e:
-                current_app.logger.warning(f"Invalid amount for bill {bill_id}: {bill.get('amount')}, error: {str(e)}")
+                current_app.logger.warning(f"Invalid amount for bill {bill_id}: {bill.get('amount')}, error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                 continue
+        categories = {trans(f'bill_category_{k}', default=k): v for k, v in categories.items() if v > 0}
         return render_template(
             'personal/BILL/bill_main.html',
             form=form,
@@ -310,21 +409,22 @@ def main():
             unpaid_count=unpaid_count,
             overdue_count=overdue_count,
             pending_count=pending_count,
-            total_paid=total_paid,
-            total_unpaid=total_unpaid,
-            total_overdue=total_overdue,
-            total_bills=total_bills,
+            total_paid=format_currency(total_paid),
+            total_unpaid=format_currency(total_unpaid),
+            total_overdue=format_currency(total_overdue),
+            total_bills=format_currency(total_bills),
             categories=categories,
             due_today=due_today,
             due_week=due_week,
             due_month=due_month,
             upcoming_bills=upcoming_bills,
             tips=tips,
-            activities=activities,  # Pass activities to the template
-            tool_title=trans('bill_title', default='Bill Manager')
+            activities=activities,
+            tool_title=trans('bill_title', default='Bill Manager'),
+            active_tab=active_tab
         )
     except Exception as e:
-        current_app.logger.error(f"Error in bill.main: {str(e)}")
+        current_app.logger.error(f"Error in bill.main: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_dashboard_load_error', default='Error loading bill dashboard.'), 'danger')
         return render_template(
             'personal/BILL/bill_main.html',
@@ -335,18 +435,19 @@ def main():
             unpaid_count=0,
             overdue_count=0,
             pending_count=0,
-            total_paid=0.0,
-            total_unpaid=0.0,
-            total_overdue=0.0,
-            total_bills=0.0,
+            total_paid=format_currency(0.0),
+            total_unpaid=format_currency(0.0),
+            total_overdue=format_currency(0.0),
+            total_bills=format_currency(0.0),
             categories={},
             due_today=[],
             due_week=[],
             due_month=[],
             upcoming_bills=[],
             tips=tips,
-            activities=[],  # Pass empty activities list on error
-            tool_title=trans('bill_title', default='Bill Manager')
+            activities=[],
+            tool_title=trans('bill_title', default='Bill Manager'),
+            active_tab=active_tab
         ), 500
 
 @bill_bp.route('/summary')
@@ -365,11 +466,11 @@ def summary():
         ]
         result = list(bills_collection.aggregate(pipeline))
         total_upcoming_bills = result[0]['totalUpcomingBills'] if result else 0.0
-        current_app.logger.info(f"Fetched bill summary for user {current_user.id}: {total_upcoming_bills}")
-        return jsonify({'totalUpcomingBills': total_upcoming_bills})
+        current_app.logger.info(f"Fetched bill summary for user {current_user.id}: {total_upcoming_bills}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'totalUpcomingBills': format_currency(total_upcoming_bills)})
     except Exception as e:
-        current_app.logger.error(f"Error in bill.summary: {str(e)}")
-        return jsonify({'totalUpcomingBills': 0.0}), 500
+        current_app.logger.error(f"Error in bill.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return jsonify({'totalUpcomingBills': format_currency(0.0)}), 500
 
 @bill_bp.route('/unsubscribe/<email>')
 @login_required
@@ -394,13 +495,13 @@ def unsubscribe():
         bills_collection = db.bills
         result = bills_collection.update_many(filter_criteria, {'$set': {'send_email': False}})
         if result.modified_count > 0:
-            current_app.logger.info(f"Successfully unsubscribed email {email}")
+            current_app.logger.info(f"Successfully unsubscribed email {email}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans('bill_unsubscribe_success', default='Successfully unsubscribed from bill emails.'), 'success')
         else:
-            current_app.logger.warning(f"No records updated for email {email} during unsubscribe")
+            current_app.logger.warning(f"No records updated for email {email} during unsubscribe", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans('bill_unsubscribe_failed', default='No matching email found or already unsubscribed.'), 'danger')
-        return redirect(url_for('bill.main'))
+        return redirect(url_for('bill.main', tab='manage-bills'))
     except Exception as e:
-        current_app.logger.error(f"Error in bill.unsubscribe: {str(e)}")
+        current_app.logger.error(f"Error in bill.unsubscribe: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_unsubscribe_error', default='Error processing unsubscribe request.'), 'danger')
         return redirect(url_for('personal.index'))
