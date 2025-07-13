@@ -93,7 +93,7 @@ KEY_PREFIX_TO_MODULE = {
     'budget_': 'budget',
     'emergency_fund_': 'emergency_fund',
     'financial_health_': 'financial_health',
-    'net_worth_': 'inventory',  # Map net_worth_ to inventory module
+    'net_worth_': 'newt_worth',  # Map net_worth_ to inventory module
     'learning_hub_': 'learning_hub',
     'quiz_': 'quiz',
     'badge_': 'quiz',  # Route badge_ keys to quiz translations
