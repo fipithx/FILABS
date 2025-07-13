@@ -7,7 +7,9 @@
     --background-main: #F2EFEA; /* Brand beige background */
     --card-bg: #f9f9f9; /* Near-white cards */
     --button-primary-bg: #b88a44; /* Golden brown */
-    --button-primary-hover: #917243; /* Darker golden brown */
+    --button-primary-hover: #a77b3a; /* Slightly darker golden brown */
+    --button-submit-bg: #10b981; /* Emerald green for submit buttons */
+    --button-submit-hover: #059669; /* Darker green for submit buttons */
     --button-secondary-bg: #ffffff;
     --button-secondary-border: #d1d5db; /* Light gray border */
     --button-secondary-hover: #e5e7eb; /* Light gray hover */
@@ -52,7 +54,7 @@
     --success-color: #10b981; /* Emerald green */
     --table-row-even-bg: #f9f9f9; /* Near-white */
     --table-row-bg-overdue: #fffbe6; /* Light yellow */
-    --table-row-bg-pending: #fefcbf; /* Pale yellow */
+    --table-row-bg-pending: #fef CBF; /* Pale yellow */
     --table-row-bg-settled: #d1fae5; /* Light green */
     --pastel-beige: #F2EFEA; /* Brand beige */
     --pastel-teal: #bae6fd; /* Light blue */
@@ -71,6 +73,8 @@
     --card-bg: #1e293b; /* Dark slate */
     --button-primary-bg: #4C78C9; /* Soft blue */
     --button-primary-hover: #3b82f6; /* Brighter blue */
+    --button-submit-bg: #34d399; /* Brighter green for submit buttons */
+    --button-submit-hover: #10b981; /* Emerald green */
     --button-secondary-bg: #1e293b; /* Dark slate */
     --button-secondary-border: #4b5563; /* Darker gray */
     --button-secondary-hover: #374151; /* Darker gray hover */
@@ -349,10 +353,32 @@ nav ul li a:hover {
 }
 
 /* Buttons */
-button, .btn, .btn-primary {
+button.btn, .btn, .btn-primary {
     background: var(--button-primary-bg);
     color: #ffffff;
-    border: none;
+    border: 1px solid transparent;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    cursor: pointer;
+    transition: var(--transition-base), transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    text-decoration: none;
+    display: inline-block;
+}
+
+button.btn:hover, .btn:hover, .btn-primary:hover {
+    background: var(--button-primary-hover);
+    border-color: #917243; /* Slightly darker border for contrast */
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+button.btn-submit {
+    background: var(--button-submit-bg);
+    color: #ffffff;
+    border: 1px solid transparent;
     padding: 12px 24px;
     border-radius: 8px;
     font-weight: 600;
@@ -362,9 +388,36 @@ button, .btn, .btn-primary {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-button:hover, .btn:hover, .btn-primary:hover {
-    background: var(--button-primary-hover);
+button.btn-submit:hover {
+    background: var(--button-submit-hover);
+    border-color: #047857; /* Darker green border for contrast */
     transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-toggle {
+    background: var(--accent-blue);
+    color: #ffffff;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-base), transform 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+    background: #2563eb; /* Darker blue for hover */
+    transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -587,7 +640,7 @@ img {
     .section-title {
         font-size: clamp(1.25rem, 3vw, 1.5rem);
     }
-    button, .btn, .btn-primary {
+    button.btn, .btn, .btn-primary, button.btn-submit, .sidebar-toggle {
         padding: 10px 20px;
         font-size: 0.9rem;
     }
@@ -654,7 +707,7 @@ img {
 
 .sidebar-toggle {
     display: none;
-    background: var(--button-primary-bg);
+    background: var(--accent-blue);
     color: white;
     border: none;
     padding: 10px;
