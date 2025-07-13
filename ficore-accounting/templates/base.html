@@ -50,9 +50,6 @@
                 <button class="btn btn-link" id="darkModeToggle" onclick="toggleDarkMode()" aria-label="{{ t('general_mode_toggle_dark', default='Toggle dark mode') | e }}" data-bs-toggle="tooltip" data-bs-title="{{ t('general_mode_toggle_tooltip_switch_to_dark', default='Switch to dark mode') | e }}">
                     <i class="bi bi-moon-stars"></i>
                 </button>
-                <a href="{{ url_for('users.logout') | e }}" class="btn btn-link profile-icon no-js-intercept" data-bs-toggle="tooltip" data-bs-title="{{ t('general_logout', default='Logout') | e }}" aria-label="{{ t('general_logout', default='Logout') | e }}" rel="external">
-                    <i class="bi bi-box-arrow-right"></i>
-                </a>
             </div>
         </header>
     {% else %}
