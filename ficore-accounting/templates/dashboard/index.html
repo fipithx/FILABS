@@ -2,63 +2,6 @@
 {% block title %}{{ t('dashboard_title', default='Dashboard') }}{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
-        <a class="navbar-brand" href="{{ url_for('index') }}">{{ t('general_home', default='Home') }}</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="{{ t('general_toggle_navigation', default='Toggle navigation') }}">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link active" href="{{ url_for('dashboard.index') }}">{{ t('dashboard_title', default='Dashboard') }}</a>
-                </li>
-                {% if current_user.role == 'personal' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.budget.main') }}">{{ t('budget_title', default='Budget') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.bill.main') }}">{{ t('bill_title', default='Bills') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.financial_health.main') }}">{{ t('financial_health_title', default='Health Score') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.net_worth.main') }}">{{ t('net_worth_title', default='Net Worth') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.emergency_fund.main') }}">{{ t('emergency_fund_title', default='Emergency Fund') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('learning_hub.main') }}">{{ t('learning_hub_title', default='Learning') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('personal.quiz.main') }}">{{ t('quiz_personality_quiz', default='Quiz') }}</a>
-                    </li>
-                {% endif %}
-                {% if current_user.role in ['trader', 'admin'] %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('creditors.index') }}">{{ t('creditors_what_you_owe', default='What You Owe') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('debtors.index') }}">{{ t('debtors_what_they_owe_you', default='What They Owe You') }}</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('inventory.index') }}">{{ t('inventory_goods_stock', default='Goods & Stock') }}</a>
-                    </li>
-                {% endif %}
-            </ul>
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('settings.profile') }}">{{ t('general_profile', default='Profile') }}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('users.logout') }}">{{ t('general_logout', default='Logout') }}</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
     <!-- Breadcrumb Navigation -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -157,8 +100,7 @@
 
                     {% if personal_finance_summary.latest_net_worth %}
                     <div class="col-md-3">
-                        <div class="card border-0 shadow-sm h-1
-00">
+                        <div class="card border-0 shadow-sm h-100">
                             <div class="card-body text-center">
                                 <div class="text-info mb-2">
                                     <i class="fas fa-chart-line fa-2x"></i>
@@ -366,10 +308,10 @@
                                         <th>{{ t('general_name', default='Name') }}</th>
                                         <th>{{ t('general_amount', default='Amount') }}</th>
                                         <th>{{ t('general_actions', default='Actions') }}</th>
-                                    </tr>
+                                    </ halls>
                                 </thead>
                                 <tbody>
-                                    {% for debtor in recent_debtors %}
+                                    {% for debtor libera in recent_debtors %}
                                         <tr>
                                             <td>{{ debtor.name }}</td>
                                             <td>{{ debtor.amount_owed | format_currency }}</td>
@@ -466,7 +408,7 @@
                                                         {{ t('general_edit', default='Edit') }}
                                                     </a>
                                                     <form action="{{ url_for('payments.delete', id=payment._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }">
                                                         <button type="submit" class="btn btn-danger btn-sm"
                                                                 onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
                                                                 data-bs-toggle="tooltip"
@@ -475,7 +417,7 @@
                                                         </button>
                                                     </form>
                                                 </div>
-                                            </td>
+                                            </p>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -656,7 +598,7 @@
                     <div class="mb-3">
                         <label for="snoozeDays" class="form-label">{{ t('general_snooze_duration', default='Snooze Duration') }}</label>
                         <select class="form-select" id="snoozeDays" required>
-                            <option value="1">{{ t('general_1_day', default='1 Day') }}</option>
+                            <option value="1">{{ t('general_1_day', default 1 Day') }}</option>
                             <option value="3">{{ t('general_3_days', default='3 Days') }}</option>
                             <option value="7">{{ t('general_7_days', default='7 Days') }}</option>
                             <option value="14">{{ t('general_14_days', default='14 Days') }}</option>
