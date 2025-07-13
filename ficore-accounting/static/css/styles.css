@@ -1873,6 +1873,46 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 .d-grid.gap-2 .btn {
     width: 100%;
 }
+.btn {
+    min-width: 120px;
+}
+.btn-sm {
+    min-width: 80px;
+}
+.btn-info {
+    background: var(--alert-info-bg);
+    color: var(--alert-info-text);
+    border: none;
+}
+.btn-info:hover, .btn-info:focus {
+    background: var(--alert-info-border);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
+}
+.modal-footer .btn {
+    min-width: 100px;
+}
+.btn.dropdown-toggle {
+    min-width: 120px;
+    text-align: center;
+}
+@media (max-width: 576px) {
+    .btn {
+        min-width: 100px;
+        padding: 0.5rem 1rem;
+        font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    }
+    .btn-sm {
+        min-width: 60px;
+        padding: 0.25rem 0.5rem;
+        font-size: clamp(0.7rem, 1.4vw, 0.8rem);
+    }
+} 
+@media (max-width: 576px) {
+    .table th:nth-child(6), .table td:nth-child(6) {
+        min-width: 150px;
+    }
+}
 
 /* Cards */
 .card {
@@ -2094,6 +2134,8 @@ h2.card-title {
     overflow-x: auto; /* Enable horizontal scrolling for tables */
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
     max-width: 100%; /* Fit within parent container */
+    position: relative; /* Ensure the table-responsive creates a new stacking context */
+    overflow: visible;
 }
 
 .table {
@@ -2908,6 +2950,53 @@ h2.card-title {
 .dropdown-menu.show {
     display: block !important;
 }
+.table .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 2000;
+    min-width: 150px;
+    transform: translateY(2px);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+}
+
+.table td:has(.dropdown) {
+    overflow: visible;
+    max-width: none;
+}
+
+/* Alternative for older browsers */
+.table .dropdown-cell {
+    overflow: visible;
+    max-width: none;
+}
+
+.table .dropdown-toggle {
+    padding: 0.5rem 1rem;
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+    min-width: 100px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .table .dropdown-menu {
+        min-width: 120px;
+        font-size: 0.875rem;
+    }
+    .table .dropdown-toggle {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Ensure parent containers don't clip dropdowns */
+.page-container, .section-card, .main-content {
+    overflow: visible !important;
+}
+
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
 .notification-description,
