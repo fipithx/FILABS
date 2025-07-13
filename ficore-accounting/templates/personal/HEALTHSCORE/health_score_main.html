@@ -142,7 +142,7 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="mb-3 d-none">
                                     <label for="{{ form.interest_rate.id }}" class="form-label">{{ t('financial_health_average_interest_rate', default='Average Interest Rate (%)', lang=lang) }}</label>
                                     {{ form.interest_rate(class="form-control number-input", placeholder=t('financial_health_interest_rate_placeholder', default='e.g., 5.00', lang=lang)) }}
                                     <div class="invalid-feedback">{{ t('financial_health_interest_rate_invalid', default='Interest rate must be a valid number', lang=lang) }}</div>
@@ -186,6 +186,29 @@
                                 <h4>{{ latest_record.savings_rate_formatted | default('0.00%') }}</h4>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Component Scores -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie me-1"></i> {{ t('financial_health_component_scores', default='Component Scores', lang=lang) }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ t('financial_health_dti_score', default='Debt-to-Income Score', lang=lang) }}</span>
+                                <strong>{{ latest_record.dti_score | default(0) }}/50</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ t('financial_health_savings_score', default='Savings Rate Score', lang=lang) }}</span>
+                                <strong>{{ latest_record.savings_score | default(0) }}/30</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ t('financial_health_expense_score', default='Expense Management Score', lang=lang) }}</span>
+                                <strong>{{ latest_record.expense_score | default(0) }}/20</strong>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
@@ -252,6 +275,14 @@
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('financial_health_debt_to_income_ratio', default='Debt-to-Income Ratio', lang=lang) }}</span>
                                         <strong>{{ latest_record.debt_to_income_formatted | default('0.00%') }}</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>{{ t('financial_health_savings_rate', default='Savings Rate', lang=lang) }}</span>
+                                        <strong>{{ latest_record.savings_rate_formatted | default('0.00%') }}</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>{{ t('financial_health_expense_ratio', default='Expense Ratio', lang=lang) }}</span>
+                                        <strong>{{ latest_record.expense_ratio_formatted | default('0.00%') }}</strong>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between">
                                         <span>{{ t('financial_health_created_at', default='Created At', lang=lang) }}</span>
@@ -328,6 +359,9 @@
                                             <th>{{ t('financial_health_score', default='Score', lang=lang) }}</th>
                                             <th>{{ t('financial_health_status', default='Status', lang=lang) }}</th>
                                             <th>{{ t('financial_health_savings_rate', default='Savings Rate', lang=lang) }}</th>
+                                            <th>{{ t('financial_health_dti_score', default='DTI Score', lang=lang) }}</th>
+                                            <th>{{ t('financial_health_savings_score', default='Savings Score', lang=lang) }}</th>
+                                            <th>{{ t('financial_health_expense_score', default='Expense Score', lang=lang) }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -337,6 +371,9 @@
                                                 <td>{{ record.score }}</td>
                                                 <td>{{ record.status }}</td>
                                                 <td>{{ record.savings_rate_formatted }}</td>
+                                                <td>{{ record.dti_score }}/50</td>
+                                                <td>{{ record.savings_score }}/30</td>
+                                                <td>{{ record.expense_score }}/20</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
@@ -384,7 +421,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Number input validation and formatting with comma separation
     function formatNumberInput(input) {
-        const isInterestRate = input.name === 'interest_rate';
         input.addEventListener('input', function(e) {
             // Store cursor position
             const cursorPosition = e.target.selectionStart;
@@ -397,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Handle currency fields (allow decimals) and interest rate
+            // Handle currency fields (allow decimals)
             const parts = value.split('.');
             if (parts.length > 2) {
                 value = parts[0] + '.' + parts.slice(1).join('');
@@ -407,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 value = parts[0] + (parts[1] ? '.' + parts[1] : '');
             }
             const numericValue = parseFloat(value) || 0;
-            if (!isInterestRate && numericValue > 10000000000) {
+            if (numericValue > 10000000000) {
                 value = '10000000000';
                 alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
             }
@@ -445,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 clean = parts[0] + (parts[1] ? '.' + parts[1] : '');
             }
             let numericValue = parseFloat(clean) || 0;
-            if (!isInterestRate && numericValue > 10000000000) {
+            if (numericValue > 10000000000) {
                 numericValue = 10000000000;
                 alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
             }
@@ -464,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     value = parts[0] + (parts[1] ? '.' + parts[1] : '');
                 }
                 let numericValue = parseFloat(value) || 0;
-                if (!isInterestRate && numericValue > 10000000000) numericValue = 10000000000;
+                if (numericValue > 10000000000) numericValue = 10000000000;
                 e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
         });
@@ -571,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {{ latest_record.score | default(0) }},
         {{ latest_record.debt_to_income | default(0) }},
         {{ latest_record.savings_rate | default(0) }},
-        {{ latest_record.interest_burden | default(0) }}
+        {{ latest_record.expense_ratio | default(0) }}
     ];
     const maxValue = Math.max(...dataValues) * 1.2;
 
@@ -582,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '{{ t('financial_health_your_score', default='Score', lang=lang) | escape }}',
                 '{{ t('financial_health_debt_to_income_ratio', default='Debt-to-Income', lang=lang) | escape }}',
                 '{{ t('financial_health_savings_rate', default='Savings Rate', lang=lang) | escape }}',
-                '{{ t('financial_health_interest_burden', default='Interest Burden', lang=lang) | escape }}'
+                '{{ t('financial_health_expense_ratio', default='Expense Ratio', lang=lang) | escape }}'
             ],
             datasets: [{
                 label: '{{ t('financial_health_metrics', default='Metrics', lang=lang) | escape }}',
