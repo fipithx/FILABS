@@ -244,6 +244,19 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     flex-wrap: wrap;
     margin-bottom: 0 !important;
 }
+.header-actions button {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.header-actions button:hover {
+  background: #f1f1f1;
+}
+
 .welcome-text {
     font-size: clamp(0.75rem, 1.8vw, 0.875rem);
     font-weight: 600;
@@ -256,10 +269,13 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 }
 
 .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .notification-bell {
@@ -1475,6 +1491,12 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 .bottom-nav .nav-item.active {
     color: var(--accent-blue);
     background: rgba(58, 134, 255, 0.15);
+    padding: 0.3rem 0.75rem;  /* add horizontal padding */
+    border-radius: 8px;       /* rounded edges */
+    box-sizing: border-box;   /* include padding in width */
+    max-width: fit-content;   /* shrink to content */
+    overflow: hidden;         /* prevent overflow */
+
 }
 
 .bottom-nav .nav-item:active {
@@ -2763,7 +2785,11 @@ h2.card-title {
     box-shadow: var(--card-shadow);
     min-width: 120px;
     position: absolute;
-    z-index: 1055;
+    bottom: 100%; /* open upwards */
+    max-height: 150px;
+    z-index: 9999;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .dropdown-item {
