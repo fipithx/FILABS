@@ -238,52 +238,17 @@
                                             <td>{{ creditor.name }}</td>
                                             <td>{{ creditor.amount_owed | format_currency }}</td>
                                             <td>
-                                                <div class="responsive-btn-group" role="group">
-                                                    <a href="{{ url_for('creditors.view_page', id=creditor._id) }}"
-                                                       class="btn btn-info btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_view_details', default='View Details') }}">
-                                                        {{ t('general_view', default='View') }}
-                                                    </a>
-                                                    {% if creditor.contact %}
-                                                    <button type="button" class="btn btn-warning btn-sm dashboard-reminder-btn"
-                                                            data-id="{{ creditor._id }}"
-                                                            data-name="{{ creditor.name }}"
-                                                            data-amount="{{ creditor.amount_owed }}"
-                                                            data-contact="{{ creditor.contact }}"
-                                                            data-date="{{ format_date(creditor.created_at) }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('creditors_send_delivery_reminder', default='Send Delivery Reminder') }}">
-                                                        {{ t('general_reminder', default='Reminder') }}
-                                                    </button>
-                                                    <button type="button" class="btn btn-primary btn-sm dashboard-snooze-btn"
-                                                            data-id="{{ creditor._id }}"
-                                                            data-name="{{ creditor.name }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('general_snooze_reminder', default='Snooze Reminder') }}">
-                                                        {{ t('general_snooze', default='Snooze') }}
-                                                    </button>
-                                                    <button type="button" class="btn btn-success btn-sm dashboard-share-btn"
-                                                            data-id="{{ creditor._id }}"
-                                                            data-contact="{{ creditor.contact }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('general_share_iou', default='Share IOU') }}">
-                                                        {{ t('general_share', default='Share') }}
-                                                    </button>
-                                                    {% endif %}
-                                                    <a href="{{ url_for('creditors.edit', id=creditor._id) }}" class="btn btn-primary btn-sm"
-                                                       data-bs-toggle="tooltip" title="{{ t('general_edit', default='Edit') }}">
-                                                        {{ t('general_edit', default='Edit') }}
-                                                    </a>
-                                                    <form action="{{ url_for('creditors.delete', id=creditor._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
-                                                                data-bs-toggle="tooltip"
-                                                                title="{{ t('general_delete', default='Delete') }}">
-                                                            {{ t('general_delete', default='Delete') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
+                                                <button class="btn btn-secondary btn-sm actions-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#creditorActionsModal"
+                                                        data-id="{{ creditor._id }}"
+                                                        data-name="{{ creditor.name }}"
+                                                        data-amount="{{ creditor.amount_owed }}"
+                                                        data-contact="{{ creditor.contact or '' }}"
+                                                        data-date="{{ format_date(creditor.created_at) }}"
+                                                        data-description="{{ creditor.description or '' }}">
+                                                    {{ t('general_actions', default='Actions') }}
+                                                </button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -308,7 +273,7 @@
                                         <th>{{ t('general_name', default='Name') }}</th>
                                         <th>{{ t('general_amount', default='Amount') }}</th>
                                         <th>{{ t('general_actions', default='Actions') }}</th>
-                                    </ halls>
+                                    </tr>
                                 </thead>
                                 <tbody>
                                     {% for debtor in recent_debtors %}
@@ -316,52 +281,18 @@
                                             <td>{{ debtor.name }}</td>
                                             <td>{{ debtor.amount_owed | format_currency }}</td>
                                             <td>
-                                                <div class="responsive-btn-group" role="group">
-                                                    <a href="{{ url_for('debtors.view_page', id=debtor._id) }}"
-                                                       class="btn btn-info btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_view_details', default='View Details') }}">
-                                                        {{ t('general_view', default='View') }}
-                                                    </a>
-                                                    {% if debtor.contact %}
-                                                    <button type="button" class="btn btn-warning btn-sm dashboard-reminder-btn"
-                                                            data-id="{{ debtor._id }}"
-                                                            data-name="{{ debtor.name }}"
-                                                            data-amount="{{ debtor.amount_owed }}"
-                                                            data-contact="{{ debtor.contact }}"
-                                                            data-date="{{ format_date(debtor.created_at) }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('general_send_reminder', default='Send Reminder') }}">
-                                                        {{ t('general_reminder', default='Reminder') }}
-                                                    </button>
-                                                    <button type="button" class="btn btn-primary btn-sm dashboard-snooze-btn"
-                                                            data-id="{{ debtor._id }}"
-                                                            data-name="{{ debtor.name }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('general_snooze_reminder', default='Snooze Reminder') }}">
-                                                        {{ t('general_snooze', default='Snooze') }}
-                                                    </button>
-                                                    <button type="button" class="btn btn-success btn-sm dashboard-share-btn"
-                                                            data-id="{{ debtor._id }}"
-                                                            data-contact="{{ debtor.contact }}"
-                                                            data-bs-toggle="tooltip"
-                                                            title="{{ t('general_share_iou', default='Share IOU') }}">
-                                                        {{ t('general_share', default='Share') }}
-                                                    </button>
-                                                    {% endif %}
-                                                    <a href="{{ url_for('debtors.edit', id=debtor._id) }}" class="btn btn-primary btn-sm"
-                                                       data-bs-toggle="tooltip" title="{{ t('general_edit', default='Edit') }}">
-                                                        {{ t('general_edit', default='Edit') }}
-                                                    </a>
-                                                    <form action="{{ url_for('debtors.delete', id=debtor._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
-                                                                data-bs-toggle="tooltip"
-                                                                title="{{ t('general_delete', default='Delete') }}">
-                                                            {{ t('general_delete', default='Delete') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
+                                                <button class="btn btn-secondary btn-sm actions-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#debtorActionsModal"
+                                                        data-id="{{ debtor._id }}"
+                                                        data-name="{{ debtor.name }}"
+                                                        data-amount="{{ debtor.amount_owed }}"
+                                                        data-contact="{{ debtor.contact or '' }}"
+                                                        data-date="{{ format_date(debtor.created_at) }}"
+                                                        data-reminders="{{ debtor.get('reminder_count', 0) }}"
+                                                        data-description="{{ debtor.description or '' }}">
+                                                    {{ t('general_actions', default='Actions') }}
+                                                </button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -394,30 +325,17 @@
                                             <td>{{ payment.recipient }}</td>
                                             <td>{{ payment.amount | format_currency }}</td>
                                             <td>
-                                                <div class="responsive-btn-group" role="group">
-                                                    <a href="{{ url_for('payments.view', id=payment._id) }}"
-                                                       class="btn btn-info btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_view_details', default='View Details') }}">
-                                                        {{ t('general_view', default='View') }}
-                                                    </a>
-                                                    <a href="{{ url_for('payments.edit', id=payment._id) }}"
-                                                       class="btn btn-primary btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_edit', default='Edit') }}">
-                                                        {{ t('general_edit', default='Edit') }}
-                                                    </a>
-                                                    <form action="{{ url_for('payments.delete', id=payment._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }">
-                                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                                onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
-                                                                data-bs-toggle="tooltip"
-                                                                title="{{ t('general_delete', default='Delete') }}">
-                                                            {{ t('general_delete', default='Delete') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </p>
+                                                <button class="btn btn-secondary btn-sm actions-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#paymentActionsModal"
+                                                        data-id="{{ payment._id }}"
+                                                        data-recipient="{{ payment.recipient }}"
+                                                        data-amount="{{ payment.amount }}"
+                                                        data-date="{{ format_date(payment.created_at) }}"
+                                                        data-description="{{ payment.description or '' }}">
+                                                    {{ t('general_actions', default='Actions') }}
+                                                </button>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
@@ -449,29 +367,16 @@
                                             <td>{{ receipt.payer }}</td>
                                             <td>{{ receipt.amount | format_currency }}</td>
                                             <td>
-                                                <div class="responsive-btn-group" role="group">
-                                                    <a href="{{ url_for('receipts.view', id=receipt._id) }}"
-                                                       class="btn btn-info btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_view_details', default='View Details') }}">
-                                                        {{ t('general_view', default='View') }}
-                                                    </a>
-                                                    <a href="{{ url_for('receipts.edit', id=receipt._id) }}"
-                                                       class="btn btn-primary btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_edit', default='Edit') }}">
-                                                        {{ t('general_edit', default='Edit') }}
-                                                    </a>
-                                                    <form action="{{ url_for('receipts.delete', id=receipt._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                                onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
-                                                                data-bs-toggle="tooltip"
-                                                                title="{{ t('general_delete', default='Delete') }}">
-                                                            {{ t('general_delete', default='Delete') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
+                                                <button class="btn btn-secondary btn-sm actions-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#receiptActionsModal"
+                                                        data-id="{{ receipt._id }}"
+                                                        data-payer="{{ receipt.payer }}"
+                                                        data-amount="{{ receipt.amount }}"
+                                                        data-date="{{ format_date(receipt.created_at) }}"
+                                                        data-description="{{ receipt.description or '' }}">
+                                                    {{ t('general_actions', default='Actions') }}
+                                                </button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -504,29 +409,18 @@
                                             <td>{{ item.name }}</td>
                                             <td>{{ item.quantity }}</td>
                                             <td>
-                                                <div class="responsive-btn-group" role="group">
-                                                    <a href="{{ url_for('inventory.view_page', id=item._id) }}"
-                                                       class="btn btn-info btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_view_details', default='View Details') }}">
-                                                        {{ t('general_view', default='View') }}
-                                                    </a>
-                                                    <a href="{{ url_for('inventory.edit', id=item._id) }}"
-                                                       class="btn btn-primary btn-sm"
-                                                       data-bs-toggle="tooltip"
-                                                       title="{{ t('general_edit', default='Edit') }}">
-                                                        {{ t('general_edit', default='Edit') }}
-                                                    </a>
-                                                    <form action="{{ url_for('inventory.delete', id=item._id) }}" method="POST" style="display:inline;">
-                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                        <button type="submit" class="btn btn-danger btn-sm"
-                                                                onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')"
-                                                                data-bs-toggle="tooltip"
-                                                                title="{{ t('general_delete', default='Delete') }}">
-                                                            {{ t('general_delete', default='Delete') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
+                                                <button class="btn btn-secondary btn-sm actions-btn"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#inventoryActionsModal"
+                                                        data-id="{{ item._id }}"
+                                                        data-name="{{ item.name }}"
+                                                        data-quantity="{{ item.quantity }}"
+                                                        data-unit="{{ item.unit or '' }}"
+                                                        data-buying-price="{{ item.buying_price or '' }}"
+                                                        data-selling-price="{{ item.selling_price or '' }}"
+                                                        data-threshold="{{ item.threshold or 5 }}">
+                                                    {{ t('general_actions', default='Actions') }}
+                                                </button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -547,6 +441,190 @@
             <a href="{{ url_for('users.login') }}" class="btn btn-primary">{{ t('general_login', default='Log In') }}</a>
         </div>
     {% endif %}
+</div>
+
+<!-- Creditor Actions Modal -->
+<div class="modal fade" id="creditorActionsModal" tabindex="-1" aria-labelledby="creditorActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="creditorActionsModalLabel">{{ t('creditors_what_you_owe', default='What You Owe') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="creditorModalName"></span></p>
+                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="creditorModalAmount"></span></p>
+                        <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="creditorModalContact"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="creditorModalDescription"></span></p>
+                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="creditorModalDate"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="creditorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                <button id="creditorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
+                <a id="creditorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                <form id="creditorDeleteForm" action="#" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                        {{ t('general_delete', default='Delete') }}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Debtor Actions Modal -->
+<div class="modal fade" id="debtorActionsModal" tabindex="-1" aria-labelledby="debtorActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="debtorActionsModalLabel">{{ t('debtors_what_they_owe_you', default='What They Owe You') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_name', default='Name') }}:</strong> <span id="debtorModalName"></span></p>
+                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="debtorModalAmount"></span></p>
+                        <p><strong>{{ t('general_contact', default='Contact') }}:</strong> <span id="debtorModalContact"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="debtorModalDescription"></span></p>
+                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="debtorModalDate"></span></p>
+                        <p><strong>{{ t('debtors_reminders', default='Reminders') }}:</strong> <span id="debtorModalReminders"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="debtorViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                <button id="debtorReminderBtn" class="btn btn-warning" style="display: none;">{{ t('general_reminder', default='Reminder') }}</button>
+                <button id="debtorSnoozeBtn" class="btn btn-primary" style="display: none;">{{ t('general_snooze', default='Snooze') }}</button>
+                <button id="debtorShareBtn" class="btn btn-success" style="display: none;">{{ t('general_share', default='Share') }}</button>
+                <a id="debtorEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                <form id="debtorDeleteForm" action="#" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                        {{ t('general_delete', default='Delete') }}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Actions Modal -->
+<div class="modal fade" id="paymentActionsModal" tabindex="-1" aria-labelledby="paymentActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentActionsModalLabel">{{ t('payments_money_out', default='Money Out') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('payments_recipient', default='Recipient') }}:</strong> <span id="paymentModalRecipient"></span></p>
+                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="paymentModalAmount"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="paymentModalDescription"></span></p>
+                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="paymentModalDate"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="paymentViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                <a id="paymentEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                <form id="paymentDeleteForm" action="#" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                        {{ t('general_delete', default='Delete') }}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Receipt Actions Modal -->
+<div class="modal fade" id="receiptActionsModal" tabindex="-1" aria-labelledby="receiptActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="receiptActionsModalLabel">{{ t('receipts_money_in', default='Money In') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('receipts_payer', default='Payer') }}:</strong> <span id="receiptModalPayer"></span></p>
+                        <p><strong>{{ t('general_amount', default='Amount') }}:</strong> <span id="receiptModalAmount"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('general_description', default='Description') }}:</strong> <span id="receiptModalDescription"></span></p>
+                        <p><strong>{{ t('general_date', default='Date') }}:</strong> <span id="receiptModalDate"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="receiptViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                <a id="receiptEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                <form id="receiptDeleteForm" action="#" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                        {{ t('general_delete', default='Delete') }}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Inventory Actions Modal -->
+<div class="modal fade" id="inventoryActionsModal" tabindex="-1" aria-labelledby="inventoryActionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="inventoryActionsModalLabel">{{ t('inventory_goods_stock', default='Goods & Stock') }}</h5>
+                <button class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('general_close', default='Close') }}"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>{{ t('inventory_item_name', default='Item Name') }}:</strong> <span id="inventoryModalName"></span></p>
+                        <p><strong>{{ t('inventory_quantity', default='Quantity') }}:</strong> <span id="inventoryModalQuantity"></span></p>
+                        <p><strong>{{ t('inventory_unit', default='Unit') }}:</strong> <span id="inventoryModalUnit"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>{{ t('inventory_buying_price', default='Buying Price') }}:</strong> <span id="inventoryModalBuyingPrice"></span></p>
+                        <p><strong>{{ t('inventory_selling_price', default='Selling Price') }}:</strong> <span id="inventoryModalSellingPrice"></span></p>
+                        <p><strong>{{ t('inventory_threshold', default='Threshold') }}:</strong> <span id="inventoryModalThreshold"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="inventoryViewBtn" class="btn btn-info" href="#">{{ t('general_view', default='View') }}</a>
+                <a id="inventoryEditBtn" class="btn btn-primary" href="#">{{ t('general_edit', default='Edit') }}</a>
+                <form id="inventoryDeleteForm" action="#" method="POST" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('{{ t('general_confirm_delete', default='Are you sure?') }}')">
+                        {{ t('general_delete', default='Delete') }}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('general_close', default='Close') }}</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Reminder Modal -->
@@ -598,7 +676,7 @@
                     <div class="mb-3">
                         <label for="snoozeDays" class="form-label">{{ t('general_snooze_duration', default='Snooze Duration') }}</label>
                         <select class="form-select" id="snoozeDays" required>
-                            <option value="1">{{ t('general_1_day', default 1 Day') }}</option>
+                            <option value="1">{{ t('general_1_day', default='1 Day') }}</option>
                             <option value="3">{{ t('general_3_days', default='3 Days') }}</option>
                             <option value="7">{{ t('general_7_days', default='7 Days') }}</option>
                             <option value="14">{{ t('general_14_days', default='14 Days') }}</option>
@@ -619,6 +697,7 @@
     </div>
 </div>
 
+{% block page_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize tooltips
@@ -627,33 +706,200 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentData = null;
 
-    // Reminder button functionality
-    document.querySelectorAll('.dashboard-reminder-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const name = button.dataset.name;
-            const amount = parseFloat(button.dataset.amount).toLocaleString();
-            const date = button.dataset.date;
-            const contact = button.dataset.contact;
-            const id = button.dataset.id;
-
+    // Creditor Actions
+    document.querySelectorAll('#creditorActionsModal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
             currentData = {
-                _id: id,
-                name,
-                amount_owed: button.dataset.amount,
-                contact,
-                created_at: date
+                _id: button.dataset.id,
+                name: button.dataset.name,
+                amount: parseFloat(button.dataset.amount).toLocaleString(),
+                contact: button.dataset.contact,
+                date: button.dataset.date,
+                description: button.dataset.description
             };
 
-            const defaultMessage = button.classList.contains('dashboard-reminder-btn') && button.closest('.card').querySelector('h3').textContent.includes('What You Owe') ?
-                `Hi ${name}, this is a reminder about the {{ t('general_currency_symbol', default='₦') }}${amount} delivery/service recorded on FiCore Records (${date}). Please provide update on delivery status.` :
-                `Hi ${name}, just a reminder you owe {{ t('general_currency_symbol', default='₦') }}${amount} recorded on FiCore Records (${date}). Please settle soon.`;
-            
-            document.getElementById('reminderMessage').value = defaultMessage;
-            new bootstrap.Modal(document.getElementById('reminderModal')).show();
+            // Populate modal
+            document.getElementById('creditorModalName').textContent = currentData.name;
+            document.getElementById('creditorModalAmount').textContent = `{{ t('general_currency_symbol', default='₦') }}${currentData.amount}`;
+            document.getElementById('creditorModalContact').textContent = currentData.contact || '-';
+            document.getElementById('creditorModalDescription').textContent = currentData.description || '-';
+            document.getElementById('creditorModalDate').textContent = currentData.date;
+
+            // Update action buttons
+            document.getElementById('creditorViewBtn').href = `/creditors/view/${currentData._id}`;
+            document.getElementById('creditorEditBtn').href = `/creditors/edit/${currentData._id}`;
+            document.getElementById('creditorDeleteForm').action = `/creditors/delete/${currentData._id}`;
+            document.getElementById('creditorShareBtn').style.display = currentData.contact ? 'inline-block' : 'none';
         });
     });
 
-    // Send reminder functionality
+    document.getElementById('creditorShareBtn').addEventListener('click', () => {
+        if (!currentData || !currentData.contact) {
+            alert('{{ t('general_no_contact', default='No contact provided for sharing') }}');
+            return;
+        }
+        fetch(`/creditors/share/${currentData._id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.open(data.whatsapp_link, '_blank');
+                    bootstrap.Modal.getInstance(document.getElementById('creditorActionsModal')).hide();
+                } else {
+                    alert('{{ t('general_failed_to_share_iou', default='Failed to share IOU') }}: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error sharing IOU:', error);
+                alert('{{ t('general_error_sharing_iou', default='Error sharing IOU') }}');
+            });
+    });
+
+    // Debtor Actions
+    document.querySelectorAll('#debtorActionsModal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            currentData = {
+                _id: button.dataset.id,
+                name: button.dataset.name,
+                amount: parseFloat(button.dataset.amount).toLocaleString(),
+                contact: button.dataset.contact,
+                date: button.dataset.date,
+                reminders: button.dataset.reminders,
+                description: button.dataset.description
+            };
+
+            // Populate modal
+            document.getElementById('debtorModalName').textContent = currentData.name;
+            document.getElementById('debtorModalAmount').textContent = `{{ t('general_currency_symbol', default='₦') }}${currentData.amount}`;
+            document.getElementById('debtorModalContact').textContent = currentData.contact || '-';
+            document.getElementById('debtorModalDescription').textContent = currentData.description || '-';
+            document.getElementById('debtorModalDate').textContent = currentData.date;
+            document.getElementById('debtorModalReminders').textContent = currentData.reminders;
+
+            // Update action buttons
+            document.getElementById('debtorViewBtn').href = `/debtors/view/${currentData._id}`;
+            document.getElementById('debtorEditBtn').href = `/debtors/edit/${currentData._id}`;
+            document.getElementById('debtorDeleteForm').action = `/debtors/delete/${currentData._id}`;
+            document.getElementById('debtorReminderBtn').style.display = currentData.contact ? 'inline-block' : 'none';
+            document.getElementById('debtorSnoozeBtn').style.display = currentData.contact ? 'inline-block' : 'none';
+            document.getElementById('debtorShareBtn').style.display = currentData.contact ? 'inline-block' : 'none';
+        });
+    });
+
+    document.getElementById('debtorReminderBtn').addEventListener('click', () => {
+        if (!currentData) return;
+        const defaultMessage = `Hi ${currentData.name}, just a reminder you owe {{ t('general_currency_symbol', default='₦') }}${currentData.amount} recorded on FiCore Records (${currentData.date}). Please settle soon.`;
+        document.getElementById('reminderMessage').value = defaultMessage;
+        new bootstrap.Modal(document.getElementById('reminderModal')).show();
+    });
+
+    document.getElementById('debtorSnoozeBtn').addEventListener('click', () => {
+        if (!currentData) return;
+        new bootstrap.Modal(document.getElementById('snoozeModal')).show();
+    });
+
+    document.getElementById('debtorShareBtn').addEventListener('click', () => {
+        if (!currentData || !currentData.contact) {
+            alert('{{ t('general_no_contact', default='No contact provided for sharing') }}');
+            return;
+        }
+        fetch(`/debtors/share/${currentData._id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.open(data.whatsapp_link, '_blank');
+                    bootstrap.Modal.getInstance(document.getElementById('debtorActionsModal')).hide();
+                } else {
+                    alert('{{ t('general_failed_to_share_iou', default='Failed to share IOU') }}: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error sharing IOU:', error);
+                alert('{{ t('general_error_sharing_iou', default='Error sharing IOU') }}');
+            });
+    });
+
+    // Payment Actions
+    document.querySelectorAll('#paymentActionsModal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            currentData = {
+                _id: button.dataset.id,
+                recipient: button.dataset.recipient,
+                amount: parseFloat(button.dataset.amount).toLocaleString(),
+                date: button.dataset.date,
+                description: button.dataset.description
+            };
+
+            // Populate modal
+            document.getElementById('paymentModalRecipient').textContent = currentData.recipient;
+            document.getElementById('paymentModalAmount').textContent = `{{ t('general_currency_symbol', default='₦') }}${currentData.amount}`;
+            document.getElementById('paymentModalDescription').textContent = currentData.description || '-';
+            document.getElementById('paymentModalDate').textContent = currentData.date;
+
+            // Update action buttons
+            document.getElementById('paymentViewBtn').href = `/payments/view/${currentData._id}`;
+            document.getElementById('paymentEditBtn').href = `/payments/edit/${currentData._id}`;
+            document.getElementById('paymentDeleteForm').action = `/payments/delete/${currentData._id}`;
+        });
+    });
+
+    // Receipt Actions
+    document.querySelectorAll('#receiptActionsModal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            currentData = {
+                _id: button.dataset.id,
+                payer: button.dataset.payer,
+                amount: parseFloat(button.dataset.amount).toLocaleString(),
+                date: button.dataset.date,
+                description: button.dataset.description
+            };
+
+            // Populate modal
+            document.getElementById('receiptModalPayer').textContent = currentData.payer;
+            document.getElementById('receiptModalAmount').textContent = `{{ t('general_currency_symbol', default='₦') }}${currentData.amount}`;
+            document.getElementById('receiptModalDescription').textContent = currentData.description || '-';
+            document.getElementById('receiptModalDate').textContent = currentData.date;
+
+            // Update action buttons
+            document.getElementById('receiptViewBtn').href = `/receipts/view/${currentData._id}`;
+            document.getElementById('receiptEditBtn').href = `/receipts/edit/${currentData._id}`;
+            document.getElementById('receiptDeleteForm').action = `/receipts/delete/${currentData._id}`;
+        });
+    });
+
+    // Inventory Actions
+    document.querySelectorAll('#inventoryActionsModal').forEach(modal => {
+        modal.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            currentData = {
+                _id: button.dataset.id,
+                name: button.dataset.name,
+                quantity: button.dataset.quantity,
+                unit: button.dataset.unit,
+                buying_price: button.dataset.buyingPrice ? parseFloat(button.dataset.buyingPrice).toLocaleString() : '-',
+                selling_price: button.dataset.sellingPrice ? parseFloat(button.dataset.sellingPrice).toLocaleString() : '-',
+                threshold: button.dataset.threshold
+            };
+
+            // Populate modal
+            document.getElementById('inventoryModalName').textContent = currentData.name;
+            document.getElementById('inventoryModalQuantity').textContent = currentData.quantity;
+            document.getElementById('inventoryModalUnit').textContent = currentData.unit || '-';
+            document.getElementById('inventoryModalBuyingPrice').textContent = currentData.buying_price === '-' ? '-' : `{{ t('general_currency_symbol', default='₦') }}${currentData.buying_price}`;
+            document.getElementById('inventoryModalSellingPrice').textContent = currentData.selling_price === '-' ? '-' : `{{ t('general_currency_symbol', default='₦') }}${currentData.selling_price}`;
+            document.getElementById('inventoryModalThreshold').textContent = currentData.threshold;
+
+            // Update action buttons
+            document.getElementById('inventoryViewBtn').href = `/inventory/view_page/${currentData._id}`;
+            document.getElementById('inventoryEditBtn').href = `/inventory/edit/${currentData._id}`;
+            document.getElementById('inventoryDeleteForm').action = `/inventory/delete/${currentData._id}`;
+        });
+    });
+
+    // Reminder Functionality
     document.getElementById('sendReminderBtn').addEventListener('click', function() {
         if (!currentData) return;
 
@@ -688,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 alert('{{ t('general_reminder_sent_successfully', default='Reminder sent successfully') }}');
                 bootstrap.Modal.getInstance(document.getElementById('reminderModal')).hide();
+                bootstrap.Modal.getInstance(document.getElementById(currentData._id.includes('creditor') ? 'creditorActionsModal' : 'debtorActionsModal')).hide();
                 location.reload();
             } else {
                 alert('{{ t('general_failed_to_send_reminder', default='Failed to send reminder') }}: ' + (data.message || 'Unknown error'));
@@ -703,18 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Snooze button functionality
-    document.querySelectorAll('.dashboard-snooze-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            currentData = {
-                _id: button.dataset.id,
-                name: button.dataset.name
-            };
-            new bootstrap.Modal(document.getElementById('snoozeModal')).show();
-        });
-    });
-
-    // Snooze reminder functionality
+    // Snooze Functionality
     document.getElementById('snoozeReminderBtn').addEventListener('click', function() {
         if (!currentData) return;
 
@@ -741,6 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 alert('{{ t('general_snooze_set_successfully', default='Snooze set successfully') }}');
                 bootstrap.Modal.getInstance(document.getElementById('snoozeModal')).hide();
+                bootstrap.Modal.getInstance(document.getElementById(currentData._id.includes('creditor') ? 'creditorActionsModal' : 'debtorActionsModal')).hide();
                 location.reload();
             } else {
                 alert('{{ t('general_failed_to_set_snooze', default='Failed to set snooze') }}: ' + (data.message || 'Unknown error'));
@@ -753,35 +990,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .finally(() => {
             this.disabled = false;
             this.textContent = '{{ t('general_snooze', default='Snooze') }}';
-        });
-    });
-
-    // Share IOU functionality
-    document.querySelectorAll('.dashboard-share-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const debtId = button.dataset.id;
-            const contact = button.dataset.contact;
-
-            if (!contact) {
-                alert('{{ t('general_no_contact', default='No contact provided for sharing') }}');
-                return;
-            }
-
-            const endpoint = debtId.includes('creditor') ? `/creditors/share/${debtId}` : `/debtors/share/${debtId}`;
-
-            fetch(endpoint)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.open(data.whatsapp_link, '_blank');
-                    } else {
-                        alert('{{ t('general_failed_to_share_iou', default='Failed to share IOU') }}: ' + (data.message || 'Unknown error'));
-                    }
-                })
-                .catch(error => {
-                    console.error('Error sharing IOU:', error);
-                    alert('{{ t('general_error_sharing_iou', default='Error sharing IOU') }}');
-                });
         });
     });
 });
