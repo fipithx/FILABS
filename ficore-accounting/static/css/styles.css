@@ -216,7 +216,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    padding-top: 0;
+    padding-top: 1rem;
     margin-top: calc(var(--navbar-height) - 4px); /* reduce gap a bit */
     padding-bottom: calc(var(--bottom-nav-height) + 2rem);
     min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
@@ -229,7 +229,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 .main-content > .page-container:first-child,
 .main-content > .section-card:first-child {
   margin-top: 0 !important;
-  padding-top: 0 !important;
+  padding-top: 1rem !important;
 }
 
 /* --- Homepage Specific Styles --- */
@@ -497,7 +497,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     grid-template-columns: repeat(2, 1fr); /* Always 2 columns */
     gap: 1.5rem;
     margin-bottom: 1.5rem;
-    padding: 0;
+    padding: 2rem;
 }
 
 .summary-card {
@@ -605,7 +605,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.5rem;
-    padding: 0;
+    padding: 1rem;
 }
 
 .stat-card {
@@ -863,7 +863,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 2rem;
     border-bottom: 1px solid var(--card-border);
     transition: background 0.3s ease;
 }
@@ -930,7 +930,7 @@ h4 { font-size: clamp(1rem, 2.5vw, 1.25rem); }
 .explore-card {
     background: var(--card-bg);
     border-radius: 12px;
-    padding: 1.5rem 1.75rem;
+    padding: 2rem 1.75rem;
     margin-bottom: 1.5rem;
     box-shadow: var(--card-shadow);
     border: 1px solid var(--card-border);
@@ -3118,7 +3118,7 @@ h2.card-title {
 .main-content > .navigation-cards,
 .main-content > .explore-section {
     margin-top: 0 !important;
-    padding-top: 0!important;
+    padding-top: 1rem !important;
 }
 .main-content h1,
 .main-content h2,
@@ -3128,18 +3128,18 @@ h2.card-title {
 }
 .main-content .page-container {
     padding-top: 0 !important;
-    padding: 0.5rem 0.5rem 1.5rem;
+    padding: 1rem 0.5rem 1.5rem;
 }
 /* Mobile adjustments */
 @media (max-width: 768px) {
     .main-content {
         margin-top: var(--navbar-height);
-        padding: 0 0 2rem 0;
+        padding: 1rem 0 2rem 0;
     }
 }
 
 /* Ensure containers have no extra margins */
 .container, .container-fluid, .row, .col {
     margin-top: 0 !important;
-    padding-top: 0 !important;
+    padding-top: 1rem !important;
 }
