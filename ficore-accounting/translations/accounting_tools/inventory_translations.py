@@ -6,6 +6,7 @@ INVENTORY_TRANSLATIONS = {
     'en': {
         'inventory_list': 'Inventory List',
         'net_worth_net_worth': 'Net Worth',
+        'inventory_adjust_stock': 'Adjust Stock',
         'net_worth_calculator': 'Net Worth Calculator',
         'net_worth_desc': 'Track your assets and liabilities to calculate your net worth',
         'inventory_add_item': 'Add Item',
@@ -127,6 +128,7 @@ INVENTORY_TRANSLATIONS = {
         'inventory_add_goods_stock': 'Ƙara Kaya zuwa Jari',
         'inventory_dashboard_desc': 'Sarrafa kayanka da ajiyarka.', # "Manage your product stock and inventory."
         'inventory_tooltip': 'Duba da sarrafa kayanka.',
+        'inventory_adjust_stock': 'Gyara Haja',
         'inventory_tooltip': 'Sarrafa kayan ajiya',
         'inventory_management': 'Sarrafa Jari',
         'inventory_desc': 'Bi diddigin jarin ka kuma sarrafa jari cikin inganci',
