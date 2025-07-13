@@ -120,13 +120,6 @@ class FinancialHealthForm(FlaskForm):
             NumberRange(min=0, max=10000000000, message=trans('financial_health_debt_max', default='Debt exceeds maximum limit.'))
         ]
     )
-    interest_rate = CommaSeparatedFloatField(
-        trans('financial_health_average_interest_rate', default='Average Interest Rate'),
-        validators=[
-            Optional(),
-            NumberRange(min=0, message=trans('financial_health_interest_rate_positive', default='Interest rate must be positive.'))
-        ]
-    )
     submit = SubmitField(trans('financial_health_submit', default='Submit'))
 
     def validate_email(self, field):
@@ -194,7 +187,6 @@ def main():
                     flash(trans('financial_health_log_error', default='Error logging financial health score calculation. Continuing with submission.'), 'warning')
                 
                 debt = float(clean_currency(form.debt.data)) if form.debt.data else 0
-                interest_rate = float(clean_currency(form.interest_rate.data)) if form.interest_rate.data else 0
                 income = float(clean_currency(form.income.data))
                 expenses = float(clean_currency(form.expenses.data))
 
@@ -203,20 +195,49 @@ def main():
                     flash(trans("financial_health_income_zero_error", default='Income must be greater than zero.'), "danger")
                     return redirect(url_for('financial_health.main', tab='assessment'))
 
+                # Calculate metrics
                 debt_to_income = (debt / income * 100) if income > 0 else 0
-                savings_rate = ((income - expenses) / income * 100) if income > 0 else 0
-                interest_burden = ((interest_rate * debt / 100) / 12) / income * 100 if debt > 0 and income > 0 else 0
+                savings = income - expenses
+                savings_rate = (savings / income * 100) if income > 0 else 0
+                expense_ratio = (expenses / income * 100) if income > 0 else 100
 
-                score = 100
-                if debt_to_income > 0:
-                    score -= min(debt_to_income / 50, 50)
-                if savings_rate < 0:
-                    score -= min(abs(savings_rate), 30)
-                elif savings_rate > 0:
-                    score += min(savings_rate / 2, 20)
-                score -= min(interest_burden, 20)
+                # Debt-to-Income Ratio Score (50 points)
+                if debt_to_income <= 20:
+                    dti_score = 50
+                elif debt_to_income <= 35:
+                    dti_score = 40
+                elif debt_to_income <= 50:
+                    dti_score = 30
+                elif debt_to_income <= 65:
+                    dti_score = 20
+                else:
+                    dti_score = 10
+
+                # Savings Rate Score (30 points)
+                if savings_rate >= 20:
+                    savings_score = 30
+                elif savings_rate >= 10:
+                    savings_score = 20
+                elif savings_rate >= 5:
+                    savings_score = 10
+                else:
+                    savings_score = 0
+
+                # Expense Management Score (20 points)
+                if expense_ratio <= 50:
+                    expense_score = 20
+                elif expense_ratio <= 70:
+                    expense_score = 15
+                elif expense_ratio <= 90:
+                    expense_score = 10
+                else:
+                    expense_score = 5
+
+                # Total Score
+                score = dti_score + savings_score + expense_score
                 score = max(0, min(100, round(score)))
 
+                # Status
                 if score >= 80:
                     status_key = "excellent"
                     status = trans("financial_health_status_excellent", default='Excellent')
@@ -227,15 +248,16 @@ def main():
                     status_key = "needs_improvement"
                     status = trans("financial_health_status_needs_improvement", default='Needs Improvement')
 
+                # Badges
                 badges = []
                 if score >= 80:
                     badges.append(trans("financial_health_badge_financial_star", default='Financial Star'))
-                if debt_to_income < 20:
+                if debt_to_income <= 20:
                     badges.append(trans("financial_health_badge_debt_manager", default='Debt Manager'))
                 if savings_rate >= 20:
                     badges.append(trans("financial_health_badge_savings_pro", default='Savings Pro'))
-                if interest_burden == 0 and debt > 0:
-                    badges.append(trans("financial_health_badge_interest_free", default='Interest Free'))
+                if expense_ratio <= 50:
+                    badges.append(trans("financial_health_badge_expense_master", default='Expense Master'))
 
                 collection = get_mongo_collection()
                 record_data = {
@@ -248,10 +270,12 @@ def main():
                     'income': income,
                     'expenses': expenses,
                     'debt': debt,
-                    'interest_rate': interest_rate,
                     'debt_to_income': debt_to_income,
                     'savings_rate': savings_rate,
-                    'interest_burden': interest_burden,
+                    'expense_ratio': expense_ratio,
+                    'dti_score': dti_score,
+                    'savings_score': savings_score,
+                    'expense_score': expense_score,
                     'score': score,
                     'status': status,
                     'status_key': status_key,
@@ -287,10 +311,12 @@ def main():
                                 "income": format_currency(income),
                                 "expenses": format_currency(expenses),
                                 "debt": format_currency(debt),
-                                "interest_rate": f"{interest_rate:.2f}%",
                                 "debt_to_income": f"{debt_to_income:.2f}%",
                                 "savings_rate": f"{savings_rate:.2f}%",
-                                "interest_burden": f"{interest_burden:.2f}%",
+                                "expense_ratio": f"{expense_ratio:.2f}%",
+                                "dti_score": dti_score,
+                                "savings_score": savings_score,
+                                "expense_score": expense_score,
                                 "badges": badges,
                                 "created_at": record_data['created_at'].strftime('%Y-%m-%d'),
                                 "cta_url": url_for('financial_health.main', _external=True),
@@ -326,15 +352,15 @@ def main():
                 'debt': float(clean_currency(record.get('debt', 0))),
                 'debt_formatted': format_currency(record.get('debt', 0)),
                 'debt_raw': float(clean_currency(record.get('debt', 0))),
-                'interest_rate': float(clean_currency(record.get('interest_rate', 0))),
-                'interest_rate_formatted': f"{float(clean_currency(record.get('interest_rate', 0))):.2f}%",
-                'interest_rate_raw': float(clean_currency(record.get('interest_rate', 0))),
                 'debt_to_income': float(clean_currency(record.get('debt_to_income', 0))),
                 'debt_to_income_formatted': f"{float(clean_currency(record.get('debt_to_income', 0))):.2f}%",
                 'savings_rate': float(clean_currency(record.get('savings_rate', 0))),
                 'savings_rate_formatted': f"{float(clean_currency(record.get('savings_rate', 0))):.2f}%",
-                'interest_burden': float(clean_currency(record.get('interest_burden', 0))),
-                'interest_burden_formatted': f"{float(clean_currency(record.get('interest_burden', 0))):.2f}%",
+                'expense_ratio': float(clean_currency(record.get('expense_ratio', 0))),
+                'expense_ratio_formatted': f"{float(clean_currency(record.get('expense_ratio', 0))):.2f}%",
+                'dti_score': record.get('dti_score', 0),
+                'savings_score': record.get('savings_score', 0),
+                'expense_score': record.get('expense_score', 0),
                 'score': record.get('score', 0),
                 'status': record.get('status', 'Unknown'),
                 'status_key': record.get('status_key', 'unknown'),
@@ -358,15 +384,15 @@ def main():
             'debt': 0.0,
             'debt_formatted': format_currency(0.0),
             'debt_raw': 0.0,
-            'interest_rate': 0.0,
-            'interest_rate_formatted': '0.00%',
-            'interest_rate_raw': 0.0,
             'debt_to_income': 0.0,
             'debt_to_income_formatted': '0.00%',
             'savings_rate': 0.0,
             'savings_rate_formatted': '0.00%',
-            'interest_burden': 0.0,
-            'interest_burden_formatted': '0.00%',
+            'expense_ratio': 0.0,
+            'expense_ratio_formatted': '0.00%',
+            'dti_score': 0,
+            'savings_score': 0,
+            'expense_score': 0,
             'badges': [],
             'created_at': 'N/A'
         }
@@ -388,16 +414,20 @@ def main():
         try:
             debt_to_income_float = float(clean_currency(latest_record['debt_to_income']))
             savings_rate_float = float(clean_currency(latest_record['savings_rate']))
-            interest_burden_float = float(clean_currency(latest_record['interest_burden']))
+            expense_ratio_float = float(clean_currency(latest_record['expense_ratio']))
             
-            if debt_to_income_float > 40:
+            if debt_to_income_float > 35:
                 insights.append(trans("financial_health_insight_high_debt", default='Your debt-to-income ratio is high. Consider reducing debt.'))
-            if savings_rate_float < 0:
-                insights.append(trans("financial_health_insight_negative_savings", default='Your expenses exceed your income. Review your budget.'))
+            elif debt_to_income_float <= 20:
+                insights.append(trans("financial_health_insight_low_debt", default='Great job keeping your debt-to-income ratio low!'))
+            if savings_rate_float < 5:
+                insights.append(trans("financial_health_insight_low_savings", default='Your savings rate is low or negative. Review your budget to increase savings.'))
             elif savings_rate_float >= 20:
                 insights.append(trans("financial_health_insight_good_savings", default='Great job maintaining a strong savings rate!'))
-            if interest_burden_float > 10:
-                insights.append(trans("financial_health_insight_high_interest", default='High interest burden detected. Consider refinancing.'))
+            if expense_ratio_float > 70:
+                insights.append(trans("financial_health_insight_high_expenses", default='Your expenses are high relative to income. Consider cutting unnecessary costs.'))
+            elif expense_ratio_float <= 50:
+                insights.append(trans("financial_health_insight_good_expenses", default='Excellent expense management! Keep your expenses low.'))
             if total_users >= 5:
                 if rank <= total_users * 0.1:
                     insights.append(trans("financial_health_insight_top_10", default='You are in the top 10% of users!'))
@@ -466,15 +496,15 @@ def main():
                 'debt': 0.0,
                 'debt_formatted': format_currency(0.0),
                 'debt_raw': 0.0,
-                'interest_rate': 0.0,
-                'interest_rate_formatted': '0.00%',
-                'interest_rate_raw': 0.0,
                 'debt_to_income': 0.0,
                 'debt_to_income_formatted': '0.00%',
                 'savings_rate': 0.0,
                 'savings_rate_formatted': '0.00%',
-                'interest_burden': 0.0,
-                'interest_burden_formatted': '0.00%',
+                'expense_ratio': 0.0,
+                'expense_ratio_formatted': '0.00%',
+                'dti_score': 0,
+                'savings_score': 0,
+                'expense_score': 0,
                 'badges': [],
                 'created_at': 'N/A'
             },
