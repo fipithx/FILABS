@@ -943,7 +943,7 @@ def log_tool_usage(action, details=None, user_id=None, db=None, session_id=None)
         effective_session_id = session_id or session.get('sid', 'no-session-id') if has_request_context() else 'no-session-id'
         
         log_entry = {
-            'tool_name': action,
+            'tool_name': tool_name or action,
             'user_id': str(user_id) if user_id else None,
             'session_id': effective_session_id,
             'action': details.get('action') if details else None,
