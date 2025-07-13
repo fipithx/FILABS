@@ -561,3 +561,167 @@ img {
         font-size: 0.9rem;
     }
 }
+.learning-hub-wrapper {
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background: #f4f4f4;
+    padding: 20px;
+    transition: transform 0.3s ease;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.sidebar h2 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin: 10px 0;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.sidebar ul li a:hover {
+    color: #007bff;
+}
+
+.role-filter {
+    margin-top: 20px;
+}
+
+.role-filter label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.role-filter select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.sidebar-toggle {
+    display: none;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    font-size: 1.2em;
+    cursor: pointer;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+}
+
+.container {
+    margin-left: 270px;
+    padding: 20px;
+    flex-grow: 1;
+}
+
+.section-title {
+    font-size: 1.8em;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    margin-top: 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.btn:hover {
+    background: #0056b3;
+}
+
+.progress-bar {
+    background: #f4f4f4;
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar-fill {
+    background: #28a745;
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.gamification {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.gamification img {
+    width: 30px;
+}
+
+.language-toggle {
+    text-align: center;
+    padding: 20px;
+}
+
+.language-toggle a {
+    margin: 0 10px;
+    text-decoration: none;
+    color: #007bff;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        width: 200px;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+        display: block;
+    }
+
+    .container {
+        margin-left: 0;
+        padding: 20px;
+    }
+}
