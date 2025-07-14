@@ -479,7 +479,7 @@ def main():
         current_app.logger.error(f"Error in financial_health.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("financial_health_dashboard_load_error", default='Error loading financial health dashboard.'), "danger")
         return render_template(
-            'personal/HEALTHSCORE/health_score_main.html',
+            'personal/GENERAL/error.html',
             form=form,
             records=[],
             latest_record={
