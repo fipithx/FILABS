@@ -1,8 +1,8 @@
-from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app
+from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import FloatField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms import FloatField, IntegerField, SubmitField
+from wtforms.validators import DataRequired, NumberRange, ValidationError
 from flask_login import current_user, login_required
 from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter
 from datetime import datetime
@@ -73,15 +73,48 @@ def custom_login_required(f):
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
 
+class CommaSeparatedIntegerField(IntegerField):
+    def process_formdata(self, valuelist):
+        if valuelist:
+            try:
+                cleaned_value = clean_currency(valuelist[0])
+                self.data = int(cleaned_value) if cleaned_value else None
+            except (ValueError, TypeError):
+                self.data = None
+                raise ValidationError(self.gettext('Not a valid integer'))
+
 class BudgetForm(FlaskForm):
-    income = FloatField(trans('budget_monthly_income', default='Monthly Income'), filters=[strip_commas])
-    housing = FloatField(trans('budget_housing_rent', default='Housing/Rent'), filters=[strip_commas])
-    food = FloatField(trans('budget_food', default='Food'), filters=[strip_commas])
-    transport = FloatField(trans('budget_transport', default='Transport'), filters=[strip_commas])
-    dependents = FloatField(trans('budget_dependents_support', default='Dependents Support'), filters=[strip_commas])
-    miscellaneous = FloatField(trans('budget_miscellaneous', default='Miscellaneous'), filters=[strip_commas])
-    others = FloatField(trans('budget_others', default='Others'), filters=[strip_commas])
-    savings_goal = FloatField(trans('budget_savings_goal', default='Savings Goal'), filters=[strip_commas])
+    income = FloatField(
+        trans('budget_monthly_income', default='Monthly Income'),
+        filters=[strip_commas]
+    )
+    housing = FloatField(
+        trans('budget_housing_rent', default='Housing/Rent'),
+        filters=[strip_commas]
+    )
+    food = FloatField(
+        trans('budget_food', default='Food'),
+        filters=[strip_commas]
+    )
+    transport = FloatField(
+        trans('budget_transport', default='Transport'),
+        filters=[strip_commas]
+    )
+    dependents = CommaSeparatedIntegerField(
+        trans('budget_dependents_support', default='Dependents Support')
+    )
+    miscellaneous = FloatField(
+        trans('budget_miscellaneous', default='Miscellaneous'),
+        filters=[strip_commas]
+    )
+    others = FloatField(
+        trans('budget_others', default='Others'),
+        filters=[strip_commas]
+    )
+    savings_goal = FloatField(
+        trans('budget_savings_goal', default='Savings Goal'),
+        filters=[strip_commas]
+    )
     submit = SubmitField(trans('budget_submit', default='Submit'))
 
     def __init__(self, *args, **kwargs):
@@ -91,14 +124,14 @@ class BudgetForm(FlaskForm):
             DataRequired(message=trans('budget_income_required', lang)),
             NumberRange(min=0, max=10000000000, message=trans('budget_income_max', lang))
         ]
-        for field in [self.housing, self.food, self.transport, self.dependents, self.miscellaneous, self.others]:
+        for field in [self.housing, self.food, self.transport, self.miscellaneous, self.others, self.savings_goal]:
             field.validators = [
                 DataRequired(message=trans(f'budget_{field.name}_required', lang)),
-                NumberRange(min=0, message=trans('budget_amount_positive', lang))
+                NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', lang))
             ]
-        self.savings_goal.validators = [
-            DataRequired(message=trans('budget_savings_goal_required', lang)),
-            NumberRange(min=0, message=trans('budget_amount_positive', lang))
+        self.dependents.validators = [
+            DataRequired(message=trans('budget_dependents_required', lang)),
+            NumberRange(min=0, max=100, message=trans('budget_dependents_max', lang))
         ]
 
     def validate(self, extra_validators=None):
@@ -181,6 +214,7 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
+                    'user_email': current_user.email if current_user.is_authenticated else '',
                     'income': income,
                     'fixed_expenses': expenses,
                     'variable_expenses': 0.0,
@@ -189,7 +223,7 @@ def main():
                     'housing': float(form.housing.data),
                     'food': float(form.food.data),
                     'transport': float(form.transport.data),
-                    'dependents': float(form.dependents.data),
+                    'dependents': int(form.dependents.data),
                     'miscellaneous': float(form.miscellaneous.data),
                     'others': float(form.others.data),
                     'created_at': datetime.utcnow()
@@ -211,7 +245,7 @@ def main():
                             'id': None,
                             'user_id': None,
                             'session_id': session.get('sid', 'unknown'),
-                            'user_email': '',
+                            'user_email': current_user.email if current_user.is_authenticated else '',
                             'income': format_currency(0.0),
                             'income_raw': 0.0,
                             'fixed_expenses': format_currency(0.0),
@@ -229,7 +263,7 @@ def main():
                             'transport': format_currency(0.0),
                             'transport_raw': 0.0,
                             'dependents': format_currency(0.0),
-                            'dependents_raw': 0.0,
+                            'dependents_raw': 0,
                             'miscellaneous': format_currency(0.0),
                             'miscellaneous_raw': 0.0,
                             'others': format_currency(0.0),
@@ -272,7 +306,7 @@ def main():
                 'id': str(budget['_id']),
                 'user_id': budget.get('user_id'),
                 'session_id': budget.get('session_id'),
-                'user_email': budget.get('user_email', ''),
+                'user_email': budget.get('user_email', current_user.email if current_user.is_authenticated else ''),
                 'income': format_currency(float(budget.get('income', 0.0))),
                 'income_raw': float(budget.get('income', 0.0)),
                 'fixed_expenses': format_currency(float(budget.get('fixed_expenses', 0.0))),
@@ -289,8 +323,8 @@ def main():
                 'food_raw': float(budget.get('food', 0.0)),
                 'transport': format_currency(float(budget.get('transport', 0.0))),
                 'transport_raw': float(budget.get('transport', 0.0)),
-                'dependents': format_currency(float(budget.get('dependents', 0.0))),
-                'dependents_raw': float(budget.get('dependents', 0.0)),
+                'dependents': str(budget.get('dependents', 0)),
+                'dependents_raw': int(budget.get('dependents', 0)),
                 'miscellaneous': format_currency(float(budget.get('miscellaneous', 0.0))),
                 'miscellaneous_raw': float(budget.get('miscellaneous', 0.0)),
                 'others': format_currency(float(budget.get('others', 0.0))),
@@ -305,7 +339,7 @@ def main():
                 'id': None,
                 'user_id': None,
                 'session_id': session.get('sid', 'unknown'),
-                'user_email': '',
+                'user_email': current_user.email if current_user.is_authenticated else '',
                 'income': format_currency(0.0),
                 'income_raw': 0.0,
                 'fixed_expenses': format_currency(0.0),
@@ -322,8 +356,8 @@ def main():
                 'food_raw': 0.0,
                 'transport': format_currency(0.0),
                 'transport_raw': 0.0,
-                'dependents': format_currency(0.0),
-                'dependents_raw': 0.0,
+                'dependents': str(0),
+                'dependents_raw': 0,
                 'miscellaneous': format_currency(0.0),
                 'miscellaneous_raw': 0.0,
                 'others': format_currency(0.0),
@@ -334,7 +368,7 @@ def main():
             trans('budget_housing_rent', default='Housing/Rent'): latest_budget.get('housing_raw', 0.0),
             trans('budget_food', default='Food'): latest_budget.get('food_raw', 0.0),
             trans('budget_transport', default='Transport'): latest_budget.get('transport_raw', 0.0),
-            trans('budget_dependents_support', default='Dependents Support'): latest_budget.get('dependents_raw', 0.0),
+            trans('budget_dependents_support', default='Dependents Support'): latest_budget.get('dependents_raw', 0),
             trans('budget_miscellaneous', default='Miscellaneous'): latest_budget.get('miscellaneous_raw', 0.0),
             trans('budget_others', default='Others'): latest_budget.get('others_raw', 0.0)
         }
@@ -386,7 +420,7 @@ def main():
                 'id': None,
                 'user_id': None,
                 'session_id': session.get('sid', 'unknown'),
-                'user_email': '',
+                'user_email': current_user.email if current_user.is_authenticated else '',
                 'income': format_currency(0.0),
                 'income_raw': 0.0,
                 'fixed_expenses': format_currency(0.0),
@@ -403,8 +437,8 @@ def main():
                 'food_raw': 0.0,
                 'transport': format_currency(0.0),
                 'transport_raw': 0.0,
-                'dependents': format_currency(0.0),
-                'dependents_raw': 0.0,
+                'dependents': str(0),
+                'dependents_raw': 0,
                 'miscellaneous': format_currency(0.0),
                 'miscellaneous_raw': 0.0,
                 'others': format_currency(0.0),
@@ -425,7 +459,6 @@ def main():
 @limiter.limit("5 per minute")
 def summary():
     """Return summary of the latest budget for the current user."""
-    from flask import jsonify
     db = get_mongo_db()
     try:
         log_tool_usage(
@@ -439,13 +472,22 @@ def summary():
         latest_budget = db.budgets.find_one(filter_criteria, sort=[('created_at', -1)])
         if not latest_budget:
             current_app.logger.info(f"No budget found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-            return jsonify({'totalBudget': format_currency(0.0)})
+            return jsonify({
+                'totalBudget': format_currency(0.0),
+                'user_email': current_user.email if current_user.is_authenticated else ''
+            })
         total_budget = float(latest_budget.get('income', 0.0))
         current_app.logger.info(f"Fetched budget summary for user {current_user.id}: {total_budget}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'totalBudget': format_currency(total_budget)})
+        return jsonify({
+            'totalBudget': format_currency(total_budget),
+            'user_email': latest_budget.get('user_email', current_user.email if current_user.is_authenticated else '')
+        })
     except Exception as e:
         current_app.logger.error(f"Error in budget.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        return jsonify({'totalBudget': format_currency(0.0)}), 500
+        return jsonify({
+            'totalBudget': format_currency(0.0),
+            'user_email': current_user.email if current_user.is_authenticated else ''
+        }), 500
 
 @budget_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
