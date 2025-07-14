@@ -1,9 +1,8 @@
-
 from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, render_template, request, session
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, BooleanField, SubmitField, FloatField
-from wtforms.validators import DataRequired, NumberRange, Optional, Email, ValidationError
+from wtforms import BooleanField, SubmitField, FloatField
+from wtforms.validators import DataRequired, NumberRange, Optional
 from flask_login import current_user, login_required
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
@@ -79,14 +78,6 @@ class CommaSeparatedFloatField(FloatField):
                 raise ValidationError(self.gettext('Not a valid number'))
 
 class NetWorthForm(FlaskForm):
-    first_name = StringField(
-        trans('general_first_name', default='First Name'),
-        validators=[DataRequired(message=trans('general_first_name_required', default='Please enter your first name.'))]
-    )
-    email = StringField(
-        trans('general_email', default='Email'),
-        validators=[Optional(), Email(message=trans('general_email_invalid', default='Please enter a valid email address.'))]
-    )
     send_email = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False
@@ -121,11 +112,6 @@ class NetWorthForm(FlaskForm):
     )
     submit = SubmitField(trans('net_worth_submit', default='Submit'))
 
-    def validate_email(self, field):
-        if self.send_email.data and not field.data:
-            current_app.logger.warning(f"Email required for notifications for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
-            raise ValidationError(trans('general_email_required', default='Valid email is required for notifications'))
-
 @net_worth_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
@@ -147,12 +133,7 @@ def main():
     session.permanent = True
     session.modified = True
     
-    form_data = {}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email
-        form_data['first_name'] = current_user.get_first_name()
-    
-    form = NetWorthForm(data=form_data)
+    form = NetWorthForm()
     
     try:
         log_tool_usage(
@@ -200,8 +181,7 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
-                    'first_name': form.first_name.data,
-                    'email': form.email.data,
+                    'user_email': current_user.email if current_user.is_authenticated else None,
                     'send_email': form.send_email.data,
                     'cash_savings': cash_savings,
                     'investments': investments,
@@ -218,12 +198,12 @@ def main():
                     db.net_worth_data.insert_one(net_worth_record)
                     current_app.logger.info(f"Successfully saved record {net_worth_record['_id']} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans("net_worth_success", default="Net worth calculated successfully"), "success")
-                    if form.send_email.data and form.email.data:
+                    if form.send_email.data and current_user.is_authenticated:
                         try:
                             config = EMAIL_CONFIG["net_worth"]
                             subject = trans(config["subject_key"], default='Your Net Worth Summary')
                             email_data = {
-                                "first_name": net_worth_record['first_name'],
+                                "first_name": current_user.get_first_name(),
                                 "cash_savings": format_currency(net_worth_record['cash_savings']),
                                 "investments": format_currency(net_worth_record['investments']),
                                 "property": format_currency(net_worth_record['property']),
@@ -234,18 +214,18 @@ def main():
                                 "badges": badges,
                                 "created_at": net_worth_record['created_at'].strftime('%Y-%m-%d'),
                                 "cta_url": url_for('personal.net_worth.main', _external=True),
-                                "unsubscribe_url": url_for('personal.net_worth.unsubscribe', email=form.email.data, _external=True)
+                                "unsubscribe_url": url_for('personal.net_worth.unsubscribe', _external=True)
                             }
                             send_email(
                                 app=current_app,
                                 logger=current_app.logger,
-                                to_email=form.email.data,
+                                to_email=current_user.email,
                                 subject=subject,
                                 template_name=config["template"],
                                 data=email_data,
                                 lang=session.get('lang', 'en')
                             )
-                            current_app.logger.info(f"Email sent to {form.email.data} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+                            current_app.logger.info(f"Email sent to {current_user.email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
                         except Exception as e:
                             current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                             flash(trans("general_email_action", default="Failed to send email"), "warning")
@@ -257,7 +237,7 @@ def main():
 
         user_records = db.net_worth_data.find(filter_criteria).sort('created_at', -1)
         if db.net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
-            user_records = db.net_worth_data.find({'email': current_user.email}).sort('created_at', -1)
+            user_records = db.net_worth_data.find({'user_email': current_user.email}).sort('created_at', -1)
         
         records_data = []
         for record in user_records:
@@ -265,8 +245,7 @@ def main():
                 'id': str(record.get('_id')),
                 'user_id': record.get('user_id'),
                 'session_id': record.get('session_id'),
-                'first_name': record.get('first_name'),
-                'email': record.get('email'),
+                'user_email': record.get('user_email', 'N/A'),
                 'send_email': record.get('send_email', False),
                 'cash_savings': float(clean_currency(record.get('cash_savings', 0))),
                 'cash_savings_formatted': format_currency(record.get('cash_savings', 0)),
@@ -475,10 +454,10 @@ def summary():
         current_app.logger.error(f"Error in net_worth.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'net_worth': format_currency(0.0)}), 500
 
-@net_worth_bp.route('/unsubscribe/<email>')
+@net_worth_bp.route('/unsubscribe', methods=['POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
-def unsubscribe(email):
+def unsubscribe():
     """Unsubscribe user from net worth emails using MongoDB."""
     db = get_mongo_db()
     if 'sid' not in session:
@@ -494,7 +473,7 @@ def unsubscribe(email):
             action='unsubscribe'
         )
         
-        filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session['sid']}
+        filter_criteria = {'user_email': current_user.email} if current_user.is_authenticated else {'session_id': session['sid']}
         
         net_worth_collection = db.net_worth_data
         result = net_worth_collection.update_many(
@@ -502,10 +481,10 @@ def unsubscribe(email):
             {'$set': {'send_email': False}}
         )
         if result.modified_count > 0:
-            current_app.logger.info(f"Successfully unsubscribed email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+            current_app.logger.info(f"Successfully unsubscribed email {current_user.email if current_user.is_authenticated else 'anonymous'} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("net_worth_unsubscribe_success", default="Successfully unsubscribed from emails"), "success")
         else:
-            current_app.logger.warning(f"No emails updated for {email} during unsubscribe for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+            current_app.logger.warning(f"No emails updated for {current_user.email if current_user.is_authenticated else 'anonymous'} during unsubscribe for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("net_worth_unsubscribe_failed", default="Failed to unsubscribe. Email not found or already unsubscribed."), "danger")
         return redirect(url_for('personal.net_worth.main', tab='dashboard'))
     except Exception as e:
