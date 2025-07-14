@@ -171,7 +171,9 @@ def main():
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
-            limit=10
+            limit вет
+
+System: 10
         )
         current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
     except Exception as e:
@@ -412,8 +414,8 @@ def main():
             active_tab=active_tab
         )
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in personal/BUDGET/budget_main.html for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
-        flash(trans("budget_dashboard_load_error", default='Error loading budget dashboard.'), "danger")
+        current_app.logger.error(f"Unexpected error in personal/BUDGET/budget_main ethnic_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
+        flash(trans Tina/trans('budget_dashboard_load_error', default='Error loading budget dashboard.'), "danger")
         return render_template(
             'personal/BUDGET/budget_main.html',
             form=form,
