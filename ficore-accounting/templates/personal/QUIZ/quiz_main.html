@@ -116,47 +116,20 @@
                 <input type="hidden" name="action" value="submit_quiz">
 
                 <!-- Personal Information -->
+                {% if current_user.is_authenticated %}
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-user me-1"></i> {{ t('quiz_personal_info', default='Personal Information', lang=lang) }}</h5>
+                        <h5><i class="fas fa-user me-1"></i> {{ t('quiz_email_preferences', default='Email Preferences', lang=lang) }}</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.first_name.id }}" class="form-label">{{ t('general_first_name', default='First Name', lang=lang) }}</label>
-                                    {{ form.first_name(class="form-control", required=True) }}
-                                    <div id="first-name-help" class="form-text">{{ t('general_first_name_placeholder', default='e.g., Muhammad, Bashir, Umar', lang=lang) }}</div>
-                                    <div class="invalid-feedback">{{ t('general_first_name_required', default='First name is required', lang=lang) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.email.id }}" class="form-label">{{ t('general_email', default='Email', lang=lang) }}</label>
-                                    {{ form.email(class="form-control") }}
-                                    <div id="email-help" class="form-text">{{ t('general_email_placeholder', default='e.g., muhammad@example.com', lang=lang) }}</div>
-                                    <div class="invalid-feedback">{{ t('general_email_required', default='Valid email is required for notifications', lang=lang) }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.lang.id }}" class="form-label">{{ t('general_language', default='Language', lang=lang) }}</label>
-                                    {{ form.lang(class="form-select") }}
-                                    <div id="language-help" class="form-text">{{ t('general_language_select', default='Select your preferred language', lang=lang) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check mt-4">
-                                    {{ form.send_email(class="form-check-input", id="sendEmail") }}
-                                    <label class="form-check-label" for="sendEmail">{{ t('quiz_send_email', default='Send me my results by email', lang=lang) }}</label>
-                                    <div id="send-email-help" class="form-text">{{ t('general_send_email_title', default='Check to receive an email with your quiz results', lang=lang) }}</div>
-                                </div>
-                            </div>
+                        <div class="form-check mb-3">
+                            {{ form.send_email(class="form-check-input", id="sendEmail") }}
+                            <label class="form-check-label" for="sendEmail">{{ t('quiz_send_email', default='Send me my results by email', lang=lang) }}</label>
+                            <div id="send-email-help" class="form-text">{{ t('general_send_email_title', default='Check to receive an email with your quiz results', lang=lang) }}</div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Quiz Questions -->
                 <div class="card mb-4">
@@ -229,6 +202,16 @@
                             </div>
                         </div>
                     </div>
+                    {% if current_user.is_authenticated %}
+                    <div class="col-md-12 mt-3">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body text-center">
+                                <h6>{{ t('quiz_user_email', default='Associated Email', lang=lang) }}</h6>
+                                <h6>{{ latest_record.get('user_email', 'N/A') }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Score Chart -->
@@ -376,6 +359,14 @@
                     <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) }}" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ t('general_profile_copy_link', default='Copy', lang=lang) }}</button>
                 </div>
+                <div class="mt-3">
+                    <h6>{{ t('quiz_email_preferences', default='Email Preferences', lang=lang) }}</h6>
+                    <p>{{ t('quiz_unsubscribe_description', default='Click below to unsubscribe from quiz email notifications.', lang=lang) }}</p>
+                    <form method="POST" action="{{ url_for('personal.quiz.unsubscribe') }}" class="d-inline">
+                        {{ form.csrf_token }}
+                        <button type="submit" class="btn btn-warning btn-sm">{{ t('quiz_unsubscribe', default='Unsubscribe', lang=lang) }}</button>
+                    </form>
+                </div>
             </div>
         </div>
     {% endif %}
@@ -468,22 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!allAnswered) {
             event.preventDefault();
             alert('{{ t('quiz_all_questions_required', default='Please answer all questions before submitting', lang=lang) | escape }}');
-        }
-    });
-
-    // Email validation based on send_email checkbox
-    const sendEmailCheckbox = document.getElementById('sendEmail');
-    const emailInput = document.querySelector('#quizForm input[name="email"]');
-    sendEmailCheckbox.addEventListener('change', () => {
-        emailInput.required = sendEmailCheckbox.checked;
-        emailInput.classList.remove('is-invalid');
-        if (sendEmailCheckbox.checked && !emailInput.value) {
-            emailInput.classList.add('is-invalid');
-        }
-    });
-    emailInput.addEventListener('input', () => {
-        if (sendEmailCheckbox.checked && emailInput.value) {
-            emailInput.classList.remove('is-invalid');
         }
     });
 
