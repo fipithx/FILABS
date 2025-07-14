@@ -18,6 +18,18 @@
         {% endif %}
     {% endwith %}
 
+    <!-- Display form errors only after POST -->
+    {% if form.errors and request.method == 'POST' %}
+        {% for field, errors in form.errors.items() %}
+            {% for error in errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ t(error, default=error) }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="budgetTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -50,14 +62,14 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_first_name', default='First Name') }}</label>
-                                    {{ form.first_name(class="form-control", placeholder=t('budget_first_name_placeholder', default='e.g., Ahmad')) }}
+                                    {{ form.first_name(class="form-control", placeholder=t('budget_first_name_placeholder', default='e.g., Ahmad'), value=form.first_name.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_first_name_required', default='First name is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_email', default='Email') }}</label>
-                                    {{ form.email(class="form-control", placeholder=t('budget_email_placeholder', default='e.g., user@example.com')) }}
+                                    {{ form.email(class="form-control", placeholder=t('budget_email_placeholder', default='e.g., user@example.com'), value=form.email.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_email_required', default='Valid email is required for email notifications') }}</div>
                                 </div>
                             </div>
@@ -77,7 +89,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">{{ t('budget_monthly_income', default='Monthly Income') }}</label>
-                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500,000.00')) }}
+                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500,000.00'), value=form.income.data or '') }}
                             <div class="invalid-feedback">{{ t('budget_income_required', default='Income is required') }}</div>
                             <div class="form-text">{{ t('budget_income_help', default='Enter your monthly income without commas (e.g., 500000 or 500000.00)') }}</div>
                         </div>
@@ -94,7 +106,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_housing_rent', default='Housing/Rent') }}</label>
-                                    {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100,000.00')) }}
+                                    {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100,000.00'), value=form.housing.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_housing_required', default='Housing cost is required') }}</div>
                                     <div class="form-text">{{ t('budget_housing_help', default='Enter housing cost without commas (e.g., 100000 or 100000.00)') }}</div>
                                 </div>
@@ -102,7 +114,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_food', default='Food') }}</label>
-                                    {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50,000.00')) }}
+                                    {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50,000.00'), value=form.food.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_food_required', default='Food cost is required') }}</div>
                                     <div class="form-text">{{ t('budget_food_help', default='Enter food cost without commas (e.g., 50000 or 50000.00)') }}</div>
                                 </div>
@@ -112,7 +124,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_transport', default='Transport') }}</label>
-                                    {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20,000.00')) }}
+                                    {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20,000.00'), value=form.transport.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_transport_required', default='Transport cost is required') }}</div>
                                     <div class="form-text">{{ t('budget_transport_help', default='Enter transport cost without commas (e.g., 20000 or 20000.00)') }}</div>
                                 </div>
@@ -120,7 +132,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_dependents_support', default='Dependents Support') }}</label>
-                                    {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30,000.00')) }}
+                                    {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30,000.00'), value=form.dependents.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_dependents_required', default='Dependents support cost is required') }}</div>
                                     <div class="form-text">{{ t('budget_dependents_help', default='Enter dependents cost without commas (e.g., 30000 or 30000.00)') }}</div>
                                 </div>
@@ -130,7 +142,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_miscellaneous', default='Miscellaneous') }}</label>
-                                    {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10,000.00')) }}
+                                    {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10,000.00'), value=form.miscellaneous.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_miscellaneous_required', default='Miscellaneous cost is required') }}</div>
                                     <div class="form-text">{{ t('budget_miscellaneous_help', default='Enter miscellaneous cost without commas (e.g., 10000 or 10000.00)') }}</div>
                                 </div>
@@ -138,7 +150,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">{{ t('budget_others', default='Others') }}</label>
-                                    {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15,000.00')) }}
+                                    {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15,000.00'), value=form.others.data or '') }}
                                     <div class="invalid-feedback">{{ t('budget_others_required', default='Other expenses are required') }}</div>
                                     <div class="form-text">{{ t('budget_others_help', default='Enter other expenses without commas (e.g., 15000 or 15000.00)') }}</div>
                                 </div>
@@ -155,7 +167,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">{{ t('budget_monthly_savings_goal', default='Monthly Savings Goal') }}</label>
-                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50,000.00')) }}
+                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50,000.00'), value=form.savings_goal.data or '') }}
                             <div class="invalid-feedback">{{ t('budget_savings_goal_required', default='Savings goal is required') }}</div>
                             <div class="form-text">{{ t('budget_savings_goal_help', default='Enter your monthly savings goal without commas (e.g., 50000 or 50000.00)') }}</div>
                         </div>
