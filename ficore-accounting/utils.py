@@ -91,11 +91,11 @@ _PERSONAL_TOOLS = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -193,11 +193,11 @@ _PERSONAL_EXPLORE_FEATURES = [
         "icon": "bi-shield"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -284,11 +284,11 @@ _BUSINESS_TOOLS = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -354,11 +354,11 @@ _BUSINESS_EXPLORE_FEATURES = [
         "icon": "bi-box"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -437,11 +437,11 @@ _AGENT_TOOLS = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -491,11 +491,11 @@ _AGENT_EXPLORE_FEATURES = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "coins.history",
-        "label": "Coins",
-        "label_key": "coins_dashboard",
-        "description_key": "coins_dashboard_desc",
-        "tooltip_key": "coins_tooltip",
+        "endpoint": "credits.history",
+        "label": "Ficore Credits",
+        "label_key": "credits_dashboard",
+        "description_key": "credits_dashboard_desc",
+        "tooltip_key": "credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -534,11 +534,11 @@ _ADMIN_TOOLS = [
         "icon": "bi-people"
     },
     {
-        "endpoint": "admin.credit_coins",
-        "label": "Credit Coins",
-        "label_key": "admin_credit_coins",
-        "description_key": "admin_credit_coins_desc",
-        "tooltip_key": "admin_credit_coins_tooltip",
+        "endpoint": "admin.ficore_credits",
+        "label": "Credit Ficore Credits",
+        "label_key": "admin_ficore_credits",
+        "description_key": "admin_ficore_credits_desc",
+        "tooltip_key": "admin_ficore_credits_tooltip",
         "icon": "bi-coin"
     },
     {
@@ -567,14 +567,6 @@ _ADMIN_NAV = [
         "description_key": "admin_manage_users_desc",
         "tooltip_key": "admin_manage_users_tooltip",
         "icon": "bi-people"
-    },
-    {
-        "endpoint": "admin.credit_coins",
-        "label": "Credit Coins",
-        "label_key": "admin_credit_coins",
-        "description_key": "admin_credit_coins_desc",
-        "tooltip_key": "admin_credit_coins_tooltip",
-        "icon": "bi-coin"
     },
     {
         "endpoint": "admin.audit",
@@ -736,15 +728,6 @@ def get_explore_features():
                     "tooltip_key": "agents_tooltip",
                     "icon": "bi-person-workspace",
                     "category": "Agent"
-                },
-                {
-                    "endpoint": "coins.history",
-                    "label": "Coins",
-                    "label_key": "coins_dashboard",
-                    "description_key": "coins_dashboard_desc",
-                    "tooltip_key": "coins_tooltip",
-                    "icon": "bi-coin",
-                    "category": "Proof of Concept"
                 },
                 {
                     "endpoint": "news_bp.news_list",
