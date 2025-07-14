@@ -3,12 +3,9 @@ from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, DuplicateKeyError, OperationFailure
 from werkzeug.security import generate_password_hash
 from bson import ObjectId
-import os
 import logging
-import uuid
-import time
 from translations import trans
-from utils import get_mongo_db, log_tool_usage, logger # Use SessionAdapter logger from utils
+from utils import get_mongo_db, logger  # Use SessionAdapter logger from utils
 from functools import lru_cache
 import traceback
 
@@ -312,6 +309,42 @@ def initialize_app_data(app):
                         {'key': [('user_id', ASCENDING)]},
                         {'key': [('session_id', ASCENDING)]},
                         {'key': [('due_date', ASCENDING)]}
+                    ]
+                },
+                'vat_rules': {
+                    'validator': {
+                        '$jsonSchema': {
+                            'bsonType': 'object',
+                            'required': ['category', 'vat_exempt', 'description'],
+                            'properties': {
+                                'category': {'bsonType': 'string'},
+                                'vat_exempt': {'bsonType': 'bool'},
+                                'description': {'bsonType': 'string'},
+                                'session_id': {'bsonType': ['string', 'null']}
+                            }
+                        }
+                    },
+                    'indexes': [
+                        {'key': [('category', ASCENDING)], 'unique': True},
+                        {'key': [('session_id', ASCENDING)]}
+                    ]
+                },
+                'tax_deadlines': {
+                    'validator': {
+                        '$jsonSchema': {
+                            'bsonType': 'object',
+                            'required': ['deadline_date', 'description', 'created_at'],
+                            'properties': {
+                                'deadline_date': {'bsonType': 'date'},
+                                'description': {'bsonType': 'string'},
+                                'created_at': {'bsonType': 'date'},
+                                'session_id': {'bsonType': ['string', 'null']}
+                            }
+                        }
+                    },
+                    'indexes': [
+                        {'key': [('deadline_date', ASCENDING)]},
+                        {'key': [('session_id', ASCENDING)]}
                     ]
                 },
                 'feedback': {
@@ -677,6 +710,25 @@ def initialize_app_data(app):
                                extra={'session_id': 'no-session-id'})
                 except OperationFailure as e:
                     logger.error(f"Failed to insert sample agents: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
+                    raise
+            
+            # Initialize VAT rules
+            vat_rules_collection = db_instance.vat_rules
+            if vat_rules_collection.count_documents({}) == 0:
+                try:
+                    vat_rules_collection.insert_many([
+                        {'category': 'food', 'vat_exempt': True, 'description': trans('tax_vat_exempt_food', default='Food items are VAT-exempt'), 'session_id': None},
+                        {'category': 'healthcare', 'vat_exempt': True, 'description': trans('tax_vat_exempt_healthcare', default='Healthcare services are VAT-exempt'), 'session_id': None},
+                        {'category': 'education', 'vat_exempt': True, 'description': trans('tax_vat_exempt_education', default='Educational services are VAT-exempt'), 'session_id': None},
+                        {'category': 'rent', 'vat_exempt': True, 'description': trans('tax_vat_exempt_rent', default='Rent is VAT-exempt'), 'session_id': None},
+                        {'category': 'power', 'vat_exempt': True, 'description': trans('tax_vat_exempt_power', default='Power supply is VAT-exempt'), 'session_id': None},
+                        {'category': 'baby_products', 'vat_exempt': True, 'description': trans('tax_vat_exempt_baby_products', default='Baby products are VAT-exempt'), 'session_id': None},
+                        {'category': 'other', 'vat_exempt': False, 'description': trans('tax_vat_default', default='Default 7.5% VAT applied'), 'session_id': None}
+                    ])
+                    logger.info(trans('general_vat_rules_initialized', default='Initialized VAT rules in MongoDB'), 
+                                extra={'session_id': 'no-session-id'})
+                except OperationFailure as e:
+                    logger.error(f"Failed to insert VAT rules: {str(e)}", exc_info=True, extra={'session_id': 'no-session-id'})
                     raise
             
             # Initialize courses and quizzes (to be handled by learning hub's init_learning_materials)
@@ -1081,6 +1133,42 @@ def get_tax_reminders(db, filter_kwargs):
                     exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
+def get_vat_rules(db, filter_kwargs):
+    """
+    Retrieve VAT rule records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of VAT rule records
+    """
+    try:
+        return list(db.vat_rules.find(filter_kwargs).sort('category', ASCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_vat_rules_fetch_error', default='Error getting VAT rules')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def get_tax_deadlines(db, filter_kwargs):
+    """
+    Retrieve tax deadline records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of tax deadline records
+    """
+    try:
+        return list(db.tax_deadlines.find(filter_kwargs).sort('deadline_date', ASCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_tax_deadlines_fetch_error', default='Error getting tax deadlines')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
 def create_feedback(db, feedback_data):
     """
     Create a new feedback record in the feedback collection.
@@ -1178,6 +1266,34 @@ def create_tax_rate(db, tax_rate_data):
                     exc_info=True, extra={'session_id': tax_rate_data.get('session_id', 'no-session-id')})
         raise
 
+def create_vat_rule(db, vat_rule_data):
+    """
+    Create a new VAT rule in the vat_rules collection.
+    
+    Args:
+        db: MongoDB database instance
+        vat_rule_data: Dictionary containing VAT rule information (category, vat_exempt, description)
+    
+    Returns:
+        str: ID of the created VAT rule
+    """
+    try:
+        required_fields = ['category', 'vat_exempt', 'description']
+        if not all(field in vat_rule_data for field in required_fields):
+            raise ValueError(trans('general_missing_vat_rule_fields', default='Missing required VAT rule fields'))
+        result = db.vat_rules.insert_one(vat_rule_data)
+        logger.info(f"{trans('general_vat_rule_created', default='Created VAT rule with ID')}: {result.inserted_id}", 
+                    extra={'session_id': vat_rule_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except DuplicateKeyError as e:
+        logger.error(f"{trans('general_vat_rule_creation_error', default='Error creating VAT rule')}: {trans('general_duplicate_key_error', default='Duplicate category error')} - {str(e)}", 
+                    exc_info=True, extra={'session_id': vat_rule_data.get('session_id', 'no-session-id')})
+        raise ValueError(trans('general_vat_rule_exists', default='VAT rule with this category already exists'))
+    except Exception as e:
+        logger.error(f"{trans('general_vat_rule_creation_error', default='Error creating VAT rule')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': vat_rule_data.get('session_id', 'no-session-id')})
+        raise
+
 def create_payment_location(db, location_data):
     """
     Create a new payment location in the payment_locations collection.
@@ -1208,7 +1324,7 @@ def create_tax_reminder(db, reminder_data):
     
     Args:
         db: MongoDB database instance
-        reminder_data: Dictionary containing tax reminder information
+        reminder_data: Dictionary containing tax reminder information (message as tax_type, reminder_date as due_date)
     
     Returns:
         str: ID of the created tax reminder
@@ -1216,7 +1332,13 @@ def create_tax_reminder(db, reminder_data):
     try:
         required_fields = ['user_id', 'tax_type', 'due_date', 'amount', 'status', 'created_at']
         if not all(field in reminder_data for field in required_fields):
-            raise ValueError(trans('general_missing_reminder_fields', default='Missing required tax reminder fields'))
+            # Map template fields to schema
+            if 'message' in reminder_data:
+                reminder_data['tax_type'] = reminder_data.pop('message')
+            if 'reminder_date' in reminder_data:
+                reminder_data['due_date'] = reminder_data.pop('reminder_date')
+            if not all(field in reminder_data for field in required_fields):
+                raise ValueError(trans('general_missing_reminder_fields', default='Missing required tax reminder fields'))
         result = db.tax_reminders.insert_one(reminder_data)
         logger.info(f"{trans('general_tax_reminder_created', default='Created tax reminder with ID')}: {result.inserted_id}", 
                    extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
@@ -1224,6 +1346,30 @@ def create_tax_reminder(db, reminder_data):
     except Exception as e:
         logger.error(f"{trans('general_tax_reminder_creation_error', default='Error creating tax reminder')}: {str(e)}", 
                     exc_info=True, extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_tax_deadline(db, deadline_data):
+    """
+    Create a new tax deadline in the tax_deadlines collection.
+    
+    Args:
+        db: MongoDB database instance
+        deadline_data: Dictionary containing tax deadline information
+    
+    Returns:
+        str: ID of the created tax deadline
+    """
+    try:
+        required_fields = ['deadline_date', 'description', 'created_at']
+        if not all(field in deadline_data for field in required_fields):
+            raise ValueError(trans('general_missing_deadline_fields', default='Missing required tax deadline fields'))
+        result = db.tax_deadlines.insert_one(deadline_data)
+        logger.info(f"{trans('general_tax_deadline_created', default='Created tax deadline with ID')}: {result.inserted_id}", 
+                    extra={'session_id': deadline_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_tax_deadline_creation_error', default='Error creating tax deadline')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': deadline_data.get('session_id', 'no-session-id')})
         raise
 
 def update_tax_reminder(db, reminder_id, update_data):
@@ -1256,7 +1402,6 @@ def update_tax_reminder(db, reminder_id, update_data):
                     exc_info=True, extra={'session_id': 'no-session-id'})
         raise
 
-# Data conversion functions for backward compatibility
 def to_dict_financial_health(record):
     """Convert financial health record to dictionary."""
     if not record:
@@ -1393,6 +1538,17 @@ def to_dict_tax_rate(record):
         'description': record.get('description', '')
     }
 
+def to_dict_vat_rule(record):
+    """Convert VAT rule record to dictionary."""
+    if not record:
+        return {'category': None, 'vat_exempt': None, 'description': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'category': record.get('category', ''),
+        'vat_exempt': record.get('vat_exempt', False),
+        'description': record.get('description', '')
+    }
+
 def to_dict_payment_location(record):
     """Convert payment location record to dictionary."""
     if not record:
@@ -1419,4 +1575,15 @@ def to_dict_tax_reminder(record):
         'status': record.get('status', ''),
         'created_at': record.get('created_at'),
         'updated_at': record.get('updated_at')
+    }
+
+def to_dict_tax_deadline(record):
+    """Convert tax deadline record to dictionary."""
+    if not record:
+        return {'deadline_date': None, 'description': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'deadline_date': record.get('deadline_date'),
+        'description': record.get('description', ''),
+        'created_at': record.get('created_at')
     }
