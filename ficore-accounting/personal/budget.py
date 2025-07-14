@@ -406,8 +406,7 @@ def main():
             categories=categories,
             tips=tips,
             insights=insights,
-            activities=activ
-```ities,
+            activities=activities,
             tool_title=trans('budget_title', default='Budget Planner'),
             active_tab=active_tab
         )
