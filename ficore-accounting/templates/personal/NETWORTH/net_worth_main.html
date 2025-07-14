@@ -37,6 +37,18 @@
         {% endif %}
     {% endwith %}
 
+    <!-- Display form errors only after POST -->
+    {% if form.errors and request.method == 'POST' %}
+        {% for field, errors in form.errors.items() %}
+            {% for error in errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ t(error, default=error, lang=lang) }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close', lang=lang) }}"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="netWorthTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -69,20 +81,20 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.first_name.id }}" class="form-label">{{ t('general_first_name', default='First Name', lang=lang) }}</label>
-                                    {{ form.first_name(class="form-control", placeholder=t('general_first_name_placeholder', default='e.g., Muhammad, Bashir, Umar', lang=lang), required=True) }}
+                                    {{ form.first_name(class="form-control", placeholder=t('general_first_name_placeholder', default='e.g., Muhammad, Bashir, Umar', lang=lang), value=form.first_name.data or '', required=True) }}
                                     <div class="invalid-feedback">{{ t('general_first_name_required', default='First name is required', lang=lang) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.email.id }}" class="form-label">{{ t('general_email', default='Email', lang=lang) }}</label>
-                                    {{ form.email(class="form-control", placeholder=t('general_email_placeholder', default='e.g., muhammad@example.com', lang=lang)) }}
+                                    {{ form.email(class="form-control", placeholder=t('general_email_placeholder', default='e.g., muhammad@example.com', lang=lang), value=form.email.data or '') }}
                                     <div class="invalid-feedback">{{ t('general_email_required', default='Valid email is required for notifications', lang=lang) }}</div>
                                 </div>
                             </div>
                         </div>
                         <div class="form-check">
-                            {{ form.send_email(class="form-check-input", id="sendEmail") }}
+                            {{ form.send_email(class="form-check-input", id="sendEmail", checked=form.send_email.data or False) }}
                             <label class="form-check-label" for="sendEmail">{{ t('net_worth_send_email', default='Send me my net worth summary by email', lang=lang) }}</label>
                         </div>
                     </div>
@@ -98,7 +110,7 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="{{ form.cash_savings.id }}" class="form-label">{{ t('net_worth_cash_savings', default='Cash & Savings', lang=lang) }}</label>
-                                    {{ form.cash_savings(class="form-control number-input", placeholder=t('net_worth_cash_savings_placeholder', default='e.g., 500000.00', lang=lang), required=True) }}
+                                    {{ form.cash_savings(class="form-control number-input", placeholder=t('net_worth_cash_savings_placeholder', default='e.g., 500000.00', lang=lang), value=form.cash_savings.data or '', required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_cash_savings_invalid', default='Cash & Savings must be a valid number', lang=lang) }}</div>
                                     <div class="form-text">{{ t('net_worth_cash_savings_help', default='Enter amount without commas (e.g., 500000 or 500000.00)', lang=lang) }}</div>
                                 </div>
@@ -106,7 +118,7 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="{{ form.investments.id }}" class="form-label">{{ t('net_worth_investments', default='Investments', lang=lang) }}</label>
-                                    {{ form.investments(class="form-control number-input", placeholder=t('net_worth_investments_placeholder', default='e.g., 1000000.00', lang=lang), required=True) }}
+                                    {{ form.investments(class="form-control number-input", placeholder=t('net_worth_investments_placeholder', default='e.g., 1000000.00', lang=lang), value=form.investments.data or '', required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_investments_invalid', default='Investments must be a valid number', lang=lang) }}</div>
                                     <div class="form-text">{{ t('net_worth_investments_help', default='Enter amount without commas (e.g., 1000000 or 1000000.00)', lang=lang) }}</div>
                                 </div>
@@ -114,7 +126,7 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label for="{{ form.property.id }}" class="form-label">{{ t('net_worth_physical_property', default='Physical Property', lang=lang) }}</label>
-                                    {{ form.property(class="form-control number-input", placeholder=t('net_worth_property_placeholder', default='e.g., 5000000.00', lang=lang), required=True) }}
+                                    {{ form.property(class="form-control number-input", placeholder=t('net_worth_property_placeholder', default='e.g., 5000000.00', lang=lang), value=form.property.data or '', required=True) }}
                                     <div class="invalid-feedback">{{ t('net_worth_property_invalid', default='Physical Property must be a valid number', lang=lang) }}</div>
                                     <div class="form-text">{{ t('net_worth_property_help', default='Enter amount without commas (e.g., 5000000 or 5000000.00)', lang=lang) }}</div>
                                 </div>
@@ -133,7 +145,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.loans.id }}" class="form-label">{{ t('net_worth_loans', default='Loans & Debts', lang=lang) }}</label>
-                                    {{ form.loans(class="form-control number-input", placeholder=t('net_worth_loans_placeholder', default='e.g., 200000.00', lang=lang)) }}
+                                    {{ form.loans(class="form-control number-input", placeholder=t('net_worth_loans_placeholder', default='e.g., 200000.00', lang=lang), value=form.loans.data or '') }}
                                     <div class="invalid-feedback">{{ t('net_worth_loans_invalid', default='Loans must be a valid number', lang=lang) }}</div>
                                     <div class="form-text">{{ t('net_worth_loans_help', default='Enter amount without commas (e.g., 200000 or 200000.00)', lang=lang) }}</div>
                                 </div>
@@ -435,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         });
 
-        input.addEventListener('blur', function() {
+        input.addEventListener('blur', function(e) {
             if (e.target.value) {
                 let value = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = value.split('.');
