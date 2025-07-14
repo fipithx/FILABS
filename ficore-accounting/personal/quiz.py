@@ -333,7 +333,7 @@ def main():
                 except Exception as e:
                     current_app.logger.error(f"Failed to save quiz result to MongoDB: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans('quiz_storage_error', default='Error saving quiz results.'), 'danger')
-                    return redirect(url_for('quiz.main', course_id=course_id, tab='take-quiz'))
+                    return redirect(url_for('personal.quiz.main', course_id=course_id, tab='take-quiz'))
 
                 if form.send_email.data and form.email.data:
                     try:
@@ -356,7 +356,7 @@ def main():
                                 'insights': quiz_result['insights'],
                                 'tips': quiz_result['tips'],
                                 'created_at': quiz_result['created_at'].strftime('%Y-%m-%d'),
-                                'cta_url': url_for('quiz.main', course_id=course_id, _external=True),
+                                'cta_url': url_for('personal.quiz.main', course_id=course_id, _external=True),
                                 'unsubscribe_url': url_for('quiz.unsubscribe', email=form.email.data, _external=True)
                             },
                             lang=lang
@@ -366,7 +366,7 @@ def main():
                         current_app.logger.error(f"Failed to send quiz results email: {str(e)}", extra={'session_id': session['sid']})
                         flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
 
-                return redirect(url_for('quiz.main', course_id=course_id, tab='results'))
+                return redirect(url_for('personal.quiz.main', course_id=course_id, tab='results'))
 
         quiz_results = list(get_mongo_db().quiz_responses.find(filter_criteria).sort('created_at', -1))
         
@@ -522,7 +522,7 @@ def main():
         )
 
     except Exception as e:
-        current_app.logger.error(f"Error in quiz.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        current_app.logger.error(f"Error in personal.quiz.main for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('quiz_error_results', default='An error occurred while loading quiz. Please try again.'), 'danger')
         return render_template('personal/QUIZ/quiz_main.html',
             form=form,
@@ -580,7 +580,7 @@ def unsubscribe(email):
         if not existing_record:
             current_app.logger.warning(f"No matching record found for email {email} to unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='No matching email found or already unsubscribed'), 'danger')
-            return redirect(url_for('quiz.main', tab='results'))
+            return redirect(url_for('personal.quiz.main', tab='results'))
 
         result = get_mongo_db().quiz_responses.update_many(
             filter_criteria,
@@ -592,11 +592,11 @@ def unsubscribe(email):
         else:
             current_app.logger.warning(f"No records updated for email {email} during unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='Failed to unsubscribe. Email not found or already unsubscribed.'), 'danger')
-        return redirect(url_for('quiz.main', tab='results'))
+        return redirect(url_for('personal.quiz.main', tab='results'))
     except Exception as e:
         current_app.logger.error(f"Error in quiz.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
         flash(trans('quiz_unsubscribe_error', default='Error processing unsubscribe request'), 'danger')
-        return redirect(url_for('quiz.main', tab='results'))
+        return redirect(url_for('personal.quiz.main', tab='results'))
 
 @quiz_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
@@ -604,4 +604,4 @@ def handle_csrf_error(e):
     lang = session.get('lang', 'en')
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('quiz_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
-    return redirect(url_for('quiz.main', tab='take-quiz')), 400
+    return redirect(url_for('personal.quiz.main', tab='take-quiz')), 400
