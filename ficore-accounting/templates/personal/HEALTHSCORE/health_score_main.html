@@ -141,14 +141,6 @@
                                     <div class="form-text">{{ t('financial_health_debt_help', default='Enter amount without commas (e.g., 200000 or 200000.00)', lang=lang) }}</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 d-none">
-                                    <label for="{{ form.interest_rate.id }}" class="form-label">{{ t('financial_health_average_interest_rate', default='Average Interest Rate (%)', lang=lang) }}</label>
-                                    {{ form.interest_rate(class="form-control number-input", placeholder=t('financial_health_interest_rate_placeholder', default='e.g., 5.00', lang=lang)) }}
-                                    <div class="invalid-feedback">{{ t('financial_health_interest_rate_invalid', default='Interest rate must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('financial_health_interest_rate_help', default='Enter percentage without % (e.g., 5 or 5.00)', lang=lang) }}</div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
