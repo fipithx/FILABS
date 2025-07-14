@@ -534,7 +534,7 @@ _ADMIN_TOOLS = [
         "icon": "bi-people"
     },
     {
-        "endpoint": "admin.ficore_credits",
+        "endpoint": "admin.credit_credits",
         "label": "Credit Ficore Credits",
         "label_key": "admin_ficore_credits",
         "description_key": "admin_ficore_credits_desc",
@@ -559,6 +559,15 @@ _ADMIN_NAV = [
         "description_key": "admin_dashboard_desc",
         "tooltip_key": "admin_dashboard_tooltip",
         "icon": "bi-speedometer"
+    },
+    
+    {
+        "endpoint": "admin.credit_credits",
+        "label": "Credit Ficore Credits",
+        "label_key": "admin_ficore_credits",
+        "description_key": "admin_ficore_credits_desc",
+        "tooltip_key": "admin_ficore_credits_tooltip",
+        "icon": "bi-coin"
     },
     {
         "endpoint": "admin.manage_users",
