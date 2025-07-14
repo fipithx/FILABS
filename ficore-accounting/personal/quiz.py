@@ -243,6 +243,80 @@ def assign_badges(score, lang='en'):
 @requires_role(['personal', 'admin'])
 def main():
     """Main quiz interface with tabbed layout."""
+    # Define questions at the start to ensure availability in all paths
+    questions = [
+        {
+            'id': 'question_1',
+            'text_key': 'quiz_track_expenses_label',
+            'text': trans('quiz_track_expenses_label', default='Do you track your expenses regularly?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_track_expenses_tooltip',
+            'icon': '💰'
+        },
+        {
+            'id': 'question_2',
+            'text_key': 'quiz_save_regularly_label',
+            'text': trans('quiz_save_regularly_label', default='Do you save a portion of your income regularly?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_save_regularly_tooltip',
+            'icon': '💰'
+        },
+        {
+            'id': 'question_3',
+            'text_key': 'quiz_budget_monthly_label',
+            'text': trans('quiz_budget_monthly_label', default='Do you set a monthly budget?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_budget_monthly_tooltip',
+            'icon': '📝'
+        },
+        {
+            'id': 'question_4',
+            'text_key': 'quiz_emergency_fund_label',
+            'text': trans('quiz_emergency_fund_label', default='Do you have an emergency fund?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_emergency_fund_tooltip',
+            'icon': '🚨'
+        },
+        {
+            'id': 'question_5',
+            'text_key': 'quiz_invest_regularly_label',
+            'text': trans('quiz_invest_regularly_label', default='Do you invest your money regularly?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_invest_regularly_tooltip',
+            'icon': '📈'
+        },
+        {
+            'id': 'question_6',
+            'text_key': 'quiz_spend_impulse_label',
+            'text': trans('quiz_spend_impulse_label', default='Do you often spend money on impulse?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_spend_impulse_tooltip',
+            'icon': '🛒'
+        },
+        {
+            'id': 'question_7',
+            'text_key': 'quiz_financial_goals_label',
+            'text': trans('quiz_financial_goals_label', default='Do you set financial goals?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_financial_goals_tooltip',
+            'icon': '🎯'
+        },
+        {
+            'id': 'question_8',
+            'text_key': 'quiz_review_spending_label',
+            'text': trans('quiz_review_spending_label', default='Do you review your spending habits regularly?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_review spending_tooltip',
+            'icon': '🔍'
+        },
+        {
+            'id': 'question_9',
+            'text_key': 'quiz_multiple_income_label',
+            'text': trans('quiz_multiple_income_label', default='Do you have multiple sources of income?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_multiple_income_tooltip',
+            'icon': '💼'
+        },
+        {
+            'id': 'question_10',
+            'text_key': 'quiz_retirement_plan_label',
+            'text': trans('quiz_retirement_plan_label', default='Do you have a retirement savings plan?', lang=session.get('lang', 'en')),
+            'tooltip': 'quiz_retirement_plan_tooltip',
+            'icon': '🏖️'
+        },
+    ]
+
     active_tab = request.args.get('tab', 'take-quiz')
     db = get_mongo_db()
     try:
@@ -252,9 +326,11 @@ def main():
         current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
         activities = []
+    
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
+    
     session.permanent = True
     session.modified = True
     lang = session.get('lang', 'en')
@@ -357,7 +433,7 @@ def main():
                                 'tips': quiz_result['tips'],
                                 'created_at': quiz_result['created_at'].strftime('%Y-%m-%d'),
                                 'cta_url': url_for('personal.quiz.main', course_id=course_id, _external=True),
-                                'unsubscribe_url': url_for('quiz.unsubscribe', email=form.email.data, _external=True)
+                                'unsubscribe_url': url_for('personal.quiz.unsubscribe', email=form.email.data, _external=True)
                             },
                             lang=lang
                         )
@@ -427,79 +503,6 @@ def main():
                     ))
             except (ValueError, TypeError) as e:
                 current_app.logger.warning(f"Error parsing net_worth for cross-tool insights: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-
-        questions = [
-            {
-                'id': 'question_1',
-                'text_key': 'quiz_track_expenses_label',
-                'text': trans('quiz_track_expenses_label', default='Do you track your expenses regularly?', lang=lang),
-                'tooltip': 'quiz_track_expenses_tooltip',
-                'icon': '💰'
-            },
-            {
-                'id': 'question_2',
-                'text_key': 'quiz_save_regularly_label',
-                'text': trans('quiz_save_regularly_label', default='Do you save a portion of your income regularly?', lang=lang),
-                'tooltip': 'quiz_save_regularly_tooltip',
-                'icon': '💰'
-            },
-            {
-                'id': 'question_3',
-                'text_key': 'quiz_budget_monthly_label',
-                'text': trans('quiz_budget_monthly_label', default='Do you set a monthly budget?', lang=lang),
-                'tooltip': 'quiz_budget_monthly_tooltip',
-                'icon': '📝'
-            },
-            {
-                'id': 'question_4',
-                'text_key': 'quiz_emergency_fund_label',
-                'text': trans('quiz_emergency_fund_label', default='Do you have an emergency fund?', lang=lang),
-                'tooltip': 'quiz_emergency_fund_tooltip',
-                'icon': '🚨'
-            },
-            {
-                'id': 'question_5',
-                'text_key': 'quiz_invest_regularly_label',
-                'text': trans('quiz_invest_regularly_label', default='Do you invest your money regularly?', lang=lang),
-                'tooltip': 'quiz_invest_regularly_tooltip',
-                'icon': '📈'
-            },
-            {
-                'id': 'question_6',
-                'text_key': 'quiz_spend_impulse_label',
-                'text': trans('quiz_spend_impulse_label', default='Do you often spend money on impulse?', lang=lang),
-                'tooltip': 'quiz_spend_impulse_tooltip',
-                'icon': '🛒'
-            },
-            {
-                'id': 'question_7',
-                'text_key': 'quiz_financial_goals_label',
-                'text': trans('quiz_financial_goals_label', default='Do you set financial goals?', lang=lang),
-                'tooltip': 'quiz_financial_goals_tooltip',
-                'icon': '🎯'
-            },
-            {
-                'id': 'question_8',
-                'text_key': 'quiz_review_spending_label',
-                'text': trans('quiz_review_spending_label', default='Do you review your spending habits regularly?', lang=lang),
-                'tooltip': 'quiz_review_spending_tooltip',
-                'icon': '🔍'
-            },
-            {
-                'id': 'question_9',
-                'text_key': 'quiz_multiple_income_label',
-                'text': trans('quiz_multiple_income_label', default='Do you have multiple sources of income?', lang=lang),
-                'tooltip': 'quiz_multiple_income_tooltip',
-                'icon': '💼'
-            },
-            {
-                'id': 'question_10',
-                'text_key': 'quiz_retirement_plan_label',
-                'text': trans('quiz_retirement_plan_label', default='Do you have a retirement savings plan?', lang=lang),
-                'tooltip': 'quiz_retirement_plan_tooltip',
-                'icon': '🏖️'
-            },
-        ]
 
         return render_template('personal/QUIZ/quiz_main.html',
             form=form,
