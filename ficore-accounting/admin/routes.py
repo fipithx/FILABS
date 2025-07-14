@@ -40,11 +40,11 @@ class CreditForm(FlaskForm):
         DataRequired(message=trans('admin_user_id_required', default='User ID is required')),
         validators.Length(min=3, max=50, message=trans('admin_user_id_length', default='User ID must be between 3 and 50 characters'))
     ], render_kw={'class': 'form-control'})
-    amount = FloatField(trans('admin_coin_amount', default='Coin Amount'), [
-        DataRequired(message=trans('admin_coin_amount_required', default='Coin amount is required')),
-        NumberRange(min=1, message=trans('admin_coin_amount_min', default='Coin amount must be at least 1'))
+    amount = FloatField(trans('admin_credit_amount', default='Ficore Credit Amount'), [
+        DataRequired(message=trans('admin_credit_amount_required', default='Ficore Credit amount is required')),
+        NumberRange(min=1, message=trans('admin_credit_amount_min', default='Ficore Credit amount must be at least 1'))
     ], render_kw={'class': 'form-control'})
-    submit = SubmitField(trans('admin_credit_coins', default='Credit Coins'), render_kw={'class': 'btn btn-primary w-100'})
+    submit = SubmitField(trans('admin_credit_credits', default='Credit Ficore Credits'), render_kw={'class': 'btn btn-primary w-100'})
 
 class AgentManagementForm(FlaskForm):
     agent_id = StringField(trans('agents_agent_id', default='Agent ID'), [
@@ -130,7 +130,7 @@ def dashboard():
         records_count = db.records.count_documents({})
         cashflows_count = db.cashflows.count_documents({})
         inventory_count = db.inventory.count_documents({})
-        coin_tx_count = db.coin_transactions.count_documents({})
+        credit_tx_count = db.credit_transactions.count_documents({})
         audit_log_count = db.audit_logs.count_documents({})
         budgets_count = db.budgets.count_documents({})
         bills_count = db.bills.count_documents({})
@@ -161,7 +161,7 @@ def dashboard():
                 'records': records_count,
                 'cashflows': cashflows_count,
                 'inventory': inventory_count,
-                'coin_transactions': coin_tx_count,
+                'credit_transactions': credit_tx_count,
                 'audit_logs': audit_log_count,
                 'budgets': budgets_count,
                 'bills': bills_count,
@@ -242,7 +242,7 @@ def delete_user(user_id):
         db.records.delete_many({'user_id': user_id})
         db.cashflows.delete_many({'user_id': user_id})
         db.inventory.delete_many({'user_id': user_id})
-        db.coin_transactions.delete_many({'user_id': user_id})
+        db.credit_transactions.delete_many({'user_id': user_id})
         db.audit_logs.delete_many({'details.user_id': user_id})
         db.budgets.delete_many({'user_id': user_id})
         db.bills.delete_many({'user_id': user_id})
@@ -288,12 +288,12 @@ def delete_item(collection, item_id):
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return redirect(url_for('admin.dashboard'))
 
-@admin_bp.route('/coins/credit', methods=['GET', 'POST'])
+@admin_bp.route('/credits/add', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('admin')
 @utils.limiter.limit("10 per hour")
-def credit_coins():
-    """Manually credit coins to a user."""
+def credit_credits():
+    """Manually credit Ficore Credits to a user."""
     form = CreditForm()
     if form.validate_on_submit():
         try:
@@ -307,22 +307,22 @@ def credit_coins():
             amount = int(form.amount.data)
             db.users.update_one(
                 user_query,
-                {'$inc': {'coin_balance': amount}}
+                {'$inc': {'credit_balance': amount}}
             )
             ref = f"ADMIN_CREDIT_{datetime.datetime.utcnow().isoformat()}"
-            db.coin_transactions.insert_one({
+            db.credit_transactions.insert_one({
                 'user_id': user_id,
                 'amount': amount,
                 'type': 'admin_credit',
                 'ref': ref,
                 'date': datetime.datetime.utcnow()
             })
-            flash(trans('admin_credit_success', default='Coins credited successfully'), 'success')
-            logger.info(f"Admin {current_user.id} credited {amount} coins to user {user_id}")
-            log_audit_action('credit_coins', {'user_id': user_id, 'amount': amount, 'ref': ref})
+            flash(trans('admin_credit_success', default='Ficore Credits credited successfully'), 'success')
+            logger.info(f"Admin {current_user.id} credited {amount} Ficore Credits to user {user_id}")
+            log_audit_action('credit_credits', {'user_id': user_id, 'amount': amount, 'ref': ref})
             return redirect(url_for('admin.dashboard'))
         except Exception as e:
-            logger.error(f"Error crediting coins by admin {current_user.id}: {str(e)}")
+            logger.error(f"Error crediting Ficore Credits by admin {current_user.id}: {str(e)}")
             flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
             return render_template('admin/reset.html', form=form)
     return render_template('admin/reset.html', form=form)
