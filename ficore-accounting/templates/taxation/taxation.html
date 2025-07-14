@@ -55,6 +55,8 @@
                     <li>{{ rule.description }}</li>
                 {% endfor %}
             </ul>
+        {% else %}
+            <p class="text-warning">{{ t('tax_vat_rules_missing', default='No VAT rules available. Default 7.5% VAT rate will be applied.') }}</p>
         {% endif %}
         <form id="taxForm" method="POST" action="{{ url_for('taxation_bp.calculate_tax') }}">
             {{ form.hidden_tag() }}
@@ -324,7 +326,12 @@
                     {% endfor %}
                 </tbody>
             </table>
+        {% else %}
+            <p class="text-warning">{{ t('tax_vat_rules_missing', default='No VAT rules available. Default 7.5% VAT rate will be applied.') }}</p>
         {% endif %}
+        <form method="POST" action="{{ url_for('taxation_bp.reseed_tax_data') }}" class="mt-3">
+            <button type="submit" class="btn btn-warning">{{ t('tax_reseed_data', default='Reseed Tax Data') }}</button>
+        </form>
         <a href="{{ url_for('taxation_bp.understand_taxes') }}" class="btn btn-info mt-3" style="font-size: 1.2em; padding: 10px 20px;">{{ t('tax_understand_taxes', default='Understand Your Taxes') }}</a>
 
     {% elif section == 'admin_locations' %}
@@ -352,6 +359,8 @@
                     <li>{{ location.name }} - {{ location.address }} ({{ t('tax_contact', default='Contact') }}: {{ location.contact }})</li>
                 {% endfor %}
             </ul>
+        {% else %}
+            <p>{{ t('tax_no_locations_found', default='No payment locations found.') }}</p>
         {% endif %}
         <a href="{{ url_for('taxation_bp.understand_taxes') }}" class="btn btn-info mt-3" style="font-size: 1.2em; padding: 10px 20px;">{{ t('tax_understand_taxes', default='Understand Your Taxes') }}</a>
 
@@ -376,12 +385,14 @@
                     <li>{{ deadline.description }} - {{ t('tax_due_on', default='Due on') }} {{ deadline.deadline_date.strftime('%Y-%m-%d') }}</li>
                 {% endfor %}
             </ul>
+        {% else %}
+            <p>{{ t('tax_no_deadlines_found', default='No deadlines found.') }}</p>
         {% endif %}
         <a href="{{ url_for('taxation_bp.understand_taxes') }}" class="btn btn-info mt-3" style="font-size: 1.2em; padding: 10px 20px;">{{ t('tax_understand_taxes', default='Understand Your Taxes') }}</a>
 
     {% elif section == 'understand_taxes' %}
         <h1>{{ t('tax_understand_your_taxes', default='Understand Your Taxes') }}</h1>
-        <p><strong>{{ t('tax_updated_as_of', default='Updated as of') }} July 12, 2025</strong></p>
+        <p><strong>{{ t('tax_updated_as_of', default='Updated as of') }} July 14, 2025</strong></p>
         <h2>{{ t('tax_paye_2025', default='Personal Income Tax (PAYE) - 2025') }}</h2>
         <p>{{ t('tax_paye_2025_details', default='For 2025, PAYE is calculated on taxable income after deductions: gross income minus pension contributions, a 20% relief on income after pension, and a ₦200,000 Consolidated Relief Allowance (CRA).') }}</p>
         <ul>
@@ -416,6 +427,9 @@
         </ul>
         <h2>{{ t('tax_vat_rules', default='VAT Rules') }}</h2>
         <p>{{ t('tax_vat_rules_details', default='VAT is 7.5% on non-exempt goods and services. Exempt categories include food, healthcare, education, rent, power, and baby products. Businesses can reclaim 7.5% VAT paid on expenses and assets.') }}</p>
+        {% if not vat_rules %}
+            <p class="text-warning">{{ t('tax_vat_rules_missing', default='No VAT rules available. Default 7.5% VAT rate will be applied.') }}</p>
+        {% endif %}
         <h2>{{ t('tax_actions_to_take', default='Actions to Take') }}</h2>
         <ol>
             <li><strong>{{ t('tax_get_informed', default='Get Informed') }}:</strong> {{ t('tax_get_informed_details', default='Understand how these changes affect your personal or business taxes.') }}</li>
@@ -451,7 +465,16 @@
             const isBusinessVatGroup = document.getElementById('is_business_vat_group');
             const taxResult = document.getElementById('taxResult');
             const taxRates = {{ tax_rates | tojson | safe }};
-            const vatRules = {{ vat_rules | tojson | safe }};
+            let vatRules = {{ vat_rules | tojson | safe }};
+
+            // Fallback for empty VAT rules
+            if (!vatRules || vatRules.length === 0) {
+                vatRules = [{
+                    category: 'default',
+                    vat_exempt: false,
+                    description: '{{ t("tax_vat_default", default="Default 7.5% VAT applied") }}'
+                }];
+            }
 
             // Sanitize input values
             function sanitizeInput(value) {
@@ -491,7 +514,7 @@
                 const rentRelief = parseFloat(sanitizeInput(rentReliefInput.value)) || 0;
                 const taxpayerType = taxpayerTypeInput.value;
                 const businessSize = businessSizeInput.value;
-                const vatCategory = vatCategoryInput.value;
+                const vatCategory = vatCategoryInput.value || 'default';
                 const isBusinessVat = isBusinessVatInput.checked;
                 let preview = '';
 
@@ -597,7 +620,7 @@
                         explanation = "{{ t('tax_vat_reclaimed', default='Input VAT reclaimed for business') }}";
                     } else {
                         tax = amount * 0.075;
-                        explanation = "{{ t('tax_vat_applied', default='7.5% VAT applied') }}";
+                        explanation = "{{ t('tax_vat_default', default='Default 7.5% VAT applied') }}";
                     }
                     preview = `<div class="alert alert-info">{{ t('tax_estimated_tax', default='Estimated tax') }}: ₦${tax.toFixed(2)} (${explanation})</div>`;
                 } else {
@@ -625,7 +648,7 @@
                 const rentRelief = parseFloat(sanitizeInput(rentReliefInput.value)) || 0;
                 const taxpayerType = taxpayerTypeInput.value;
                 const businessSize = businessSizeInput.value;
-                const vatCategory = vatCategoryInput.value;
+                const vatCategory = vatCategoryInput.value || 'default';
                 const isBusinessVat = isBusinessVatInput.checked;
 
                 if (isNaN(amount) || amount < 0 || pension < 0 || rentRelief < 0) {
