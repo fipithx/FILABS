@@ -35,18 +35,20 @@ def clean_currency(value):
         except ValueError as e:
             current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
             return 0.0
-    return float(value)
+    return float(value) if value is not None else 0.0
 
 def strip_commas(value):
-    """Strip commas from string values, delegating to clean_currency."""
+    """Strip commas from string values, handling None and delegating to clean_currency."""
+    if value is None:
+        return 0.0
     if isinstance(value, str):
         return clean_currency(value)
-    return float(value)
+    return float(value) if value is not None else 0.0
 
 def format_currency(value):
     """Format a numeric value with comma separation, no currency symbol."""
     try:
-        numeric_value = float(value)
+        numeric_value = float(value) if value is not None else 0.0
         formatted = f"{numeric_value:,.2f}"
         current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
         return formatted
@@ -142,7 +144,7 @@ class EditBillForm(FlaskForm):
         ('pending', trans('bill_status_pending', default='Pending')),
         ('overdue', trans('bill_status_overdue', default='Overdue'))
     ], default='unpaid', validators=[DataRequired()])
-    send_email = BooleanField(trans('general_send_email', default='Send Email Reminders'), default=False)
+    send_email = BooleanField(trans('general_send_email', default='Send Email Reminders'), defaultmechan=False)
     reminder_days = IntegerField(trans('bill_reminder_days', default='Reminder Days'), default=7, validators=[Optional(), NumberRange(min=1, max=30)])
 
 @bill_bp.route('/main', methods=['GET', 'POST'])
