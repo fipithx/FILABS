@@ -1,8 +1,8 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, SelectField, BooleanField, SubmitField, FloatField
-from wtforms.validators import DataRequired, NumberRange, Optional, Email, ValidationError
+from wtforms import BooleanField, SubmitField, FloatField
+from wtforms.validators import DataRequired, NumberRange, Optional
 from flask_login import current_user, login_required
 from datetime import datetime
 from bson import ObjectId
@@ -80,21 +80,6 @@ class CommaSeparatedFloatField(FloatField):
                 raise ValidationError(self.gettext('Not a valid number'))
 
 class FinancialHealthForm(FlaskForm):
-    first_name = StringField(
-        trans('general_first_name', default='First Name'),
-        validators=[DataRequired(message=trans('general_first_name_required', default='Please enter your first name.'))]
-    )
-    email = StringField(
-        trans('general_email', default='Email'),
-        validators=[Optional(), Email(message=trans('general_email_invalid', default='Please enter a valid email address.'))]
-    )
-    user_type = SelectField(
-        trans('financial_health_user_type', default='User Type'),
-        choices=[
-            ('individual', trans('financial_health_user_type_individual', default='Individual')),
-            ('business', trans('financial_health_user_type_business', default='Business'))
-        ]
-    )
     send_email = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False
@@ -122,11 +107,6 @@ class FinancialHealthForm(FlaskForm):
     )
     submit = SubmitField(trans('financial_health_submit', default='Submit'))
 
-    def validate_email(self, field):
-        if self.send_email.data and not field.data:
-            current_app.logger.warning(f"Email required for notifications for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
-            raise ValidationError(trans('general_email_required', default='Valid email is required for notifications'))
-
 @financial_health_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
@@ -148,12 +128,7 @@ def main():
     session.permanent = True
     session.modified = True
     
-    form_data = {}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email
-        form_data['first_name'] = current_user.get_first_name()
-    
-    form = FinancialHealthForm(data=form_data)
+    form = FinancialHealthForm()
     
     try:
         log_tool_usage(
@@ -193,7 +168,7 @@ def main():
                 if income <= 0:
                     current_app.logger.error(f"Income is zero or negative for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_income_zero_error", default='Income must be greater than zero.'), "danger")
-                    return redirect(url_for('financial_health.main', tab='assessment'))
+                    return redirect(url_for('personal.financial_health.main', tab='assessment'))
 
                 # Calculate metrics
                 debt_to_income = (debt / income * 100) if income > 0 else 0
@@ -264,9 +239,7 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
-                    'first_name': form.first_name.data,
-                    'email': form.email.data,
-                    'user_type': form.user_type.data,
+                    'user_email': current_user.email if current_user.is_authenticated else None,
                     'income': income,
                     'expenses': expenses,
                     'debt': debt,
@@ -291,9 +264,9 @@ def main():
                 except Exception as e:
                     current_app.logger.error(f"Failed to save financial health data to MongoDB: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("financial_health_storage_error", default='Error saving financial health score.'), "danger")
-                    return redirect(url_for('financial_health.main', tab='assessment'))
+                    return redirect(url_for('personal.financial_health.main', tab='assessment'))
 
-                if form.send_email.data and form.email.data:
+                if form.send_email.data and current_user.is_authenticated:
                     try:
                         config = EMAIL_CONFIG["financial_health"]
                         subject = trans(config["subject_key"], default='Your Financial Health Score')
@@ -301,11 +274,11 @@ def main():
                         send_email(
                             app=current_app,
                             logger=current_app.logger,
-                            to_email=form.email.data,
+                            to_email=current_user.email,
                             subject=subject,
                             template_name=template,
                             data={
-                                "first_name": form.first_name.data,
+                                "first_name": current_user.get_first_name(),
                                 "score": score,
                                 "status": status,
                                 "income": format_currency(income),
@@ -319,17 +292,17 @@ def main():
                                 "expense_score": expense_score,
                                 "badges": badges,
                                 "created_at": record_data['created_at'].strftime('%Y-%m-%d'),
-                                "cta_url": url_for('financial_health.main', _external=True),
-                                "unsubscribe_url": url_for('financial_health.unsubscribe', email=form.email.data, _external=True)
+                                "cta_url": url_for('personal.financial_health.main', _external=True),
+                                "unsubscribe_url": url_for('personal.financial_health.unsubscribe', _external=True)
                             },
                             lang=session.get('lang', 'en')
                         )
-                        current_app.logger.info(f"Email sent to {form.email.data} for session {session['sid']}", extra={'session_id': session['sid']})
+                        current_app.logger.info(f"Email sent to {current_user.email} for session {session['sid']}", extra={'session_id': session['sid']})
                     except Exception as e:
                         current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session['sid']})
                         flash(trans("general_email_send_failed", default='Failed to send email.'), "warning")
                 
-                return redirect(url_for('financial_health.main', tab='dashboard'))
+                return redirect(url_for('personal.financial_health.main', tab='dashboard'))
 
         collection = get_mongo_collection()
         stored_records = list(collection.find(filter_criteria).sort('created_at', -1))
@@ -340,9 +313,7 @@ def main():
                 'id': str(record['_id']),
                 'user_id': record.get('user_id'),
                 'session_id': record.get('session_id'),
-                'first_name': record.get('first_name'),
-                'email': record.get('email'),
-                'user_type': record.get('user_type'),
+                'user_email': record.get('user_email'),
                 'income': float(clean_currency(record.get('income', 0))),
                 'income_formatted': format_currency(record.get('income', 0)),
                 'income_raw': float(clean_currency(record.get('income', 0))),
@@ -558,10 +529,10 @@ def summary():
                                 extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'financialHealthScore': 0}), 500
 
-@financial_health_bp.route('/unsubscribe/<email>')
+@financial_health_bp.route('/unsubscribe', methods=['POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
-def unsubscribe(email):
+def unsubscribe():
     """Unsubscribe user from financial health emails."""
     db = get_mongo_db()
     if 'sid' not in session:
@@ -578,26 +549,26 @@ def unsubscribe(email):
             session_id=session.get('sid', 'unknown'),
             action='unsubscribe'
         )
-        filter_kwargs = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session['sid']}
+        filter_kwargs = {'user_email': current_user.email} if current_user.is_authenticated else {'session_id': session['sid']}
         result = get_mongo_collection().update_many(
             filter_kwargs,
             {'$set': {'send_email': False}}
         )
         if result.modified_count > 0:
-            current_app.logger.info(f"Unsubscribed email {email} for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.info(f"Unsubscribed email {current_user.email} for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans("financial_health_unsubscribed_success", default='Successfully unsubscribed from email notifications.'), "success")
         else:
-            current_app.logger.warning(f"No records found to unsubscribe email {email} for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.warning(f"No records found to unsubscribe email {current_user.email} for session {session['sid']}", extra={'session_id': session['sid']})
             flash(trans("financial_health_unsubscribe_error", default='No email notifications found for this email.'), "danger")
-        return redirect(url_for('financial_health.main', tab='dashboard'))
+        return redirect(url_for('personal.financial_health.main', tab='dashboard'))
     except Exception as e:
         current_app.logger.error(f"Error in financial_health.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session['sid']})
         flash(trans("financial_health_unsubscribe_error", default='Error unsubscribing from email notifications.'), "danger")
-        return redirect(url_for('financial_health.main', tab='dashboard'))
+        return redirect(url_for('personal.financial_health.main', tab='dashboard'))
 
 @financial_health_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
     """Handle CSRF errors with user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('financial_health_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
-    return redirect(url_for('financial_health.main', tab='assessment')), 400
+    return redirect(url_for('personal.financial_health.main', tab='assessment')), 400
