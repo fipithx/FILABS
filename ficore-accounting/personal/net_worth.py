@@ -232,8 +232,8 @@ def main():
                                 "net_worth": format_currency(net_worth_record['net_worth']),
                                 "badges": badges,
                                 "created_at": net_worth_record['created_at'].strftime('%Y-%m-%d'),
-                                "cta_url": url_for('net_worth.main', _external=True),
-                                "unsubscribe_url": url_for('net_worth.unsubscribe', email=form.email.data, _external=True)
+                                "cta_url": url_for('personal.net_worth.main', _external=True),
+                                "unsubscribe_url": url_for('personal.net_worth.unsubscribe', email=form.email.data, _external=True)
                             }
                             send_email(
                                 app=current_app,
@@ -248,11 +248,11 @@ def main():
                         except Exception as e:
                             current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                             flash(trans("general_email_action", default="Failed to send email"), "warning")
-                    return redirect(url_for('net_worth.main', tab='dashboard'))
+                    return redirect(url_for('personal.net_worth.main', tab='dashboard'))
                 except Exception as e:
                     current_app.logger.error(f"Failed to save net worth data to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans("net_worth_storage_error", default="Error saving net worth data."), "danger")
-                    return redirect(url_for('net_worth.main', tab='calculator'))
+                    return redirect(url_for('personal.net_worth.main', tab='calculator'))
 
         user_records = db.net_worth_data.find(filter_criteria).sort('created_at', -1)
         if db.net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
@@ -506,15 +506,15 @@ def unsubscribe(email):
         else:
             current_app.logger.warning(f"No emails updated for {email} during unsubscribe for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("net_worth_unsubscribe_failed", default="Failed to unsubscribe. Email not found or already unsubscribed."), "danger")
-        return redirect(url_for('net_worth.main', tab='dashboard'))
+        return redirect(url_for('personal.net_worth.main', tab='dashboard'))
     except Exception as e:
         current_app.logger.error(f"Error in net_worth.unsubscribe: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans("net_worth_unsubscribe_error", default="Failed to process unsubscribe request"), "danger")
-        return redirect(url_for('net_worth.main', tab='dashboard'))
+        return redirect(url_for('personal.net_worth.main', tab='dashboard'))
 
 @net_worth_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
     """Handle CSRF errors with a user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans("net_worth_csrf_error", default="Form submission failed due to missing security token. Please refresh and try again."), "danger")
-    return redirect(url_for('net_worth.main', tab='calculator')), 400
+    return redirect(url_for('personal.net_worth.main', tab='calculator')), 400
