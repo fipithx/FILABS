@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.memory import MemoryJobStore
 from datetime import datetime, date, timedelta
-from flask import current_app, url_for
+from flask import url_for
 from mailersend_email import send_email, trans, EMAIL_CONFIG
 import time
 import psutil
@@ -37,9 +37,9 @@ def log_job_metrics(job_name):
     return decorator
 
 @log_job_metrics('update_overdue_status')
-def update_overdue_status():
+def update_overdue_status(app):
     """Update status to overdue for past-due bills."""
-    with current_app.app_context():
+    with app.app_context():
         try:
             db = get_mongo_db()
             bills_collection = db.bills
@@ -66,9 +66,9 @@ def update_overdue_status():
             raise
 
 @log_job_metrics('send_bill_reminders')
-def send_bill_reminders():
+def send_bill_reminders(app):
     """Send reminders for upcoming and overdue bills via email, SMS, and WhatsApp in batches."""
-    with current_app.app_context():
+    with app.app_context():
         try:
             db = get_mongo_db()
             bills_collection = db.bills
@@ -82,11 +82,11 @@ def send_bill_reminders():
             bills = bills_collection.find().limit(100)  # Process up to 100 bills per run
             for bill in bills:
                 email = bill.get('user_email')
-                phone = bill.get('user_phone')  # Added phone number for SMS/WhatsApp
+                phone = bill.get('user_phone')
                 user = users_collection.find_one({'email': email}, {'lang': 1, 'phone': 1})
                 lang = user.get('lang', 'en') if user else 'en'
                 phone = user.get('phone') or phone  # Prefer user profile phone number
-                if bill.get('send_notifications'):  # Check for general notification preference
+                if bill.get('send_notifications'):
                     reminder_window = today + timedelta(days=bill.get('reminder_days', 7))
                     bill_due_date = bill.get('due_date')
                     if isinstance(bill_due_date, str):
@@ -136,7 +136,7 @@ def send_bill_reminders():
                         config = EMAIL_CONFIG.get("bill_reminder", {})
                         subject = trans(config.get("subject_key", "bill_reminder_subject"), lang=data['lang'])
                         send_email(
-                            app=current_app,
+                            app=app,
                             logger=logger,
                             to_email=email,
                             subject=subject,
@@ -201,9 +201,9 @@ def send_bill_reminders():
             raise
 
 @log_job_metrics('cleanup_expired_sessions')
-def cleanup_expired_sessions():
+def cleanup_expired_sessions(app):
     """Remove expired sessions from the sessions collection."""
-    with current_app.app_context():
+    with app.app_context():
         try:
             db = get_mongo_db()
             expiry_threshold = datetime.utcnow() - timedelta(hours=1)
@@ -215,43 +215,42 @@ def cleanup_expired_sessions():
 
 def init_scheduler(app, mongo):
     """Initialize the background scheduler."""
-    with app.app_context():
-        try:
-            jobstores = {
-                'default': MemoryJobStore()
-            }
-            scheduler = BackgroundScheduler(jobstores=jobstores)
-            scheduler.add_job(
-                func=update_overdue_status,
-                trigger='interval',
-                days=1,
-                id='overdue_status',
-                name='Update overdue bill statuses daily',
-                replace_existing=True,
-                max_instances=1
-            )
-            scheduler.add_job(
-                func=send_bill_reminders,
-                trigger='interval',
-                days=1,
-                id='bill_reminders',
-                name='Send bill reminders daily',
-                replace_existing=True,
-                max_instances=1
-            )
-            scheduler.add_job(
-                func=cleanup_expired_sessions,
-                trigger='interval',
-                hours=6,
-                id='cleanup_expired_sessions',
-                name='Clean up expired sessions every 6 hours',
-                replace_existing=True,
-                max_instances=1
-            )
-            scheduler.start()
-            app.config['SCHEDULER'] = scheduler
-            logger.info("Bill reminder, overdue status, and session cleanup scheduler started successfully")
-            return scheduler
-        except Exception as e:
-            logger.error(f"Failed to initialize scheduler: {str(e)}", exc_info=True)
-            raise RuntimeError(f"Scheduler initialization failed: {str(e)}")
+    try:
+        jobstores = {
+            'default': MemoryJobStore()
+        }
+        scheduler = BackgroundScheduler(jobstores=jobstores)
+        scheduler.add_job(
+            func=lambda: update_overdue_status(app),
+            trigger='interval',
+            days=1,
+            id='overdue_status',
+            name='Update overdue bill statuses daily',
+            replace_existing=True,
+            max_instances=1
+        )
+        scheduler.add_job(
+            func=lambda: send_bill_reminders(app),
+            trigger='interval',
+            days=1,
+            id='bill_reminders',
+            name='Send bill reminders daily',
+            replace_existing=True,
+            max_instances=1
+        )
+        scheduler.add_job(
+            func=lambda: cleanup_expired_sessions(app),
+            trigger='interval',
+            hours=6,
+            id='cleanup_expired_sessions',
+            name='Clean up expired sessions every 6 hours',
+            replace_existing=True,
+            max_instances=1
+        )
+        scheduler.start()
+        app.config['SCHEDULER'] = scheduler
+        logger.info("Bill reminder, overdue status, and session cleanup scheduler started successfully")
+        return scheduler
+    except Exception as e:
+        logger.error(f"Failed to initialize scheduler: {str(e)}", exc_info=True)
+        raise RuntimeError(f"Scheduler initialization failed: {str(e)}")
