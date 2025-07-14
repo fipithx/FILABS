@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', function(e) {
             const cursorPosition = e.target.selectionStart;
             const originalValue = e.target.value;
-            let value = originalValue.replace(/[^0-9.]/g, ''); // Remove non-numeric characters except decimal
+            let value = originalValue.replace(/,/g, ''); // Remove non-numeric characters except decimal
 
             if (!value) {
                 e.target.value = '';
