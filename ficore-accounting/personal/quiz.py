@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, render_template, request, session
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, SelectField, BooleanField, SubmitField, RadioField
-from wtforms.validators import DataRequired, Email, Optional, ValidationError
+from wtforms import BooleanField, SubmitField, RadioField
+from wtforms.validators import DataRequired, Optional
 from flask_login import current_user
 from bson import ObjectId
 from datetime import datetime
@@ -32,31 +32,6 @@ def custom_login_required(f):
     return decorated_function
 
 class QuizForm(FlaskForm):
-    first_name = StringField(
-        trans('general_first_name', default='First Name'),
-        validators=[DataRequired(message=trans('general_first_name_required', default='Please enter your first name.'))],
-        render_kw={
-            'placeholder': trans('general_first_name_placeholder', default='e.g., Muhammad, Bashir, Umar'),
-            'title': trans('general_first_name_title', default='Enter your first name to personalize your quiz results'),
-            'aria-describedby': 'first-name-help'
-        }
-    )
-    email = StringField(
-        trans('general_email', default='Email'),
-        validators=[Optional(), Email(message=trans('general_email_invalid', default='Please enter a valid email address.'))],
-        render_kw={
-            'placeholder': trans('general_email_placeholder', default='e.g., muhammad@example.com'),
-            'title': trans('general_email_title', default='Enter your email to receive quiz results'),
-            'aria-describedby': 'email-help'
-        }
-    )
-    lang = SelectField(
-        trans('general_language', default='Language'),
-        choices=[('en', trans('general_english', default='English')), ('ha', trans('general_hausa', default='Hausa'))],
-        default='en',
-        validators=[Optional()],
-        render_kw={'aria-describedby': 'language-help'}
-    )
     send_email = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False,
@@ -140,11 +115,6 @@ class QuizForm(FlaskForm):
         trans('quiz_submit_quiz', default='Submit Quiz'),
         render_kw={'aria-label': trans('quiz_submit_quiz', default='Submit Quiz')}
     )
-
-    def validate_email(self, field):
-        if self.send_email.data and not field.data:
-            current_app.logger.warning(f"Email required for notifications for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
-            raise ValidationError(trans('general_email_required', default='Valid email is required for notifications'))
 
     def __init__(self, lang='en', *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -298,7 +268,7 @@ def main():
             'id': 'question_8',
             'text_key': 'quiz_review_spending_label',
             'text': trans('quiz_review_spending_label', default='Do you review your spending habits regularly?', lang=session.get('lang', 'en')),
-            'tooltip': 'quiz_review spending_tooltip',
+            'tooltip': 'quiz_review_spending_tooltip',
             'icon': '🔍'
         },
         {
@@ -336,12 +306,7 @@ def main():
     lang = session.get('lang', 'en')
     course_id = request.args.get('course_id', 'financial_quiz')
     
-    form_data = {'lang': lang}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email
-        form_data['first_name'] = current_user.get_first_name()
-    
-    form = QuizForm(lang=lang, data=form_data)
+    form = QuizForm(lang=lang)
     
     try:
         log_tool_usage(
@@ -374,11 +339,6 @@ def main():
                     current_app.logger.error(f"Failed to log quiz submission: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('quiz_log_error', default='Error logging quiz submission. Continuing with submission.'), 'warning')
 
-                if form.lang.data != lang:
-                    session['lang'] = form.lang.data
-                    lang = form.lang.data
-                    current_app.logger.info(f"Language changed to {lang} for session {session['sid']}", extra={'session_id': session['sid']})
-
                 answers = [getattr(form, f'question_{i}').data for i in range(1, 11)]
                 score = calculate_score(answers)
                 personality = assign_personality(score, lang)
@@ -389,9 +349,8 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
+                    'user_email': current_user.email if current_user.is_authenticated else '',
                     'created_at': created_at,
-                    'first_name': form.first_name.data,
-                    'email': form.email.data,
                     'send_email': form.send_email.data,
                     'personality': personality['name'],
                     'description': personality['description'],
@@ -411,7 +370,7 @@ def main():
                     flash(trans('quiz_storage_error', default='Error saving quiz results.'), 'danger')
                     return redirect(url_for('personal.quiz.main', course_id=course_id, tab='take-quiz'))
 
-                if form.send_email.data and form.email.data:
+                if form.send_email.data and current_user.is_authenticated:
                     try:
                         config = EMAIL_CONFIG["quiz"]
                         subject = trans(config["subject_key"], default='Your Financial Quiz Results', lang=lang)
@@ -419,11 +378,10 @@ def main():
                         send_email(
                             app=current_app,
                             logger=current_app.logger,
-                            to_email=form.email.data,
+                            to_email=current_user.email,
                             subject=subject,
                             template_name=template,
                             data={
-                                'first_name': quiz_result['first_name'],
                                 'score': quiz_result['score'],
                                 'max_score': 30,
                                 'personality': quiz_result['personality'],
@@ -433,11 +391,11 @@ def main():
                                 'tips': quiz_result['tips'],
                                 'created_at': quiz_result['created_at'].strftime('%Y-%m-%d'),
                                 'cta_url': url_for('personal.quiz.main', course_id=course_id, _external=True),
-                                'unsubscribe_url': url_for('personal.quiz.unsubscribe', email=form.email.data, _external=True)
+                                'unsubscribe_url': url_for('personal.quiz.unsubscribe', _external=True)
                             },
                             lang=lang
                         )
-                        current_app.logger.info(f"Email sent to {form.email.data} for session {session['sid']}", extra={'session_id': session['sid']})
+                        current_app.logger.info(f"Email sent to {current_user.email} for session {session['sid']}", extra={'session_id': session['sid']})
                     except Exception as e:
                         current_app.logger.error(f"Failed to send quiz results email: {str(e)}", extra={'session_id': session['sid']})
                         flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
@@ -446,8 +404,8 @@ def main():
 
         quiz_results = list(get_mongo_db().quiz_responses.find(filter_criteria).sort('created_at', -1))
         
-        if not quiz_results and current_user.is_authenticated and current_user.email:
-            quiz_results = list(get_mongo_db().quiz_responses.find({'email': current_user.email}).sort('created_at', -1))
+        if not quiz_results and current_user.is_authenticated:
+            quiz_results = list(get_mongo_db().quiz_responses.find({'user_email': current_user.email}).sort('created_at', -1))
 
         records = []
         for result in quiz_results:
@@ -556,10 +514,10 @@ def main():
             active_tab=active_tab
         ), 500
 
-@quiz_bp.route('/unsubscribe/<email>')
+@quiz_bp.route('/unsubscribe', methods=['POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
-def unsubscribe(email):
+def unsubscribe():
     """Unsubscribe user from quiz emails using MongoDB."""
     db = get_mongo_db()
     if 'sid' not in session:
@@ -577,11 +535,11 @@ def unsubscribe(email):
             session_id=session.get('sid', 'unknown'),
             action='unsubscribe'
         )
-        filter_criteria = {'email': email} if is_admin() else {'email': email, 'user_id': current_user.id} if current_user.is_authenticated else {'email': email, 'session_id': session['sid']}
+        filter_criteria = {} if is_admin() else {'user_id': current_user.id, 'user_email': current_user.email} if current_user.is_authenticated else {'session_id': session['sid']}
         
         existing_record = get_mongo_db().quiz_responses.find_one(filter_criteria)
         if not existing_record:
-            current_app.logger.warning(f"No matching record found for email {email} to unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.warning(f"No matching record found for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session['sid']} to unsubscribe", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='No matching email found or already unsubscribed'), 'danger')
             return redirect(url_for('personal.quiz.main', tab='results'))
 
@@ -590,10 +548,10 @@ def unsubscribe(email):
             {'$set': {'send_email': False}}
         )
         if result.modified_count > 0:
-            current_app.logger.info(f"Successfully unsubscribed email {email} for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.info(f"Successfully unsubscribed {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session['sid']}", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribed_success', default='Successfully unsubscribed from emails'), 'success')
         else:
-            current_app.logger.warning(f"No records updated for email {email} during unsubscribe for session {session['sid']}", extra={'session_id': session['sid']})
+            current_app.logger.warning(f"No records updated for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session['sid']} during unsubscribe", extra={'session_id': session['sid']})
             flash(trans('quiz_unsubscribe_failed', default='Failed to unsubscribe. Email not found or already unsubscribed.'), 'danger')
         return redirect(url_for('personal.quiz.main', tab='results'))
     except Exception as e:
