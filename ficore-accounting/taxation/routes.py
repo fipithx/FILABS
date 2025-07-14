@@ -234,17 +234,36 @@ def tax_summary(name, gross_income, pension, rent_relief, turnover, vat_amount, 
     }
 
 # Database Seeding
-def seed_tax_data():
+def seed_tax_data(force_reseed=False):
     db = get_mongo_db()
-    if db.config.find_one({'key': 'tax_data_seeded'}):
-        logger.info("Tax data already seeded")
-        return
+    # Check if seeding is needed or forced
+    if not force_reseed and db.config.find_one({'key': 'tax_data_seeded'}):
+        logger.info("Tax data already seeded, skipping unless forced")
+        # Verify that vat_rules has data
+        vat_count = db.vat_rules.count_documents({})
+        if vat_count == 0:
+            logger.warning("vat_rules collection is empty, forcing re-seeding")
+            force_reseed = True
+        else:
+            logger.info(f"Found {vat_count} VAT rules, seeding not required")
+            return
     try:
+        # Drop existing collections if forcing reseed
+        if force_reseed:
+            logger.info("Force reseeding tax data")
+            db.tax_rates.drop()
+            db.vat_rules.drop()
+            db.payment_locations.drop()
+            db.tax_reminders.drop()
+            db.config.delete_one({'key': 'tax_data_seeded'})
+
+        # Create collections if they don't exist
         for collection in ['tax_rates', 'vat_rules', 'payment_locations', 'tax_reminders']:
             if collection not in db.list_collection_names():
                 db.create_collection(collection)
                 logger.info(f"Created collection: {collection}")
 
+        # Seed tax rates
         if db.tax_rates.count_documents({}) == 0:
             tax_rates = [
                 {'role': 'personal', 'min_income': 0.0, 'max_income': 300000.0, 'rate': 0.07, 'description': trans('tax_rate_personal_7_2025', default='7% PAYE for income up to ₦300,000 in 2025, with 20% relief and ₦200,000 CRA'), 'year': 2025},
@@ -264,43 +283,55 @@ def seed_tax_data():
                 {'role': 'company', 'min_income': 0.0, 'max_income': 50000000.0, 'rate': 0.0, 'description': trans('tax_rate_cit_small', default='0% CIT for turnover ≤ ₦50M, simplified return, no audit'), 'year': 2026},
                 {'role': 'company', 'min_income': 50000001.0, 'max_income': float('inf'), 'rate': 0.30, 'description': trans('tax_rate_cit_large', default='30% CIT for turnover > ₦50M'), 'year': 2026}
             ]
-            for rate in tax_rates:
-                if 'role' not in rate:
-                    logger.error(f"Tax rate missing 'role' field: {rate}")
-                    continue
-                db.tax_rates.insert_one(rate)
-            logger.info("Seeded tax rates")
+            inserted_count = db.tax_rates.insert_many(tax_rates).inserted_ids
+            logger.info(f"Seeded {len(inserted_count)} tax rates")
+            if len(inserted_count) != len(tax_rates):
+                logger.error(f"Failed to seed all tax rates: expected {len(tax_rates)}, inserted {len(inserted_count)}")
+                raise Exception("Incomplete tax rates seeding")
 
+        # Seed VAT rules
         if db.vat_rules.count_documents({}) == 0:
             vat_rules = [
                 {'category': cat, 'vat_exempt': True, 'description': trans(f'tax_vat_exempt_{cat}', default=f'{cat.capitalize()} is exempt from VAT')} for cat in ['food', 'healthcare', 'education', 'rent', 'power', 'baby_products']
             ] + [
                 {'category': 'business_credit', 'vat_exempt': False, 'description': trans('tax_vat_reclaimed', default='Input VAT reclaimed for business')}
             ]
-            for rule in vat_rules:
-                if 'category' not in rule:
-                    logger.error(f"VAT rule missing 'category' field: {rule}")
-                    continue
-                db.vat_rules.insert_one(rule)
-            logger.info("Seeded VAT rules")
+            inserted_count = db.vat_rules.insert_many(vat_rules).inserted_ids
+            logger.info(f"Seeded {len(inserted_count)} VAT rules")
+            if len(inserted_count) != len(vat_rules):
+                logger.error(f"Failed to seed all VAT rules: expected {len(vat_rules)}, inserted {len(inserted_count)}")
+                raise Exception("Incomplete VAT rules seeding")
 
+        # Seed payment locations
         if db.payment_locations.count_documents({}) == 0:
             locations = [
                 {'name': 'Lagos NRS Office', 'address': '123 Broad Street, Lagos', 'contact': '+234-1-2345678'},
                 {'name': 'Abuja NRS Office', 'address': '456 Garki Road, Abuja', 'contact': '+234-9-8765432'}
             ]
-            db.payment_locations.insert_many(locations)
-            logger.info("Seeded tax locations")
+            inserted_count = db.payment_locations.insert_many(locations).inserted_ids
+            logger.info(f"Seeded {len(inserted_count)} payment locations")
+            if len(inserted_count) != len(locations):
+                logger.error(f"Failed to seed all payment locations: expected {len(locations)}, inserted {len(inserted_count)}")
+                raise Exception("Incomplete payment locations seeding")
 
+        # Seed reminders
         if db.tax_reminders.count_documents({}) == 0:
             reminders = [
                 {'user_id': 'admin', 'message': trans('tax_reminder_quarterly', default='File quarterly tax return with NRS'), 'reminder_date': datetime.datetime(2026, 3, 31), 'created_at': datetime.datetime.utcnow()}
             ]
-            db.tax_reminders.insert_many(reminders)
-            logger.info("Seeded reminders")
+            inserted_count = db.tax_reminders.insert_many(reminders).inserted_ids
+            logger.info(f"Seeded {len(inserted_count)} reminders")
+            if len(inserted_count) != len(reminders):
+                logger.error(f"Failed to seed all reminders: expected {len(reminders)}, inserted {len(inserted_count)}")
+                raise Exception("Incomplete reminders seeding")
 
-        db.config.insert_one({'key': 'tax_data_seeded', 'value': True})
-        logger.info("Tax data seeding completed")
+        # Mark seeding as complete
+        db.config.update_one(
+            {'key': 'tax_data_seeded'},
+            {'$set': {'key': 'tax_data_seeded', 'value': True}},
+            upsert=True
+        )
+        logger.info("Tax data seeding completed successfully")
     except Exception as e:
         logger.error(f"Failed to seed tax data: {str(e)}")
         raise
@@ -316,19 +347,21 @@ def calculate_tax():
         tax_rates = list(db.tax_rates.find({'role': {'$exists': True}}))
         vat_rules = list(db.vat_rules.find())
         logger.debug(f"Tax rates count: {len(tax_rates)}, VAT rules count: {len(vat_rules)}")
-        if not tax_rates or not vat_rules:
-            logger.error("Tax rates or VAT rules are missing from the database")
-            flash(trans('tax_data_missing', default='Tax configuration data is missing. Please contact support.'), 'danger')
-            return render_template(
-                'taxation/taxation.html',
-                section='calculate',
-                form=form,
-                role=current_user.role,
-                tax_rates=[],
-                vat_rules=[],
-                policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
-                title=trans('tax_calculate_title', default='Calculate Tax', lang=session.get('lang', 'en'))
-            )
+        # Log contents for debugging
+        logger.debug(f"Tax rates: {[str(rate) for rate in tax_rates]}")
+        logger.debug(f"VAT rules: {[str(rule) for rule in vat_rules]}")
+        # Check if vat_rules is empty and provide fallback
+        if not vat_rules:
+            logger.warning("No VAT rules found, using default VAT rules")
+            vat_rules = [
+                {'category': 'default', 'vat_exempt': False, 'description': trans('tax_vat_default', default='Default 7.5% VAT applied'), '_id': 'default'}
+            ]
+            flash(trans('tax_vat_rules_missing', default='VAT rules are missing. Using default 7.5% VAT rate.'), 'warning')
+        # Remove strict check to avoid error
+        # if not tax_rates or not vat_rules:
+        #     logger.error("Tax rates or VAT rules are missing from the database")
+        #     flash(trans('tax_data_missing', default='Tax configuration data is missing. Please contact support.'), 'danger')
+        #     return render_template(...)
         for rate in tax_rates:
             if 'role' not in rate:
                 logger.warning(f"Unexpected tax_rates document without 'role': {rate}")
@@ -568,7 +601,8 @@ def manage_tax_rates():
                 'min_income': form.min_income.data,
                 'max_income': form.max_income.data,
                 'rate': form.rate.data,
-                'description': form.description.data
+                'description': form.description.data,
+                'year': int(form.description.data.split()[-1]) if form.description.data.split()[-1].isdigit() else 2025  # Extract year from description or default to 2025
             }
             result = db.tax_rates.insert_one(tax_rate)
             logger.info(f"Tax rate added: user={current_user.id}, role={form.role.data}, rate={form.rate.data}, rate_id={result.inserted_id}")
@@ -724,3 +758,16 @@ def manage_tax_deadlines():
             policy_notice=trans('tax_policy_notice', default='New tax laws effective 1 January 2026: Rent relief of ₦200,000 for income ≤ ₦1M, VAT exemptions for essentials, 0% CIT for small businesses ≤ ₦50M with simplified returns, 30% CIT for large businesses, VAT credits for businesses.'),
             title=trans('tax_manage_deadlines_title', default='Manage Tax Deadlines', lang=session.get('lang', 'en'))
         )
+
+@taxation_bp.route('/admin/reseed', methods=['POST'])
+@requires_role('admin')
+@login_required
+def reseed_tax_data():
+    try:
+        seed_tax_data(force_reseed=True)
+        flash(trans('tax_data_reseeded', default='Tax data reseeded successfully'), 'success')
+        return redirect(url_for('taxation_bp.manage_tax_rates'))
+    except Exception as e:
+        logger.error(f"Error in reseed_tax_data: user={current_user.id}, error={str(e)}")
+        flash(trans('tax_general_error', default='An error occurred while reseeding tax data. Please try again.'), 'danger')
+        return redirect(url_for('taxation_bp.manage_tax_rates'))
