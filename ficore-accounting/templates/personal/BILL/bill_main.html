@@ -66,24 +66,6 @@
                     <form method="POST" action="{{ url_for('personal.bill.main') }}" id="addBillForm" class="validate-form">
                         {{ form.csrf_token }}
                         <input type="hidden" name="action" value="add_bill">
-                        
-                        <!-- Basic Information Section -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="first_name" class="form-label">{{ t('general_first_name', default='First Name') }}</label>
-                                    {{ form.first_name(class="form-control", placeholder=t('general_first_name_placeholder', default='e.g., Chukwuma'), value=form.first_name.data or '') }}
-                                    <div class="invalid-feedback">{{ t('general_first_name_required', default='First name is required') }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">{{ t('general_email', default='Email') }}</label>
-                                    {{ form.email(class="form-control", placeholder=t('general_email_placeholder', default='e.g., user@example.com'), value=form.email.data or '') }}
-                                    <div class="invalid-feedback">{{ t('general_email_required', default='Valid email is required') }}</div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Bill Details Section -->
                         <div class="row">
@@ -180,8 +162,15 @@
                                         {{ edit_form.csrf_token }}
                                         <input type="hidden" name="bill_id" value="{{ bill_id }}">
                                         <input type="hidden" name="action" value="update_bill">
-                                        
+
                                         <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('bill_amount', default='Amount') }}</label>
+                                                    {{ edit_form.amount(class="form-control number-input", value=edit_form.amount.data or '') }}
+                                                    <div class="form-text">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</div>
+                                                </div>
+                                            </div>
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_frequency', default='Frequency') }}</label>
@@ -194,22 +183,22 @@
                                                     {{ edit_form.category(class="form-select", value=edit_form.category.data or 'utilities') }}
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div class="row">
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_status', default='Status') }}</label>
                                                     {{ edit_form.status(class="form-select", value=edit_form.status.data or 'unpaid') }}
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-check">
+                                            <div class="col-md-4">
+                                                <div class="form-check mt-4">
                                                     {{ edit_form.send_email(class="form-check-input", id="send_email_" + bill_id, checked=edit_form.send_email.data or False) }}
                                                     <label class="form-check-label" for="send_email_{{ bill_id }}">{{ t('bill_send_email', default='Send Email Reminders') }}</label>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <div class="reminder-days-container" style="display: {{ 'block' if edit_form.send_email.data else 'none' }};">
                                                     <label class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
                                                     {{ edit_form.reminder_days(class="form-control", value=edit_form.reminder_days.data or '') }}
@@ -302,7 +291,7 @@
                                 <thead>
                                     <tr>
                                         <th>{{ t('bill_bill_name', default='Bill Name') }}</th>
-                                        <th>{{ t('bill_amount', default='Amount') }}</th>
+                                        <th>{{ cento_bills }}</th>
                                         <th>{{ t('bill_due_date', default='Due Date') }}</th>
                                         <th>{{ t('bill_category', default='Category') }}</th>
                                         <th>{{ t('bill_status', default='Status') }}</th>
@@ -351,7 +340,7 @@
                 <div class="mt-3">
                     <h6>{{ t('bill_email_preferences', default='Email Preferences') }}</h6>
                     <p>{{ t('bill_unsubscribe_description', default='Click below to unsubscribe from bill reminder emails.') }}</p>
-                    <form method="POST" action="{{ url_for('personal.bill.unsubscribe', email=current_user.email) }}" class="d-inline">
+                    <form method="POST" action="{{ url_for('personal.bill.unsubscribe') }}" class="d-inline">
                         {{ form.csrf_token }}
                         <button type="submit" class="btn btn-warning btn-sm">{{ t('bill_unsubscribe', default='Unsubscribe') }}</button>
                     </form>
@@ -447,8 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Chart rendering with try-catch
     {% if categories and categories|length > 0 %}
     try {
-        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-        new Chart(categoryCtx, {
+        const categoryCtx = document.getElementById('categoryChart').Chart.js configuration for a pie chart
             type: 'pie',
             data: {
                 labels: {{ categories.keys() | list | tojson }},
