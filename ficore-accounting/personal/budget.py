@@ -1,10 +1,9 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, FloatField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, NumberRange, Email, ValidationError
+from wtforms import FloatField, SubmitField
+from wtforms.validators import DataRequired, NumberRange
 from flask_login import current_user, login_required
-from mailersend_email import send_email, EMAIL_CONFIG
 from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter
 from datetime import datetime
 import re
@@ -77,9 +76,6 @@ def custom_login_required(f):
     return decorated_function
 
 class BudgetForm(FlaskForm):
-    first_name = StringField(trans('general_first_name', default='First Name'))
-    email = StringField(trans('general_email', default='Email'))
-    send_email = BooleanField(trans('general_send_email', default='Send Email'))
     income = FloatField(trans('budget_monthly_income', default='Monthly Income'), filters=[strip_commas])
     housing = FloatField(trans('budget_housing_rent', default='Housing/Rent'), filters=[strip_commas])
     food = FloatField(trans('budget_food', default='Food'), filters=[strip_commas])
@@ -93,8 +89,6 @@ class BudgetForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         lang = session.get('lang', 'en')
-        self.first_name.validators = [DataRequired(message=trans('general_first_name_required', lang))]
-        self.email.validators = []
         self.income.validators = [
             DataRequired(message=trans('budget_income_required', lang)),
             NumberRange(min=0, max=10000000000, message=trans('budget_income_max', lang))
@@ -108,16 +102,6 @@ class BudgetForm(FlaskForm):
             DataRequired(message=trans('budget_savings_goal_required', lang)),
             NumberRange(min=0, message=trans('budget_amount_positive', lang))
         ]
-
-    def validate_email(self, field):
-        if self.send_email.data and not field.data:
-            current_app.logger.warning(f"Email required for notifications for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
-            raise ValidationError(trans('budget_email_required', session.get('lang', 'en')))
-        if field.data:
-            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-            if not re.match(email_pattern, field.data):
-                current_app.logger.warning(f"Invalid email format for session {session.get('sid', 'no-session-id')}: {field.data}", extra={'session_id': session.get('sid', 'no-session-id')})
-                raise ValidationError(trans('general_email_invalid', session.get('lang', 'en')))
 
     def validate(self, extra_validators=None):
         if not super().validate(extra_validators):
@@ -143,11 +127,7 @@ def main():
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
     session.permanent = True
     session.modified = True
-    form_data = {}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email or ''
-        form_data['first_name'] = current_user.get_first_name() or ''
-    form = BudgetForm(data=form_data)
+    form = BudgetForm()
     db = get_mongo_db()
     
     # Get active tab from query parameter (defaults to 'create-budget')
@@ -211,7 +191,6 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
-                    'user_email': form.email.data,
                     'income': income,
                     'fixed_expenses': expenses,
                     'variable_expenses': 0.0,
@@ -239,7 +218,35 @@ def main():
                         'personal/BUDGET/budget_main.html',
                         form=form,
                         budgets={},
-                        latest_budget={},
+                        latest_budget={
+                            'id': None,
+                            'user_id': None,
+                            'session_id': session.get('sid', 'unknown'),
+                            'user_email': '',
+                            'income': format_currency(0.0),
+                            'income_raw': 0.0,
+                            'fixed_expenses': format_currency(0.0),
+                            'fixed_expenses_raw': 0.0,
+                            'variable_expenses': format_currency(0.0),
+                            'variable_expenses_raw': 0.0,
+                            'savings_goal': format_currency(0.0),
+                            'savings_goal_raw': 0.0,
+                            'surplus_deficit': 0.0,
+                            'surplus_deficit_formatted': format_currency(0.0),
+                            'housing': format_currency(0.0),
+                            'housing_raw': 0.0,
+                            'food': format_currency(0.0),
+                            'food_raw': 0.0,
+                            'transport': format_currency(0.0),
+                            'transport_raw': 0.0,
+                            'dependents': format_currency(0.0),
+                            'dependents_raw': 0.0,
+                            'miscellaneous': format_currency(0.0),
+                            'miscellaneous_raw': 0.0,
+                            'others': format_currency(0.0),
+                            'others_raw': 0.0,
+                            'created_at': 'N/A'
+                        },
                         categories={},
                         tips=[],
                         insights=[],
@@ -247,38 +254,6 @@ def main():
                         tool_title=trans('budget_title', default='Budget Planner'),
                         active_tab='create-budget'
                     )
-                if form.send_email.data and form.email.data:
-                    try:
-                        config = EMAIL_CONFIG["budget"]
-                        subject = trans(config["subject_key"], default='Your Budget Summary')
-                        template = config["template"]
-                        send_email(
-                            app=current_app,
-                            logger=current_app.logger,
-                            to_email=form.email.data,
-                            subject=subject,
-                            template_name=template,
-                            data={
-                                "first_name": form.first_name.data,
-                                "income": format_currency(income),
-                                "expenses": format_currency(expenses),
-                                "housing": format_currency(float(form.housing.data)),
-                                "food": format_currency(float(form.food.data)),
-                                "transport": format_currency(float(form.transport.data)),
-                                "dependents": format_currency(float(form.dependents.data)),
-                                "miscellaneous": format_currency(float(form.miscellaneous.data)),
-                                "others": format_currency(float(form.others.data)),
-                                "savings_goal": format_currency(savings_goal),
-                                "surplus_deficit": format_currency(surplus_deficit),
-                                "created_at": budget_data['created_at'].strftime('%Y-%m-%d'),
-                                "cta_url": url_for('budget.main', _external=True)
-                            },
-                            lang=session.get('lang', 'en')
-                        )
-                        current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session['sid']})
-                    except Exception as e:
-                        current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session['sid']})
-                        flash(trans("general_email_send_failed", default='Failed to send email.'), "warning")
             elif action == 'delete':
                 budget_id = request.form.get('budget_id')
                 try:
@@ -411,7 +386,7 @@ def main():
             active_tab=active_tab
         )
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in personal/BUDGET/budget_main ethnic_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
+        current_app.logger.exception(f"Unexpected error in personal/BUDGET/budget_main ethnic_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('budget_dashboard_load_error', default='Error loading budget dashboard.'), "danger")
         return render_template(
             'personal/BUDGET/budget_main.html',
