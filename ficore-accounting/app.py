@@ -17,9 +17,11 @@ from mailersend_email import init_email_config
 from scheduler_setup import init_scheduler
 from models import (
     create_user, get_user_by_email, get_user, get_financial_health, get_budgets, get_bills,
-    get_net_worth, get_emergency_funds, get_quiz_results,
-    to_dict_financial_health, to_dict_budget, to_dict_bill, to_dict_net_worth,
-    to_dict_emergency_fund, to_dict_quiz_result, initialize_app_data
+    get_net_worth, get_emergency_funds, get_quiz_results, get_tax_rates, get_payment_locations,
+    get_tax_reminders, get_vat_rules, get_tax_deadlines, to_dict_financial_health, to_dict_budget,
+    to_dict_bill, to_dict_net_worth, to_dict_emergency_fund, to_dict_quiz_result, to_dict_tax_rate,
+    to_dict_payment_location, to_dict_tax_reminder, to_dict_vat_rule, to_dict_tax_deadline,
+    initialize_app_data
 )
 from learning_hub.models import get_progress, to_dict_learning_progress
 import utils
@@ -385,13 +387,14 @@ def create_app():
 
             personal_finance_collections = [
                 'budgets', 'bills', 'emergency_funds', 'financial_health_scores',
-                'net_worth_data', 'quiz_responses', 'learning_materials', 'bill_reminders'
+                'net_worth_data', 'quiz_responses', 'learning_materials', 'bill_reminders',
+                'tax_rates', 'payment_locations', 'tax_reminders', 'vat_rules', 'tax_deadlines'
             ]
             db = app.extensions['mongo']['ficodb']
             for collection_name in personal_finance_collections:
                 if collection_name not in db.list_collection_names():
                     db.create_collection(collection_name)
-                    logger.info(f'Created personal finance collection: {collection_name}')
+                    logger.info(f'Created collection: {collection_name}')
             
             try:
                 db.bills.create_index([('user_id', 1), ('due_date', 1)])
@@ -418,7 +421,18 @@ def create_app():
                 db.bill_reminders.create_index([('notification_id', 1)])
                 db.records.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
                 db.cashflows.create_index([('user_id', 1), ('type', 1), ('created_at', -1)])
-                logger.info('Created indexes for personal finance collections')
+                db.tax_rates.create_index([('role', 1)])
+                db.tax_rates.create_index([('min_income', 1)])
+                db.tax_rates.create_index([('session_id', 1)])
+                db.payment_locations.create_index([('name', 1)])
+                db.tax_reminders.create_index([('user_id', 1)])
+                db.tax_reminders.create_index([('session_id', 1)])
+                db.tax_reminders.create_index([('due_date', 1)])
+                db.vat_rules.create_index([('category', 1)], unique=True)
+                db.vat_rules.create_index([('session_id', 1)])
+                db.tax_deadlines.create_index([('deadline_date', 1)])
+                db.tax_deadlines.create_index([('session_id', 1)])
+                logger.info('Created indexes for collections')
             except Exception as e:
                 logger.warning(f'Some indexes may already exist: {str(e)}')
             
@@ -878,7 +892,7 @@ def create_app():
                 try:
                     current_app.extensions['mongo']['ficodb'].users.update_one(
                         {'_id': current_user.id},
-                        {'$set': {'lang': new_lang}}
+                        {'$set': {'language': new_lang}}
                     )
                 except Exception as e:
                     logger.warning(
