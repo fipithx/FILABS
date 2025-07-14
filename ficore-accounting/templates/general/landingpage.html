@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container">
     <!-- Welcome Section -->
-    <div class="section-card text-center">
+    <div class="section-card welcome-section-card text-center">
         <h1 class="section-title">{{ t('general_welcome', default='Manage Your Finances with FiCore Africa') | e }}</h1>
         <p class="text-muted">{{ t('general_ficore_desc', default='Africa’s leading platform for personal finance, business management, and agent services, tailored for you.') | e }}</p>
         <div class="btn-group btn-group-vertical d-md-flex mb-3">
@@ -132,13 +132,13 @@
             <div class="col">
                 <div class="why-item text-center">
                     <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i>
-                    <p class="text-muted">{{ t('general_secure', default='Advisory-only – we don’t access your funds') | e }}</p>
+                    <p class="text-muted">{{ t('general_secure', default='Advisary-only – we don’t access your funds') | e }}</p>
                 </div>
             </div>
-        </div>
-        <div class="text-center mt-4">
-            <span class="animated-counter display-5 fw-bold text-primary" data-count="10000">0</span>
-            <span class="fs-5">{{ t('general_users_served', default='Users Served') | e }}</span>
+            <div class="text-center mt-4">
+                <span class="animated-counter display-5 fw-bold text-primary" data-count="10000">0</span>
+                <span class="fs-5">{{ t('general_users_served', default='Users Served') | e }}</span>
+            </div>
         </div>
     </div>
 
@@ -186,7 +186,9 @@
     <!-- FAQ Section -->
     <div class="section-card faq-section mt-5">
         <h2 class="section-title text-center"><i class="bi bi-question-circle-fill me-2 text-primary"></i>{{ t('general_faq', default='Frequently Asked Questions') | e }}</h2>
-        <div class="accordion" id="faqAccordion">
+        <div class="
+
+accordion" id="faqAccordion">
             <div class="accordion-item">
                 <h3 class="accordion-header" id="faqFundHandling">
                     <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFundHandling" aria-expanded="true" aria-controls="collapseFundHandling">
@@ -273,10 +275,8 @@
             </div>
             <div class="accordion-item">
                 <h3 class="accordion-header" id="faqFCsExpiration">
-puestas                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFCsExpiration" aria-expanded="false" aria-controls="collapseFCsExpiration">
-                        {{ t('general_faq_fcs_expiration', default='Do FCs expire?') |
-
- e }}
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFCsExpiration" aria-expanded="false" aria-controls="collapseFCsExpiration">
+                        {{ t('general_faq_fcs_expiration', default='Do FCs expire?') | e }}
                     </button>
                 </h3>
                 <div id="collapseFCsExpiration" class="accordion-collapse collapse" aria-labelledby="faqFCsExpiration" data-bs-parent="#faqAccordion">
@@ -334,6 +334,9 @@ puestas                    <button class="accordion-button collapsed" type="butt
     background: #fff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 1.5rem;
+}
+.welcome-section-card {
+    margin-top: 5rem; /* Adjust this value based on header height */
 }
 .section-title {
     font-size: 1.75rem;
