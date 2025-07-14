@@ -171,7 +171,6 @@ def main():
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
-            limit вет
 
 System: 10
         )
