@@ -43,7 +43,7 @@ try:
     # Accounting Tools
     from .accounting_tools.admin_translations import ADMIN_TRANSLATIONS
     from .accounting_tools.agents_translations import AGENTS_TRANSLATIONS
-    from .accounting_tools.FICORE_CREDITS_TRANSLATIONS import FICORE_CREDITS_TRANSLATIONS
+    from .accounting_tools.ficore_credits_translations import FICORE_CREDITS_TRANSLATIONS
     from .accounting_tools.creditors_translations import CREDITORS_TRANSLATIONS
     from .accounting_tools.debtors_translations import DEBTORS_TRANSLATIONS
     from .accounting_tools.inventory_translations import INVENTORY_TRANSLATIONS
