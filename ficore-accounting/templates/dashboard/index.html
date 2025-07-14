@@ -210,7 +210,7 @@
                 <a href="{{ url_for('payments.add') }}" class="btn btn-primary">{{ t('payments_add_money_out', default='Add Money Out') }}</a>
                 <a href="{{ url_for('receipts.add') }}" class="btn btn-primary">{{ t('receipts_add_money_in', default='Add Money In') }}</a>
                 <a href="{{ url_for('inventory.add') }}" class="btn btn-primary">{{ t('inventory_add_goods_stock', default='Add Goods & Stock') }}</a>
-                <a href="{{ url_for('coins.purchase') }}" class="btn btn-success">{{ t('coins_purchase_coins', default='Purchase Coins') }}</a>
+                <a href="{{ url_for('credits.add') }}" class="btn btn-success">{{ t('credits_add_credits', default='Add Ficore Credits') }}</a>
                 {% if current_user.role == 'admin' %}
                     <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning">{{ t('admin_dashboard', default='Admin Dashboard') }}</a>
                 {% endif %}
@@ -646,7 +646,7 @@
                         <div class="mb-3">
                             <label for="reminderMessage" class="form-label">{{ t('general_message', default='Message') }}</label>
                             <textarea class="form-control" id="reminderMessage" rows="4" required></textarea>
-                            <div class="form-text">{{ t('general_reminder_cost', default='Cost: 2 coins per reminder') }}</div>
+                            <div class="form-text">{{ t('general_reminder_cost', default='Cost: 2 Ficore Credits per reminder') }}</div>
                         </div>
                     </form>
                 </div>
@@ -680,7 +680,7 @@
                                 <option value="7">{{ t('general_7_days', default='7 Days') }}</option>
                                 <option value="14">{{ t('general_14_days', default='14 Days') }}</option>
                             </select>
-                            <div class="form-text">{{ t('general_snooze_cost', default='Cost: 1 coin per snooze') }}</div>
+                            <div class="form-text">{{ t('general_snooze_cost', default='Cost: 1 Ficore Credit per snooze') }}</div>
                         </div>
                     </form>
                 </div>
