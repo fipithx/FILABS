@@ -172,7 +172,6 @@ def main():
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
 
-System: 10
         )
         current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
     except Exception as e:
