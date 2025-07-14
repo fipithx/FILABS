@@ -1,8 +1,8 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, FloatField, IntegerField, SelectField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Optional, Email, NumberRange, ValidationError
+from wtforms import FloatField, IntegerField, SelectField, BooleanField, SubmitField
+from wtforms.validators import DataRequired, Optional, NumberRange, ValidationError
 from flask_login import current_user, login_required
 from mailersend_email import send_email, EMAIL_CONFIG
 from datetime import datetime
@@ -87,14 +87,6 @@ class CommaSeparatedIntegerField(IntegerField):
                 raise ValidationError(self.gettext('Not a valid integer'))
 
 class EmergencyFundForm(FlaskForm):
-    first_name = StringField(
-        trans('general_first_name', default='First Name'),
-        validators=[DataRequired(message=trans('general_first_name_required', default='Please enter your first name.'))]
-    )
-    email = StringField(
-        trans('general_email', default='Email'),
-        validators=[Optional(), Email(message=trans('general_email_invalid', default='Please enter a valid email address.'))]
-    )
     email_opt_in = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False
@@ -147,10 +139,10 @@ class EmergencyFundForm(FlaskForm):
     )
     submit = SubmitField(trans('emergency_fund_calculate_button', default='Calculate'))
 
-    def validate_email(self, field):
-        if self.email_opt_in.data and not field.data:
-            current_app.logger.warning(f"Email required for notifications for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
-            raise ValidationError(trans('emergency_fund_email_required', default='Valid email is required for notifications'))
+    def validate_email_opt_in(self, field):
+        if field.data and not current_user.is_authenticated:
+            current_app.logger.warning(f"Email opt-in selected but no email available for session {session.get('sid', 'no-session-id')}", extra={'session_id': session.get('sid', 'no-session-id')})
+            raise ValidationError(trans('emergency_fund_email_required', default='Email notifications require an authenticated user.'))
 
 @emergency_fund_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
@@ -160,8 +152,8 @@ def main():
     active_tab = request.args.get('tab', 'create-plan')
     db = get_mongo_db()
     try:
-        activities = get_all_recent_activities(db=db, user_id=current_user.id, limit=10)
-        current_app.logger.debug(f"Fetched {len(activities)} recent activities for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+        activities = get_all_recent_activities(db=db, user_id=current_user.id if current_user.is_authenticated else None, session_id=session.get('sid', 'unknown'), limit=10)
+        current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
     except Exception as e:
         current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
@@ -173,11 +165,7 @@ def main():
 
     session.permanent = True
     session.modified = True
-    form_data = {}
-    if current_user.is_authenticated:
-        form_data['email'] = current_user.email
-        form_data['first_name'] = current_user.get_first_name()
-    form = EmergencyFundForm(data=form_data)
+    form = EmergencyFundForm()
 
     try:
         log_tool_usage(
@@ -238,8 +226,8 @@ def main():
                     '_id': ObjectId(),
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
-                    'first_name': form.first_name.data,
-                    'email': form.email.data,
+                    'first_name': current_user.get_first_name() if current_user.is_authenticated else '',
+                    'email': current_user.email if current_user.is_authenticated else '',
                     'email_opt_in': form.email_opt_in.data,
                     'lang': session.get('lang', 'en'),
                     'monthly_expenses': float(clean_currency(form.monthly_expenses.data)),
@@ -261,7 +249,7 @@ def main():
                     db.emergency_funds.insert_one(emergency_fund)
                     current_app.logger.info(f"Emergency fund record saved to MongoDB with ID {emergency_fund['_id']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_completed_successfully', default='Emergency fund calculation completed successfully!'), 'success')
-                    if form.email_opt_in.data and form.email.data:
+                    if form.email_opt_in.data and current_user.is_authenticated and emergency_fund['email']:
                         try:
                             config = EMAIL_CONFIG["emergency_fund"]
                             subject = trans(config["subject_key"], default='Your Emergency Fund Plan')
@@ -270,11 +258,11 @@ def main():
                             send_email(
                                 app=current_app,
                                 logger=current_app.logger,
-                                to_email=form.email.data,
+                                to_email=emergency_fund['email'],
                                 subject=subject,
                                 template_name=template,
                                 data={
-                                    'first_name': form.first_name.data,
+                                    'first_name': emergency_fund['first_name'],
                                     'lang': session.get('lang', 'en'),
                                     'monthly_expenses': format_currency(emergency_fund['monthly_expenses']),
                                     'monthly_income': format_currency(emergency_fund['monthly_income']) if emergency_fund['monthly_income'] else 'N/A',
@@ -290,11 +278,11 @@ def main():
                                     'badges': emergency_fund['badges'],
                                     'created_at': created_at_str,
                                     'cta_url': url_for('emergency_fund.main', _external=True),
-                                    'unsubscribe_url': url_for('emergency_fund.unsubscribe', email=form.email.data, _external=True)
+                                    'unsubscribe_url': url_for('emergency_fund.unsubscribe', _external=True)
                                 },
                                 lang=session.get('lang', 'en')
                             )
-                            current_app.logger.info(f"Email sent to {form.email.data}", extra={'session_id': session.get('sid', 'unknown')})
+                            current_app.logger.info(f"Email sent to {emergency_fund['email']}", extra={'session_id': session.get('sid', 'unknown')})
                         except Exception as e:
                             current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                             flash(trans("general_email_send_failed", default='Failed to send email.'), "danger")
@@ -306,12 +294,7 @@ def main():
 
         user_data = db.emergency_funds.find(filter_kwargs).sort('created_at', -1)
         user_data = list(user_data)
-        current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for user {current_user.id if current_user.is_authenticated else 'anonymous'}", extra={'session_id': session.get('sid', 'unknown')})
-
-        if not user_data and current_user.is_authenticated and current_user.email:
-            user_data = db.emergency_funds.find({'email': current_user.email}).sort('created_at', -1)
-            user_data = list(user_data)
-            current_app.logger.info(f"Retrieved {len(user_data)} records for email {current_user.email}", extra={'session_id': session.get('sid', 'unknown')})
+        current_app.logger.info(f"Retrieved {len(user_data)} records from MongoDB for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
 
         records = []
         for record in user_data:
@@ -470,10 +453,10 @@ def summary():
         current_app.logger.error(f"Error in emergency_fund.summary: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'targetAmount': format_currency(0.0), 'savingsGap': format_currency(0.0)}), 500
 
-@emergency_fund_bp.route('/unsubscribe/<email>')
+@emergency_fund_bp.route('/unsubscribe')
 @custom_login_required
 @requires_role(['personal', 'admin'])
-def unsubscribe(email):
+def unsubscribe():
     """Unsubscribe user from emergency fund emails."""
     db = get_mongo_db()
     if 'sid' not in session:
@@ -494,7 +477,7 @@ def unsubscribe(email):
             current_app.logger.error(f"Failed to log unsubscribe action: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans('emergency_fund_log_error', default='Error logging unsubscribe action. Continuing with unsubscription.'), 'warning')
 
-        filter_kwargs = {'email': email}
+        filter_kwargs = {'email': current_user.email if current_user.is_authenticated else ''}
         if current_user.is_authenticated and not is_admin():
             filter_kwargs['user_id'] = current_user.id
         result = db.emergency_funds.update_many(
@@ -502,11 +485,11 @@ def unsubscribe(email):
             {'$set': {'email_opt_in': False}}
         )
         if result.modified_count > 0:
-            current_app.logger.info(f"Unsubscribed email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+            current_app.logger.info(f"Unsubscribed email {current_user.email if current_user.is_authenticated else 'anonymous'} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
             flash(trans("emergency_fund_unsubscribed_success", default='Successfully unsubscribed from email notifications.'), "success")
         else:
-            current_app.logger.warning(f"No records found to unsubscribe email {email} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
-            flash(trans("emergency_fund_unsubscribe_error", default='No email notifications found for this email.'), "danger")
+            current_app.logger.warning(f"No records found to unsubscribe email {current_user.email if current_user.is_authenticated else 'anonymous'} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
+            flash(trans("emergency_fund_unsubscribe_error", default='No email notifications found for this user.'), "danger")
         return redirect(url_for('emergency_fund.main', tab='dashboard'))
     except Exception as e:
         current_app.logger.error(f"Error in emergency_fund.unsubscribe for session {session.get('sid', 'unknown')}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
