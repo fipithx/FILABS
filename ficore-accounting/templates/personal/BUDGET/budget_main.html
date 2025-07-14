@@ -1,36 +1,34 @@
 {% extends "base.html" %}
-{% block title %}{{ t('budget_budget_planner', default='Budget Planner') }}{% endblock %}
+{% block title %}{{ t('budget_title', default='Budget Planner') }}{% endblock %}
 {% block content %}
 <div class="container">
-    {% set tool_name = 'budget_budget_planner' %}
+    {% set tool_name = 'budget_title' %}
     {% set tool_icon = 'fa-calculator' %}
-    {% set subtitle = t('budget_manage_finances', default='Plan and manage your finances effectively') %}
+    {% set subtitle = t('budget_subtitle', default='Plan and manage your finances effectively') %}
     {% include 'personal/GENERAL/tool_header.html' %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ t(message, default=message) }}
+                    {{ t(message, default=message) | e }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <!-- Display form errors only after POST -->
     {% if form.errors and request.method == 'POST' %}
         {% for field, errors in form.errors.items() %}
             {% for error in errors %}
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ t(error, default=error) }}
+                    {{ t(error, default=error) | e }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
                 </div>
             {% endfor %}
         {% endfor %}
     {% endif %}
 
-    <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="budgetTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ 'active' if active_tab == 'create-budget' else '' }}" id="create-budget-tab" data-bs-toggle="tab" data-bs-target="#create-budget" type="button" role="tab" aria-controls="create-budget" aria-selected="{{ 'true' if active_tab == 'create-budget' else 'false' }}">
@@ -44,132 +42,86 @@
         </li>
     </ul>
 
-    <!-- Tab Content -->
     <div class="tab-content" id="budgetTabContent">
-        <!-- Create Budget Tab -->
         <div class="tab-pane fade {{ 'show active' if active_tab == 'create-budget' else '' }}" id="create-budget" role="tabpanel" aria-labelledby="create-budget-tab">
-            <form method="POST" action="{{ url_for('personal.budget.main') }}" id="budgetForm" class="validate-form">
+            <form method="POST" action="{{ url_for('personal.budget.main') }}" id="budgetForm">
                 {{ form.csrf_token }}
                 <input type="hidden" name="action" value="create_budget">
 
-                <!-- Personal Information -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-user"></i> {{ t('budget_personal_info', default='Personal Information') }}</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_first_name', default='First Name') }}</label>
-                                    {{ form.first_name(class="form-control", placeholder=t('budget_first_name_placeholder', default='e.g., Ahmad'), value=form.first_name.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_first_name_required', default='First name is required') }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_email', default='Email') }}</label>
-                                    {{ form.email(class="form-control", placeholder=t('budget_email_placeholder', default='e.g., user@example.com'), value=form.email.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_email_required', default='Valid email is required for email notifications') }}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-check">
-                            {{ form.send_email(class="form-check-input") }}
-                            <label class="form-check-label">{{ t('budget_send_email', default='Send me a budget summary') }}</label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Income -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5><i class="fas fa-money-bill-wave"></i> {{ t('budget_income', default='Monthly Income') }}</h5>
+                        <h5><i class="fas fa-money-bill-wave"></i> {{ t('budget_monthly_income', default='Monthly Income') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('budget_monthly_income', default='Monthly Income') }}</label>
-                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500,000.00'), value=form.income.data or '') }}
+                            <label for="{{ form.income.id }}" class="form-label">{{ t('budget_monthly_income', default='Monthly Income') }}</label>
+                            {{ form.income(class="form-control number-input", placeholder=t('budget_income_placeholder', default='e.g., 500000.00'), value=form.income.data or '') }}
                             <div class="invalid-feedback">{{ t('budget_income_required', default='Income is required') }}</div>
-                            <div class="form-text">{{ t('budget_income_help', default='Enter your monthly income without commas (e.g., 500000 or 500000.00)') }}</div>
+                            <small class="form-text text-muted">{{ t('budget_income_help', default='Enter your monthly income without commas (e.g., 500000 or 500000.00)') }}</small>
                         </div>
                     </div>
                 </div>
 
-                <!-- Expenses -->
                 <div class="card mb-4">
                     <div class="card-header">
                         <h5><i class="fas fa-receipt"></i> {{ t('budget_expenses', default='Monthly Expenses') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_housing_rent', default='Housing/Rent') }}</label>
-                                    {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100,000.00'), value=form.housing.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_housing_required', default='Housing cost is required') }}</div>
-                                    <div class="form-text">{{ t('budget_housing_help', default='Enter housing cost without commas (e.g., 100000 or 100000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.housing.id }}" class="form-label">{{ t('budget_housing_rent', default='Housing/Rent') }}</label>
+                                {{ form.housing(class="form-control number-input", placeholder=t('budget_housing_placeholder', default='e.g., 100000.00'), value=form.housing.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_housing_required', default='Housing cost is required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_housing_help', default='Enter housing cost without commas (e.g., 100000 or 100000.00)') }}</small>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_food', default='Food') }}</label>
-                                    {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50,000.00'), value=form.food.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_food_required', default='Food cost is required') }}</div>
-                                    <div class="form-text">{{ t('budget_food_help', default='Enter food cost without commas (e.g., 50000 or 50000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.food.id }}" class="form-label">{{ t('budget_food', default='Food') }}</label>
+                                {{ form.food(class="form-control number-input", placeholder=t('budget_food_placeholder', default='e.g., 50000.00'), value=form.food.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_food_required', default='Food cost is required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_food_help', default='Enter food cost without commas (e.g., 50000 or 50000.00)') }}</small>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_transport', default='Transport') }}</label>
-                                    {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20,000.00'), value=form.transport.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_transport_required', default='Transport cost is required') }}</div>
-                                    <div class="form-text">{{ t('budget_transport_help', default='Enter transport cost without commas (e.g., 20000 or 20000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.transport.id }}" class="form-label">{{ t('budget_transport', default='Transport') }}</label>
+                                {{ form.transport(class="form-control number-input", placeholder=t('budget_transport_placeholder', default='e.g., 20000.00'), value=form.transport.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_transport_required', default='Transport cost is required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_transport_help', default='Enter transport cost without commas (e.g., 20000 or 20000.00)') }}</small>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_dependents_support', default='Dependents Support') }}</label>
-                                    {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30,000.00'), value=form.dependents.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_dependents_required', default='Dependents support cost is required') }}</div>
-                                    <div class="form-text">{{ t('budget_dependents_help', default='Enter dependents cost without commas (e.g., 30000 or 30000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.dependents.id }}" class="form-label">{{ t('budget_dependents_support', default='Dependents Support') }}</label>
+                                {{ form.dependents(class="form-control number-input", placeholder=t('budget_dependents_placeholder', default='e.g., 30000.00'), value=form.dependents.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_dependents_required', default='Dependents support cost is required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_dependents_help', default='Enter dependents cost without commas (e.g., 30000 or 30000.00)') }}</small>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_miscellaneous', default='Miscellaneous') }}</label>
-                                    {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10,000.00'), value=form.miscellaneous.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_miscellaneous_required', default='Miscellaneous cost is required') }}</div>
-                                    <div class="form-text">{{ t('budget_miscellaneous_help', default='Enter miscellaneous cost without commas (e.g., 10000 or 10000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.miscellaneous.id }}" class="form-label">{{ t('budget_miscellaneous', default='Miscellaneous') }}</label>
+                                {{ form.miscellaneous(class="form-control number-input", placeholder=t('budget_miscellaneous_placeholder', default='e.g., 10000.00'), value=form.miscellaneous.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_miscellaneous_required', default='Miscellaneous cost is required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_miscellaneous_help', default='Enter miscellaneous cost without commas (e.g., 10000 or 10000.00)') }}</small>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{{ t('budget_others', default='Others') }}</label>
-                                    {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15,000.00'), value=form.others.data or '') }}
-                                    <div class="invalid-feedback">{{ t('budget_others_required', default='Other expenses are required') }}</div>
-                                    <div class="form-text">{{ t('budget_others_help', default='Enter other expenses without commas (e.g., 15000 or 15000.00)') }}</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.others.id }}" class="form-label">{{ t('budget_others', default='Others') }}</label>
+                                {{ form.others(class="form-control number-input", placeholder=t('budget_others_placeholder', default='e.g., 15000.00'), value=form.others.data or '') }}
+                                <div class="invalid-feedback">{{ t('budget_others_required', default='Other expenses are required') }}</div>
+                                <small class="form-text text-muted">{{ t('budget_others_help', default='Enter other expenses without commas (e.g., 15000 or 15000.00)') }}</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Savings Goal -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5><i class="fas fa-piggy-bank"></i> {{ t('budget_savings', default='Savings Goal') }}</h5>
+                        <h5><i class="fas fa-piggy-bank"></i> {{ t('budget_savings_goal', default='Savings Goal') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label">{{ t('budget_monthly_savings_goal', default='Monthly Savings Goal') }}</label>
-                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50,000.00'), value=form.savings_goal.data or '') }}
+                            <label for="{{ form.savings_goal.id }}" class="form-label">{{ t('budget_savings_goal', default='Monthly Savings Goal') }}</label>
+                            {{ form.savings_goal(class="form-control number-input", placeholder=t('budget_savings_goal_placeholder', default='e.g., 50000.00'), value=form.savings_goal.data or '') }}
                             <div class="invalid-feedback">{{ t('budget_savings_goal_required', default='Savings goal is required') }}</div>
-                            <div class="form-text">{{ t('budget_savings_goal_help', default='Enter your monthly savings goal without commas (e.g., 50000 or 50000.00)') }}</div>
+                            <small class="form-text text-muted">{{ t('budget_savings_goal_help', default='Enter your monthly savings goal without commas (e.g., 50000 or 50000.00)') }}</small>
                         </div>
                     </div>
                 </div>
@@ -180,7 +132,6 @@
             </form>
         </div>
 
-        <!-- Dashboard Tab -->
         <div class="tab-pane fade {{ 'show active' if active_tab == 'dashboard' else '' }}" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
             <div class="card">
                 <div class="card-header">
@@ -189,33 +140,32 @@
                 <div class="card-body">
                     {% if latest_budget and latest_budget.get('id') %}
                         <div class="row text-center mb-4">
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-3">
                                 <div class="card bg-success text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_income', default='Income') }}</h6>
-                                        <h4>{{ latest_budget.get('income', '0') }}</h4>
+                                        <h4>{{ latest_budget.get('income', '0.00') }}</h4>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-3">
                                 <div class="card bg-danger text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_expenses', default='Total Expenses') }}</h6>
-                                        <h4>{{ latest_budget.get('fixed_expenses', '0') }}</h4>
+                                        <h4>{{ latest_budget.get('fixed_expenses', '0.00') }}</h4>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 mb-3">
                                 <div class="card bg-{{ 'success' if latest_budget.get('surplus_deficit', 0)|float >= 0 else 'warning' }} text-white">
                                     <div class="card-body">
                                         <h6>{{ t('budget_surplus_deficit', default='Surplus/Deficit') }}</h6>
-                                        <h4>{{ latest_budget.get('surplus_deficit_formatted', '0') }}</h4>
+                                        <h4>{{ latest_budget.get('surplus_deficit_formatted', '0.00') }}</h4>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Expense Breakdown Chart -->
                         {% if categories and categories|length > 0 %}
                             <div class="card mb-4">
                                 <div class="card-header">
@@ -223,6 +173,9 @@
                                 </div>
                                 <div class="card-body">
                                     <canvas id="expenseChart" height="200"></canvas>
+                                    <div id="chartError" class="text-danger mt-2" style="display: none;">
+                                        {{ t('budget_chart_error', default='Error rendering expense chart. Please try again later.') }}
+                                    </div>
                                 </div>
                             </div>
                         {% else %}
@@ -231,7 +184,6 @@
                             </div>
                         {% endif %}
 
-                        <!-- Budget History -->
                         {% if budgets %}
                             <div class="card">
                                 <div class="card-header">
@@ -253,16 +205,17 @@
                                                 {% for budget_id, budget in budgets.items() %}
                                                     <tr>
                                                         <td>{{ budget.get('created_at', 'N/A') | format_datetime }}</td>
-                                                        <td>{{ budget.get('income', '0') }}</td>
-                                                        <td>{{ budget.get('fixed_expenses', '0') }}</td>
+                                                        <td>{{ budget.get('income', '0.00') }}</td>
+                                                        <td>{{ budget.get('fixed_expenses', '0.00') }}</td>
                                                         <td class="{% if budget.get('surplus_deficit', 0)|float >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                            {{ budget.get('surplus_deficit_formatted', '0') }}
+                                                            {{ budget.get('surplus_deficit_formatted', '0.00') }}
                                                         </td>
                                                         <td>
                                                             <form method="POST" action="{{ url_for('personal.budget.main') }}" style="display: inline;">
+                                                                {{ form.csrf_token }}
                                                                 <input type="hidden" name="budget_id" value="{{ budget_id }}">
                                                                 <input type="hidden" name="action" value="delete">
-                                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('budget_confirm_delete', default='Are you sure you want to delete this budget?') }}');">
+                                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('budget_confirm_delete', default='Are you sure you want to delete this budget?') | e }}');">
                                                                     {{ t('general_delete', default='Delete') }}
                                                                 </button>
                                                             </form>
@@ -290,7 +243,6 @@
         </div>
     </div>
 
-    <!-- Share Ficore Africa Section -->
     {% if current_user.is_authenticated %}
         <div class="card mt-4">
             <div class="card-header">
@@ -299,7 +251,7 @@
             <div class="card-body">
                 <p>{{ t('general_share_ficore_invite', default='Invite your friends to join Ficore Africa and manage their finances better!') }}</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else '' }}" readonly>
+                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else t('general_profile_no_referral', default='No referral link available.') }}" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ t('general_profile_copy_link', default='Copy') }}</button>
                 </div>
             </div>
@@ -312,73 +264,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Number input validation and formatting with comma separation
+    // Format number inputs with commas for display
     function formatNumberInput(input) {
         input.addEventListener('input', function(e) {
-            // Store cursor position
             const cursorPosition = e.target.selectionStart;
             const oldLength = e.target.value.length;
 
-            // Remove all non-numeric characters except decimal point
             let value = e.target.value.replace(/[^0-9.]/g, '');
-            // Ensure only one decimal point
             const parts = value.split('.');
             if (parts.length > 2) {
                 value = parts[0] + '.' + parts.slice(1).join('');
             }
-            // Limit to two decimal places
             if (parts.length > 1) {
                 parts[1] = parts[1].slice(0, 2);
                 value = parts[0] + (parts[1] ? '.' + parts[1] : '');
             }
-            // Add comma separation for integer part
             const [integerPart, decimalPart] = value.split('.');
             const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             e.target.value = decimalPart !== undefined ? `${formattedInteger}.${decimalPart}` : formattedInteger;
 
-            // Adjust cursor position to account for added/removed commas
             const newLength = e.target.value.length;
-            const cursorAdjustment = newLength - oldLength;
-            e.target.selectionStart = e.target.selectionEnd = cursorPosition + cursorAdjustment;
-
-            // Show warning if invalid characters were entered
-            if (e.target.value !== e.target.value.match(/[0-9,.]+/)) {
-                const warning = document.createElement('div');
-                warning.className = 'invalid-feedback';
-                warning.textContent = '{{ t('budget_number_only', default='Please enter numbers only (e.g., 500000 or 500000.00)') }}';
-                warning.style.display = 'block';
-                e.target.parentNode.appendChild(warning);
-                setTimeout(() => warning.remove(), 3000);
-            }
+            e.target.selectionStart = e.target.selectionEnd = cursorPosition + (newLength - oldLength);
         });
     }
 
-    // Apply formatting to all number inputs
     document.querySelectorAll('.number-input').forEach(formatNumberInput);
 
-    // Clean input before form submission
-    document.getElementById('budgetForm').addEventListener('submit', function(e) {
+    // Clean input for submission and validate CSRF
+    const budgetForm = document.getElementById('budgetForm');
+    budgetForm.addEventListener('submit', function(e) {
+        const csrfToken = budgetForm.querySelector('input[name="csrf_token"]');
+        if (!csrfToken || !csrfToken.value) {
+            e.preventDefault();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+            errorDiv.innerHTML = `
+                {{ t('budget_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.') | e }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+            `;
+            budgetForm.prepend(errorDiv);
+            return;
+        }
+
         document.querySelectorAll('.number-input').forEach(function(input) {
-            // Remove commas for backend submission
             input.value = input.value.replace(/,/g, '');
         });
     });
 
-    // Tab persistence with sessionStorage
-    const tabs = document.querySelectorAll('#budgetTabs .nav-link');
-    tabs.forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(e) {
-            const activeTabId = e.target.id.replace('-tab', '');
-            sessionStorage.setItem('activeBudgetTab', activeTabId);
-            // Update URL with tab query parameter
-            const url = new URL(window.location);
-            url.searchParams.set('tab', activeTabId);
-            window.history.replaceState({}, '', url);
-        });
-    });
-
-    // Restore active tab from sessionStorage or server-provided active_tab
-    const savedTab = sessionStorage.getItem('activeBudgetTab') || '{{ active_tab }}';
+    // Validate and restore active tab
+    const validTabs = ['create-budget', 'dashboard'];
+    let savedTab = sessionStorage.getItem('activeBudgetTab') || '{{ active_tab }}';
+    if (!validTabs.includes(savedTab)) {
+        savedTab = 'create-budget';
+    }
     if (savedTab) {
         const tabButton = document.getElementById(`${savedTab}-tab`);
         if (tabButton) {
@@ -387,54 +325,90 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Chart rendering with try-catch
+    document.querySelectorAll('#budgetTabs .nav-link').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const activeTabId = e.target.id.replace('-tab', '');
+            if (validTabs.includes(activeTabId)) {
+                sessionStorage.setItem('activeBudgetTab', activeTabId);
+                const url = new URL(window.location);
+                url.searchParams.set('tab', activeTabId);
+                window.history.replaceState({}, '', url);
+            }
+        });
+    });
+
+    // Chart rendering
     {% if categories and categories|length > 0 %}
-    try {
-        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
-        new Chart(expenseCtx, {
-            type: 'pie',
-            data: {
-                labels: {{ categories.keys() | list | tojson }},
-                datasets: [{
-                    data: {{ categories.values() | list | tojson }},
-                    backgroundColor: [
-                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                let value = context.raw || 0;
-                                return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        try {
+            const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+            new Chart(expenseCtx, {
+                type: 'pie',
+                data: {
+                    labels: {{ categories.keys() | list | tojson }},
+                    datasets: [{
+                        data: {{ categories.values() | list | tojson }},
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
-    } catch (error) {
-        console.error('Error rendering expense chart:', error);
-        alert('{{ t('budget_chart_error', default='Error rendering expense chart. Please try again later.') }}');
-    }
+            });
+        } catch (error) {
+            console.error('Error rendering expense chart:', error);
+            document.getElementById('chartError').style.display = 'block';
+        }
     {% endif %}
 
-    // Copy referral link
+    // Copy referral link with modern API
     window.copyReferralLink = function() {
         const referralLink = document.getElementById('referralLink');
-        if (referralLink.value) {
-            referralLink.select();
-            document.execCommand('copy');
-            alert('{{ t('general_profile_link_copied', default='Referral link copied to clipboard!') }}');
+        const value = referralLink.value;
+        if (value && value !== '{{ t('general_profile_no_referral', default='No referral link available.') | e }}') {
+            navigator.clipboard.writeText(value).then(() => {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    {{ t('general_profile_link_copied', default='Referral link copied to clipboard!') | e }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                `;
+                referralLink.parentNode.appendChild(alertDiv);
+                setTimeout(() => alertDiv.remove(), 3000);
+            }).catch(() => {
+                referralLink.select();
+                document.execCommand('copy');
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    {{ t('general_profile_link_copied', default='Referral link copied to clipboard!') | e }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                `;
+                referralLink.parentNode.appendChild(alertDiv);
+                setTimeout(() => alertDiv.remove(), 3000);
+            });
         } else {
-            alert('{{ t('general_profile_no_referral', default='No referral link available.') }}');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-warning alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                {{ t('general_profile_no_referral', default='No referral link available.') | e }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+            `;
+            referralLink.parentNode.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 3000);
         }
     };
 });
