@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}
-{{ t('admin_credit_coins', default='Credit Coins') }} - FiCore
+{{ t('admin_credit_credits', default='Credit Ficore Credits') }} - FiCore
 {% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <h1 class="mb-4">{{ t('admin_credit_coins', default='Credit Coins') }}</h1>
+    <h1 class="mb-4">{{ t('admin_credit_credits', default='Credit Ficore Credits') }}</h1>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -16,7 +16,7 @@
         {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('admin.credit_coins') }}" method="POST" class="row g-3">
+    <form action="{{ url_for('admin.credit_credits') }}" method="POST" class="row g-3">
         {{ form.hidden_tag() }}
         <div class="col-12">
             <label for="{{ form.user_id.id }}" class="form-label">{{ t('general_user_id', default='User ID') }}</label>
@@ -28,7 +28,7 @@
             {% endif %}
         </div>
         <div class="col-12">
-            <label for="{{ form.amount.id }}" class="form-label">{{ t('coins_amount', default='Coin Amount') }}</label>
+            <label for="{{ form.amount.id }}" class="form-label">{{ t('credits_amount', default='Ficore Credit Amount') }}</label>
             {{ form.amount(class="form-control") }}
             {% if form.amount.errors %}
                 {% for error in form.amount.errors %}
