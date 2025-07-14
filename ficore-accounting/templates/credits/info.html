@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ t('credits_info_title', default='What Are Ficore Credits?') }} - FiCore{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="page-title">
+        <h1>{{ t('credits_info_title', default='What Are Ficore Credits?') }}</h1>
+        <small class="subtext">{{ t('credits_wallet_subtext', default='Tsabobin Cikin App') }}</small>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <p>Ficore Credits (FCs) are digital points you use inside the app to perform certain actions — like adding a debtor, generating reports, planning budgets, or accessing premium features.</p>
+            <h2>What FCs Can Do:</h2>
+            <ul>
+                <li>Let you perform key actions in the app (e.g., record a new payment or inventory).</li>
+                <li>Unlock learning modules or download detailed financial reports.</li>
+                <li>Help personalize your finance journey based on what you use most.</li>
+            </ul>
+            <h2>What FCs Cannot Do:</h2>
+            <ul>
+                <li>FCs are not money and cannot be transferred, exchanged, or withdrawn.</li>
+                <li>FCs do not earn interest or hold any financial value outside the app.</li>
+                <li>FCs cannot be traded between users or used as an investment.</li>
+            </ul>
+            <p><strong>Note:</strong> FCs are for personal use within your account only. Use them wisely to make the most of your FiCore experience.</p>
+            <a href="{{ url_for('credits.history') }}" class="btn btn-primary">{{ t('credits_your_wallet', default='Your Wallet') }}</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
