@@ -171,7 +171,6 @@ def main():
             db=db,
             user_id=current_user.id if current_user.is_authenticated else None,
             session_id=session.get('sid', 'unknown') if not current_user.is_authenticated else None,
-
         )
         current_app.logger.debug(f"Fetched {len(activities)} recent activities for {'user ' + str(current_user.id) if current_user.is_authenticated else 'session ' + session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
     except Exception as e:
@@ -264,7 +263,9 @@ def main():
                                 "income": format_currency(income),
                                 "expenses": format_currency(expenses),
                                 "housing": format_currency(float(form.housing.data)),
-                                "food": format_currency(float(form.food.data)),
+                                "food
+
+": format_currency(float(form.food.data)),
                                 "transport": format_currency(float(form.transport.data)),
                                 "dependents": format_currency(float(form.dependents.data)),
                                 "miscellaneous": format_currency(float(form.miscellaneous.data)),
@@ -407,13 +408,14 @@ def main():
             categories=categories,
             tips=tips,
             insights=insights,
-            activities=activities,
+            activities=activ
+```ities,
             tool_title=trans('budget_title', default='Budget Planner'),
             active_tab=active_tab
         )
     except Exception as e:
         current_app.logger.error(f"Unexpected error in personal/BUDGET/budget_main ethnic_tab: {active_tab}", extra={'session_id': session.get('sid', 'unknown')})
-        flash(trans Tina/trans('budget_dashboard_load_error', default='Error loading budget dashboard.'), "danger")
+        flash(trans('budget_dashboard_load_error', default='Error loading budget dashboard.'), "danger")
         return render_template(
             'personal/BUDGET/budget_main.html',
             form=form,
