@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-
 {% block title %}
 {{ t('bill_bill_planner', default='Bill Planner') }}
 {% endblock %}
@@ -23,6 +22,18 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
+    <!-- Display form errors only after POST -->
+    {% if form.errors and request.method == 'POST' %}
+        {% for field, errors in form.errors.items() %}
+            {% for error in errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ t(error, default=error) }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
 
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="billTabs" role="tablist">
@@ -61,14 +72,14 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="first_name" class="form-label">{{ t('general_first_name', default='First Name') }}</label>
-                                    {{ form.first_name(class="form-control", placeholder=t('general_first_name_placeholder', default='e.g., Chukwuma')) }}
+                                    {{ form.first_name(class="form-control", placeholder=t('general_first_name_placeholder', default='e.g., Chukwuma'), value=form.first_name.data or '') }}
                                     <div class="invalid-feedback">{{ t('general_first_name_required', default='First name is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="email" class="form-label">{{ t('general_email', default='Email') }}</label>
-                                    {{ form.email(class="form-control", placeholder=t('general_email_placeholder', default='e.g., user@example.com')) }}
+                                    {{ form.email(class="form-control", placeholder=t('general_email_placeholder', default='e.g., user@example.com'), value=form.email.data or '') }}
                                     <div class="invalid-feedback">{{ t('general_email_required', default='Valid email is required') }}</div>
                                 </div>
                             </div>
@@ -79,14 +90,14 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="bill_name" class="form-label">{{ t('bill_bill_name', default='Bill Name') }}</label>
-                                    {{ form.bill_name(class="form-control", placeholder=t('bill_bill_name_placeholder', default='e.g., NEPA, MTN Data, Ajo Contribution')) }}
+                                    {{ form.bill_name(class="form-control", placeholder=t('bill_bill_name_placeholder', default='e.g., NEPA, MTN Data, Ajo Contribution'), value=form.bill_name.data or '') }}
                                     <div class="invalid-feedback">{{ t('bill_bill_name_required', default='Bill name is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="amount" class="form-label">{{ t('bill_amount', default='Amount') }}</label>
-                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5,000.00')) }}
+                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5,000.00'), value=form.amount.data or '') }}
                                     <div class="invalid-feedback">{{ t('bill_amount_required', default='Valid amount is required') }}</div>
                                     <div class="form-text">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</div>
                                 </div>
@@ -97,14 +108,14 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="due_date" class="form-label">{{ t('bill_due_date', default='Due Date') }}</label>
-                                    {{ form.due_date(class="form-control", type="date") }}
+                                    {{ form.due_date(class="form-control", type="date", value=form.due_date.data or '') }}
                                     <div class="invalid-feedback">{{ t('bill_due_date_required', default='Valid due date is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="frequency" class="form-label">{{ t('bill_frequency', default='Frequency') }}</label>
-                                    {{ form.frequency(class="form-select") }}
+                                    {{ form.frequency(class="form-select", value=form.frequency.data or 'one-time') }}
                                     <div class="invalid-feedback">{{ t('bill_frequency_required', default='Frequency is required') }}</div>
                                 </div>
                             </div>
@@ -114,14 +125,14 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="category" class="form-label">{{ t('bill_category', default='Category') }}</label>
-                                    {{ form.category(class="form-select") }}
+                                    {{ form.category(class="form-select", value=form.category.data or 'utilities') }}
                                     <div class="invalid-feedback">{{ t('bill_category_required', default='Category is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="status" class="form-label">{{ t('bill_status', default='Status') }}</label>
-                                    {{ form.status(class="form-select") }}
+                                    {{ form.status(class="form-select", value=form.status.data or 'unpaid') }}
                                     <div class="invalid-feedback">{{ t('bill_status_required', default='Status is required') }}</div>
                                 </div>
                             </div>
@@ -134,12 +145,12 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 form-check">
-                                    {{ form.send_email(class="form-check-input", id="send_email") }}
+                                    {{ form.send_email(class="form-check-input", id="send_email", checked=form.send_email.data or False) }}
                                     <label class="form-check-label" for="send_email">{{ t('bill_send_email', default='Send Email Reminders') }}</label>
                                 </div>
                                 <div class="mb-3" id="reminder_days_container" style="display: {{ 'block' if form.send_email.data else 'none' }};">
                                     <label for="reminder_days" class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
-                                    {{ form.reminder_days(class="form-control", placeholder=t('bill_reminder_days_placeholder', default='e.g., 7')) }}
+                                    {{ form.reminder_days(class="form-control", placeholder=t('bill_reminder_days_placeholder', default='e.g., 7'), value=form.reminder_days.data or '') }}
                                     <div class="invalid-feedback">{{ t('bill_reminder_days_required', default='Valid number of days (1-30) is required') }}</div>
                                 </div>
                             </div>
@@ -174,19 +185,19 @@
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_frequency', default='Frequency') }}</label>
-                                                    {{ edit_form.frequency(class="form-select") }}
+                                                    {{ edit_form.frequency(class="form-select", value=edit_form.frequency.data or 'one-time') }}
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_category', default='Category') }}</label>
-                                                    {{ edit_form.category(class="form-select") }}
+                                                    {{ edit_form.category(class="form-select", value=edit_form.category.data or 'utilities') }}
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_status', default='Status') }}</label>
-                                                    {{ edit_form.status(class="form-select") }}
+                                                    {{ edit_form.status(class="form-select", value=edit_form.status.data or 'unpaid') }}
                                                 </div>
                                             </div>
                                         </div>
@@ -194,14 +205,14 @@
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-check">
-                                                    {{ edit_form.send_email(class="form-check-input", id="send_email_" + bill_id) }}
+                                                    {{ edit_form.send_email(class="form-check-input", id="send_email_" + bill_id, checked=edit_form.send_email.data or False) }}
                                                     <label class="form-check-label" for="send_email_{{ bill_id }}">{{ t('bill_send_email', default='Send Email Reminders') }}</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="reminder-days-container" style="display: {{ 'block' if edit_form.send_email.data else 'none' }};">
                                                     <label class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
-                                                    {{ edit_form.reminder_days(class="form-control") }}
+                                                    {{ edit_form.reminder_days(class="form-control", value=edit_form.reminder_days.data or '') }}
                                                 </div>
                                             </div>
                                         </div>
