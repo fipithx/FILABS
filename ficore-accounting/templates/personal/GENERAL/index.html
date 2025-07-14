@@ -71,7 +71,7 @@
         <div class="section-card recent-activity">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="section-title mb-0">{{ t('general_recent_activity', default='Recent Activity') | e }}</h3>
-                <a href="{{ url_for('personal.summaries.recent_activity') | e }}" class="btn btn-link btn-sm p-0 text-decoration-none">
+                <a href="#" class="btn btn-link btn-sm p-0 text-decoration-none" id="viewAllActivities" onclick="toggleRecentActivities()">
                     {{ t('general_view_all', default='View All') | e }}
                 </a>
             </div>
@@ -211,6 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% if current_user.is_authenticated %}
 let amountsVisible = true;
+let allActivities = [];
+let isShowingAllActivities = false;
 
 // Translation strings
 const translations = {
@@ -224,7 +226,9 @@ const translations = {
     no_recent_activity: '{{ t("general_no_recent_activity", default="No recent activity") | e }}',
     start_by_adding: '{{ t("general_start_by_adding", default="Start by adding a budget or bill") | e }}',
     no_notifications: '{{ t("general_no_notifications", default="No notifications") | e }}',
-    check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}'
+    check_back_later: '{{ t("general_check_back_later", default="Check back later") | e }}',
+    view_all: '{{ t("general_view_all", default="View All") | e }}',
+    view_less: '{{ t("general_view_less", default="View Less") | e }}'
 };
 
 // Load financial data
@@ -247,53 +251,61 @@ function loadRecentActivity() {
     fetch('{{ url_for("personal.summaries.recent_activity") | e }}')
         .then(response => response.json())
         .then(activities => {
-            const activityList = document.getElementById('recentActivityList');
-            if (activities && activities.length > 0) {
-                activityList.innerHTML = activities.map(activity => `
-                    <div class="recent-activity-card">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi ${activity.icon || getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-description fw-semibold">${activity.description}</div>
-                                <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
-                            </div>
-                            ${activity.details && activity.details.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.details.amount)}</div>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                activityList.innerHTML = `
-                    <div class="recent-activity-card">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-info-circle text-muted"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
-                                <div class="activity-time text-muted">${translations.start_by_adding}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            allActivities = activities; // Store all activities
+            renderRecentActivities(isShowingAllActivities ? activities : activities.slice(0, 2));
+            updateViewAllLink();
         }).catch(error => {
             console.error('Error loading recent activity:', error);
-            const activityList = document.getElementById('recentActivityList');
-            activityList.innerHTML = `
-                <div class="recent-activity-card">
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-info-circle text-muted"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
-                            <div class="activity-time text-muted">${translations.start_by_adding}</div>
-                        </div>
+            renderRecentActivities([]);
+        });
+}
+
+// Render recent activities
+function renderRecentActivities(activities) {
+    const activityList = document.getElementById('recentActivityList');
+    if (activities && activities.length > 0) {
+        activityList.innerHTML = activities.map(activity => `
+            <div class="recent-activity-card">
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="bi ${activity.icon || getActivityIcon(activity.type)} ${getActivityColor(activity.type)}"></i>
                     </div>
-                `;
-            });
+                    <div class="activity-content">
+                        <div class="activity-description fw-semibold">${activity.description}</div>
+                        <div class="activity-time text-muted">${formatTimeAgo(activity.timestamp)}</div>
+                    </div>
+                    ${activity.details && activity.details.amount ? `<div class="activity-amount text-nowrap ms-2 fw-bold">${format_currency(activity.details.amount)}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        activityList.innerHTML = `
+            <div class="recent-activity-card">
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="bi bi-info-circle text-muted"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-description fw-semibold">${translations.no_recent_activity}</div>
+                        <div class="activity-time text-muted">${translations.start_by_adding}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Toggle between showing first two and all activities
+function toggleRecentActivities() {
+    isShowingAllActivities = !isShowingAllActivities;
+    renderRecentActivities(isShowingAllActivities ? allActivities : allActivities.slice(0, 2));
+    updateViewAllLink();
+}
+
+// Update the "View All" link text
+function updateViewAllLink() {
+    const viewAllLink = document.getElementById('viewAllActivities');
+    viewAllLink.textContent = isShowingAllActivities ? translations.view_less : translations.view_all;
 }
 
 // Load notifications
