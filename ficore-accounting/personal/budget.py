@@ -263,9 +263,7 @@ def main():
                                 "income": format_currency(income),
                                 "expenses": format_currency(expenses),
                                 "housing": format_currency(float(form.housing.data)),
-                                "food
-
-": format_currency(float(form.food.data)),
+                                "food": format_currency(float(form.food.data)),
                                 "transport": format_currency(float(form.transport.data)),
                                 "dependents": format_currency(float(form.dependents.data)),
                                 "miscellaneous": format_currency(float(form.miscellaneous.data)),
