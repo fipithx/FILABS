@@ -1,3 +1,4 @@
+
 from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, render_template, request, session
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
