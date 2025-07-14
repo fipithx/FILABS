@@ -35,7 +35,7 @@ from pymongo import MongoClient
 import certifi
 from news.routes import seed_news
 from taxation.routes import seed_tax_data
-from coins.routes import coins_bp
+from coins.routes import credits_bp
 import re
 from flask_mailman import Mail
 from flask_limiter import Limiter
@@ -519,7 +519,7 @@ def create_app():
     app.register_blueprint(taxation_bp, url_prefix='/taxation')
     logger.info('Registered taxation blueprint')
     try:
-        app.register_blueprint(coins_bp, url_prefix='/coins')
+        app.register_blueprint(credits_bp, url_prefix='/coins')
         logger.info('Registered coins blueprint and initialized limiter')
     except Exception as e:
         logger.warning(f'Could not import coins blueprint: {str(e)}')
