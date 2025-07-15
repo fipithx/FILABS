@@ -140,8 +140,8 @@ def share(id):
             return jsonify({'success': False, 'message': trans('creditors_record_not_found', default='Record not found')}), 404
         if not creditor.get('contact'):
             return jsonify({'success': False, 'message': trans('creditors_no_contact', default='No contact provided for sharing')}), 400
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            return jsonify({'success': False, 'message': trans('creditors_insufficient_coins', default='Insufficient coins to share IOU')}), 400
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            return jsonify({'success': False, 'message': trans('debtors_insufficient_credits', default='Insufficient credits to share IOU')}), 400
         
         contact = re.sub(r'\D', '', creditor['contact'])
         if contact.startswith('0'):
@@ -154,13 +154,13 @@ def share(id):
         
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
                 'date': datetime.utcnow(),
-                'ref': f"IOU shared for {creditor['name']}"
+                'ref': f"IOU shared for {creditor['name']} (Ficore Credits)"
             })
         
         return jsonify({'success': True, 'whatsapp_link': whatsapp_link})
@@ -193,9 +193,9 @@ def send_reminder():
         if not creditor:
             return jsonify({'success': False, 'message': trans('creditors_record_not_found', default='Record not found')}), 404
         
-        coin_cost = 2 if recipient else 1
-        if not utils.is_admin() and not utils.check_coin_balance(coin_cost):
-            return jsonify({'success': False, 'message': trans('creditors_insufficient_coins', default='Insufficient coins to send reminder')}), 400
+        credit_cost = 2 if recipient else 1
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(credit_cost):
+            return jsonify({'success': False, 'message': trans('debtors_insufficient_credits', default='Insufficient credits to send reminder')}), 400
         
         update_data = {'$inc': {'reminder_count': 1}}
         if snooze_days:
@@ -215,13 +215,13 @@ def send_reminder():
             
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
-                db.users.update_one(user_query, {'$inc': {'coin_balance': -coin_cost}})
-                db.coin_transactions.insert_one({
+                db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -credit_cost}})
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
-                    'amount': -coin_cost,
+                    'amount': -credit_cost,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': f"{'Reminder sent' if recipient else 'Snooze set'} for {creditor['name']}"
+                    'ref': f"{'Reminder sent' if recipient else 'Snooze set'} for {creditor['name']} (Ficore Credits)"
                 })
             
             db.reminder_logs.insert_one({
@@ -262,9 +262,9 @@ def generate_iou(id):
             flash(trans('creditors_record_not_found', default='Record not found'), 'danger')
             return redirect(url_for('creditors.index'))
         
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            flash(trans('creditors_insufficient_coins', default='Insufficient coins to generate IOU'), 'danger')
-            return redirect(url_for('coins.purchase'))
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate IOU'), 'danger')
+            return redirect(url_for('credits.request'))
         
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -295,13 +295,13 @@ def generate_iou(id):
         
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
                 'date': datetime.utcnow(),
-                'ref': f"IOU generated for {creditor['name']}"
+                'ref': f"IOU generated for {creditor['name']} (Ficore Credits)"
             })
         
         buffer.seek(0)
@@ -324,9 +324,9 @@ def generate_iou(id):
 def add():
     """Add a new creditor record."""
     form = CreditorForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('creditors_insufficient_coins', default='Insufficient coins to create a creditor. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to create a creditor. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
@@ -345,14 +345,14 @@ def add():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
                     user_query,
-                    {'$inc': {'coin_balance': -1}}
+                    {'$inc': {'ficore_credit_balance': -1}}
                 )
-                db.coin_transactions.insert_one({
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': f"Creditor creation: {record['name']}"
+                    'ref': f"Creditor creation: {record['name']} (Ficore Credits)"
                 })
             flash(trans('creditors_create_success', default='Creditor created successfully'), 'success')
             return redirect(url_for('creditors.index'))
@@ -430,14 +430,14 @@ def delete(id):
             return redirect(url_for('creditors.index'))
         result = db.records.delete_one(query)
         if result.deleted_count:
-            db.creditor_transactions.insert_one({
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'creditor_id': str(creditor['_id']),
                 'creditor_name': creditor['name'],
                 'type': 'delete',
                 'amount_change': 0,
                 'date': datetime.utcnow(),
-                'ref': f"Deleted creditor: {creditor['name']}"
+                'ref': f"Deleted creditor: {creditor['name']} (Ficore Credits)"
             })
             flash(trans('creditors_delete_success', default='Creditor deleted successfully'), 'success')
         else:
