@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from gridfs import GridFS
-from wtforms import FloatField, StringField, SelectField, SubmitField, validators
+from wtforms import SelectField, SubmitField, validators
 from translations import trans
 import utils
 from bson import ObjectId
@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 credits_bp = Blueprint('credits', __name__, template_folder='templates/credits')
 
-class AddCreditsForm(FlaskForm):
+class RequestCreditsForm(FlaskForm):
     amount = SelectField(
         trans('credits_amount', default='Ficore Credit Amount'),
         choices=[('10', '10 Ficore Credits'), ('50', '50 Ficore Credits'), ('100', '100 Ficore Credits')],
@@ -31,7 +31,23 @@ class AddCreditsForm(FlaskForm):
         validators=[validators.DataRequired(message=trans('general_payment_method_required', default='Payment method is required'))],
         render_kw={'class': 'form-select'}
     )
-    submit = SubmitField(trans('credits_add', default='Add Ficore Credits'), render_kw={'class': 'btn btn-primary w-100'})
+    receipt = FileField(
+        trans('credits_receipt', default='Receipt (Optional)'),
+        validators=[
+            FileAllowed(['jpg', 'png', 'pdf'], trans('credits_invalid_file_type', default='Only JPG, PNG, or PDF files are allowed'))
+        ],
+        render_kw={'class': 'form-control'}
+    )
+    submit = SubmitField(trans('credits_request', default='Request Ficorem Credits'), render_kw={'class': 'btn btn-primary w-100'})
+
+class ApproveCreditRequestForm(FlaskForm):
+    status = SelectField(
+        trans('credits_request_status', default='Request Status'),
+        choices=[('approved', 'Approve'), ('denied', 'Deny')],
+        validators=[validators.DataRequired(message=trans('credits_status_required', default='Status is required'))],
+        render_kw={'class': 'form-select'}
+    )
+    submit = SubmitField(trans('credits_update_status', default='Update Request Status'), render_kw={'class': 'btn btn-primary w-100'})
 
 class ReceiptUploadForm(FlaskForm):
     receipt = FileField(
@@ -44,31 +60,34 @@ class ReceiptUploadForm(FlaskForm):
     )
     submit = SubmitField(trans('credits_upload_receipt', default='Upload Receipt'), render_kw={'class': 'btn btn-primary w-100'})
 
-def credit_ficore_credits(user_id: str, amount: int, ref: str, type: str = 'add') -> None:
-    """Credit Ficore Credits to a user and log transaction using MongoDB transaction."""
+def credit_ficore_credits(user_id: str, amount: int, ref: str, type: str = 'add', admin_id: str = None) -> None:
+    """Credit or log Ficore Credits with MongoDB transaction."""
     db = utils.get_mongo_db()
     client = db.client
     user_query = utils.get_user_query(user_id)
     with client.start_session() as session:
         with session.start_transaction():
             try:
-                result = db.users.update_one(
-                    user_query,
-                    {'$inc': {'ficore_credit_balance': amount}},
-                    session=session
-                )
-                if result.matched_count == 0:
-                    logger.error(f"No user found for ID {user_id} to credit Ficore Credits")
-                    raise ValueError(f"No user found for ID {user_id}")
+                if type == 'add':
+                    result = db.users.update_one(
+                        user_query,
+                        {'$inc': {'ficore_credit_balance': amount}},
+                        session=session
+                    )
+                    if result.matched_count == 0:
+                        logger.error(f"No user found for ID {user_id} to credit Ficore Credits")
+                        raise ValueError(f"No user found for ID {user_id}")
                 db.ficore_credit_transactions.insert_one({
                     'user_id': user_id,
                     'amount': amount,
                     'type': type,
                     'ref': ref,
+                    'payment_method': 'approved_request' if type == 'add' else None,
+                    'facilitated_by_agent': admin_id or 'system',
                     'date': datetime.utcnow()
                 }, session=session)
                 db.audit_logs.insert_one({
-                    'admin_id': 'system' if type == 'add' else str(current_user.id),
+                    'admin_id': admin_id or 'system',
                     'action': f'credit_ficore_credits_{type}',
                     'details': {'user_id': user_id, 'amount': amount, 'ref': ref},
                     'timestamp': datetime.utcnow()
@@ -82,65 +101,188 @@ def credit_ficore_credits(user_id: str, amount: int, ref: str, type: str = 'add'
                 session.abort_transaction()
                 raise
 
-@credits_bp.route('/add', methods=['GET', 'POST'])
+@credits_bp.route('/request', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role(['trader', 'personal'])
 @utils.limiter.limit("50 per hour")
-def add():
-    """Handle Ficore Credit addition requests."""
-    form = AddCreditsForm()
+def request_credits():
+    """Handle Ficore Credit request submissions."""
+    form = RequestCreditsForm()
     if form.validate_on_submit():
         try:
+            db = utils.get_mongo_db()
+            client = db.client
+            fs = GridFS(db)
             amount = int(form.amount.data)
             payment_method = form.payment_method.data
-            payment_ref = f"PAY_{datetime.utcnow().isoformat()}"
-            credit_ficore_credits(str(current_user.id), amount, payment_ref, 'add')
-            flash(trans('credits_add_success', default='Ficore Credits added successfully'), 'success')
-            logger.info(f"User {current_user.id} added {amount} Ficore Credits via {payment_method}")
+            receipt_file = form.receipt.data
+            ref = f"REQ_{datetime.utcnow().isoformat()}"
+            receipt_file_id = None
+
+            with client.start_session() as session:
+                with session.start_transaction():
+                    if receipt_file:
+                        receipt_file_id = fs.put(
+                            receipt_file,
+                            filename=receipt_file.filename,
+                            user_id=str(current_user.id),
+                            upload_date=datetime.utcnow(),
+                            session=session
+                        )
+                    db.credit_requests.insert_one({
+                        'user_id': str(current_user.id),
+                        'amount': amount,
+                        'payment_method': payment_method,
+                        'receipt_file_id': receipt_file_id,
+                        'status': 'pending',
+                        'created_at': datetime.utcnow(),
+                        'updated_at': datetime.utcnow(),
+                        'admin_id': None
+                    }, session=session)
+                    db.audit_logs.insert_one({
+                        'admin_id': 'system',
+                        'action': 'credit_request_submitted',
+                        'details': {'user_id': str(current_user.id), 'amount': amount, 'ref': ref},
+                        'timestamp': datetime.utcnow()
+                    }, session=session)
+            flash(trans('credits_request_success', default='Ficore Credit request submitted successfully'), 'success')
+            logger.info(f"User {current_user.id} submitted credit request for {amount} Ficore Credits via {payment_method}")
             return redirect(url_for('credits.history'))
-        except ValueError as e:
-            logger.error(f"User not found for Ficore Credit addition: {str(e)}")
-            flash(trans('general_user_not_found', default='User not found'), 'danger')
         except errors.PyMongoError as e:
-            logger.error(f"MongoDB error adding Ficore Credits for user {current_user.id}: {str(e)}")
+            logger.error(f"MongoDB error submitting credit request for user {current_user.id}: {str(e)}")
             flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
         except Exception as e:
-            logger.error(f"Unexpected error adding Ficore Credits for user {current_user.id}: {str(e)}")
+            logger.error(f"Unexpected error submitting credit request for user {current_user.id}: {str(e)}")
             flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
     return render_template(
-        'credits/add.html',
+        'credits/request.html',
         form=form,
-        title=trans('credits_add_title', default='Add Ficore Credits', lang=session.get('lang', 'en'))
+        title=trans('credits_request_title', default='Request Ficore Credits', lang=session.get('lang', 'en'))
     )
 
 @credits_bp.route('/history', methods=['GET'])
 @login_required
 @utils.limiter.limit("100 per hour")
 def history():
-    """View Ficore Credit transaction history."""
+    """View Ficore Credit transaction and request history."""
     try:
         db = utils.get_mongo_db()
         user_query = utils.get_user_query(str(current_user.id))
         user = db.users.find_one(user_query)
         query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
         transactions = list(db.ficore_credit_transactions.find(query).sort('date', -1).limit(50))
+        requests = list(db.credit_requests.find(query).sort('created_at', -1).limit(50))
         for tx in transactions:
             tx['_id'] = str(tx['_id'])
+        for req in requests:
+            req['_id'] = str(req['_id'])
+            req['receipt_file_id'] = str(req['receipt_file_id']) if req.get('receipt_file_id') else None
         return render_template(
             'credits/history.html',
             transactions=transactions,
+            requests=requests,
             ficore_credit_balance=user.get('ficore_credit_balance', 0) if user else 0,
             title=trans('credits_history_title', default='Ficore Credit Transaction History', lang=session.get('lang', 'en'))
         )
     except Exception as e:
-        logger.error(f"Error fetching Ficore Credit history for user {current_user.id}: {str(e)}")
+        logger.error(f"Error fetching history for user {current_user.id}: {str(e)}")
         flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
         return render_template(
             'credits/history.html',
             transactions=[],
+            requests=[],
             ficore_credit_balance=0,
             title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
         )
+
+@credits_bp.route('/requests', methods=['GET'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("50 per hour")
+def view_credit_requests():
+    """View all pending credit requests (admin only)."""
+    try:
+        db = utils.get_mongo_db()
+        requests = list(db.credit_requests.find({'status': 'pending'}).sort('created_at', -1).limit(50))
+        for req in requests:
+            req['_id'] = str(req['_id'])
+            req['receipt_file_id'] = str(req['receipt_file_id']) if req.get('receipt_file_id') else None
+        return render_template(
+            'credits/requests.html',
+            requests=requests,
+            title=trans('credits_requests_title', default='Pending Credit Requests', lang=session.get('lang', 'en'))
+        )
+    except Exception as e:
+        logger.error(f"Error fetching credit requests for admin {current_user.id}: {str(e)}")
+        flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
+        return render_template(
+            'credits/requests.html',
+            requests=[],
+            title=trans('general_error', default='Error', lang=session.get('lang', 'en'))
+        )
+
+@credits_bp.route('/request/<request_id>', methods=['GET', 'POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("20 per hour")
+def manage_credit_request(request_id):
+    """Approve or deny a credit request (admin only)."""
+    form = ApproveCreditRequestForm()
+    try:
+        db = utils.get_mongo_db()
+        client = db.client
+        request_data = db.credit_requests.find_one({'_id': ObjectId(request_id)})
+        if not request_data:
+            flash(trans('credits_request_not_found', default='Credit request not found'), 'danger')
+            return redirect(url_for('credits.view_credit_requests'))
+
+        if form.validate_on_submit():
+            status = form.status.data
+            ref = f"REQ_PROCESS_{datetime.utcnow().isoformat()}"
+            with client.start_session() as session:
+                with session.start_transaction():
+                    db.credit_requests.update_one(
+                        {'_id': ObjectId(request_id)},
+                        {
+                            '$set': {
+                                'status': status,
+                                'updated_at': datetime.utcnow(),
+                                'admin_id': str(current_user.id)
+                            }
+                        },
+                        session=session
+                    )
+                    if status == 'approved':
+                        credit_ficore_credits(
+                            user_id=request_data['user_id'],
+                            amount=request_data['amount'],
+                            ref=ref,
+                            type='add',
+                            admin_id=str(current_user.id)
+                        )
+                    db.audit_logs.insert_one({
+                        'admin_id': str(current_user.id),
+                        'action': f'credit_request_{status}',
+                        'details': {'request_id': request_id, 'user_id': request_data['user_id'], 'amount': request_data['amount']},
+                        'timestamp': datetime.utcnow()
+                    }, session=session)
+            flash(trans(f'credits_request_{status}', default=f'Credit request {status} successfully'), 'success')
+            logger.info(f"Admin {current_user.id} {status} credit request {request_id} for user {request_data['user_id']}")
+            return redirect(url_for('credits.view_credit_requests'))
+        
+        return render_template(
+            'credits/manage_request.html',
+            form=form,
+            request=request_data,
+            title=trans('credits_manage_request_title', default='Manage Credit Request', lang=session.get('lang', 'en'))
+        )
+    except errors.PyMongoError as e:
+        logger.error(f"MongoDB error managing credit request {request_id} by admin {current_user.id}: {str(e)}")
+        flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
+    except Exception as e:
+        logger.error(f"Unexpected error managing credit request {request_id} by admin {current_user.id}: {str(e)}")
+        flash(trans('general_something_went_wrong', default='An error occurred'), 'danger')
+    return redirect(url_for('credits.view_credit_requests'))
 
 @credits_bp.route('/receipt_upload', methods=['GET', 'POST'])
 @login_required
@@ -151,7 +293,7 @@ def receipt_upload():
     form = ReceiptUploadForm()
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('credits_insufficient_credits', default='Insufficient Ficore Credits to upload receipt. Get more Ficore Credits.'), 'danger')
-        return redirect(url_for('credits.add'))
+        return redirect(url_for('credits.request'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
@@ -183,6 +325,8 @@ def receipt_upload():
                             'amount': -1,
                             'type': 'spend',
                             'ref': ref,
+                            'payment_method': None,
+                            'facilitated_by_agent': 'system',
                             'date': datetime.utcnow()
                         }, session=session)
                     db.audit_logs.insert_one({
