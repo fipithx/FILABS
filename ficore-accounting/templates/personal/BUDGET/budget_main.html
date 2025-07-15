@@ -281,14 +281,6 @@
                     <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else t('general_profile_no_referral', default='No referral link available.') }}" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ t('general_profile_copy_link', default='Copy') }}</button>
                 </div>
-                <div class="mt-3">
-                    <h6>{{ t('budget_email_preferences', default='Email Preferences') }}</h6>
-                    <p>{{ t('budget_unsubscribe_description', default='Click below to unsubscribe from budget email notifications.') }}</p>
-                    <form method="POST" action="{{ url_for('personal.bill.unsubscribe') }}" class="d-inline">
-                        {{ form.csrf_token }}
-                        <button type="submit" class="btn btn-warning btn-sm">{{ t('budget_unsubscribe', default='Unsubscribe') }}</button>
-                    </form>
-                </div>
             </div>
         </div>
     {% endif %}
