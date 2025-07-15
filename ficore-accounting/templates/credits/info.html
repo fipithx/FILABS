@@ -8,21 +8,24 @@
     </div>
     <div class="card">
         <div class="card-body">
-            <p>Ficore Credits (FCs) are digital points you use inside the app to perform certain actions — like adding a debtor, generating reports, planning budgets, or accessing premium features.</p>
-            <h2>What FCs Can Do:</h2>
+            <p>{{ t('credits_info_description', default='Ficore Credits (FCs) are digital points you use inside the app to perform certain actions — like adding a debtor, generating reports, planning budgets, or accessing premium features.') }}</p>
+            <h2>{{ t('credits_info_what_fcs_do', default='What FCs Can Do:') }}</h2>
             <ul>
-                <li>Let you perform key actions in the app (e.g., record a new payment or inventory).</li>
-                <li>Unlock learning modules or download detailed financial reports.</li>
-                <li>Help personalize your finance journey based on what you use most.</li>
+                <li>{{ t('credits_info_actions', default='Let you perform key actions in the app (e.g., record a new payment or inventory).') }}</li>
+                <li>{{ t('credits_info_unlock_features', default='Unlock learning modules or download detailed financial reports.') }}</li>
+                <li>{{ t('credits_info_personalize', default='Help personalize your finance journey based on what you use most.') }}</li>
             </ul>
-            <h2>What FCs Cannot Do:</h2>
+            <h2>{{ t('credits_info_what_fcs_cannot_do', default='What FCs Cannot Do:') }}</h2>
             <ul>
-                <li>FCs are not money and cannot be transferred, exchanged, or withdrawn.</li>
-                <li>FCs do not earn interest or hold any financial value outside the app.</li>
-                <li>FCs cannot be traded between users or used as an investment.</li>
+                <li>{{ t('credits_info_not_money', default='FCs are not money and cannot be transferred, exchanged, or withdrawn.') }}</li>
+                <li>{{ t('credits_info_no_value', default='FCs do not earn interest or hold any financial value outside the app.') }}</li>
+                <li>{{ t('credits_info_no_trading', default='FCs cannot be traded between users or used as an investment.') }}</li>
             </ul>
-            <p><strong>Note:</strong> FCs are for personal use within your account only. Use them wisely to make the most of your FiCore experience.</p>
+            <h2>{{ t('credits_info_how_to_get', default='How to Get FCs:') }}</h2>
+            <p>{{ t('credits_info_request_process', default='To obtain Ficore Credits, submit a request with your desired amount and payment method. You may optionally upload a receipt. An admin or agent will review your request, and upon approval, the credits will be added to your balance.') }}</p>
+            <p><strong>{{ t('general_note', default='Note') }}:</strong> {{ t('credits_info_note', default='FCs are for personal use within your account only. Use them wisely to make the most of your FiCore experience.') }}</p>
             <a href="{{ url_for('credits.history') }}" class="btn btn-primary">{{ t('credits_your_wallet', default='Your Wallet') }}</a>
+            <a href="{{ url_for('credits.request') }}" class="btn btn-primary">{{ t('credits_request_credits', default='Request Ficore Credits') }}</a>
         </div>
     </div>
 </div>
