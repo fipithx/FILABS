@@ -16,7 +16,7 @@ emergency_fund_bp = Blueprint(
     'emergency_fund',
     __name__,
     template_folder='templates/personal/EMERGENCYFUND',
-    url_prefix=None  # Handled by personal_bp
+    url_prefix='/emergency_fund'
 )
 
 csrf = CSRFProtect()
