@@ -8,6 +8,7 @@ from translations import trans
 from utils import get_mongo_db, logger  # Use SessionAdapter logger from utils
 from functools import lru_cache
 import traceback
+import time
 
 # Configure logger for the application
 logger = logging.getLogger('ficore_app')
@@ -68,8 +69,9 @@ def initialize_app_data(app):
                                 '_id': {'bsonType': 'string'},
                                 'email': {'bsonType': 'string', 'pattern': r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'},
                                 'password_hash': {'bsonType': 'string'},
-                                'role': {'enum': ['personal', 'trader', 'agent', 'admin', 'trader', 'personal']},
+                                'role': {'enum': ['personal', 'trader', 'agent', 'admin']},
                                 'coin_balance': {'bsonType': 'int', 'minimum': 0},
+                                'ficore_credit_balance': {'bsonType': 'int', 'minimum': 0},
                                 'language': {'enum': ['en', 'ha']},
                                 'created_at': {'bsonType': 'date'},
                                 'display_name': {'bsonType': ['string', 'null']},
@@ -186,7 +188,7 @@ def initialize_app_data(app):
                         {'key': [('item_name', ASCENDING)]}
                     ]
                 },
-                'coin_transactions': {
+                'ficore_credit_transactions': {
                     'validator': {
                         '$jsonSchema': {
                             'bsonType': 'object',
@@ -194,7 +196,7 @@ def initialize_app_data(app):
                             'properties': {
                                 'user_id': {'bsonType': 'string'},
                                 'amount': {'bsonType': 'int'},
-                                'type': {'enum': ['credit', 'spend', 'purchase', 'admin_credit']},
+                                'type': {'enum': ['add', 'spend', 'purchase', 'admin_credit']},
                                 'ref': {'bsonType': ['string', 'null']},
                                 'date': {'bsonType': 'date'},
                                 'facilitated_by_agent': {'bsonType': ['string', 'null']},
@@ -207,6 +209,29 @@ def initialize_app_data(app):
                     'indexes': [
                         {'key': [('user_id', ASCENDING)]},
                         {'key': [('date', DESCENDING)]}
+                    ]
+                },
+                'credit_requests': {
+                    'validator': {
+                        '$jsonSchema': {
+                            'bsonType': 'object',
+                            'required': ['user_id', 'amount', 'payment_method', 'status', 'created_at'],
+                            'properties': {
+                                'user_id': {'bsonType': 'string'},
+                                'amount': {'bsonType': 'int', 'minimum': 1},
+                                'payment_method': {'enum': ['card', 'bank']},
+                                'receipt_file_id': {'bsonType': ['objectId', 'null']},
+                                'status': {'enum': ['pending', 'approved', 'denied']},
+                                'created_at': {'bsonType': 'date'},
+                                'updated_at': {'bsonType': ['date', 'null']},
+                                'admin_id': {'bsonType': ['string', 'null']}
+                            }
+                        }
+                    },
+                    'indexes': [
+                        {'key': [('user_id', ASCENDING)]},
+                        {'key': [('status', ASCENDING)]},
+                        {'key': [('created_at', DESCENDING)]}
                     ]
                 },
                 'audit_logs': {
@@ -250,7 +275,7 @@ def initialize_app_data(app):
                             'bsonType': 'object',
                             'required': ['role', 'min_income', 'max_income', 'rate', 'description'],
                             'properties': {
-                                'role': {'enum': ['personal', 'trader', 'agent', 'company', 'trader', 'personal']},
+                                'role': {'enum': ['personal', 'trader', 'agent', 'company']},
                                 'min_income': {'bsonType': 'number'},
                                 'max_income': {'bsonType': 'number'},
                                 'rate': {'bsonType': 'number', 'minimum': 0, 'maximum': 1},
@@ -741,7 +766,7 @@ def initialize_app_data(app):
             raise
 
 class User:
-    def __init__(self, id, email, display_name=None, role='personal', username=None, is_admin=False, setup_complete=False, coin_balance=0, language='en', dark_mode=False):
+    def __init__(self, id, email, display_name=None, role='personal', username=None, is_admin=False, setup_complete=False, coin_balance=0, ficore_credit_balance=0, language='en', dark_mode=False):
         self.id = id
         self.email = email
         self.username = username or display_name or email.split('@')[0]
@@ -750,6 +775,7 @@ class User:
         self.is_admin = is_admin
         self.setup_complete = setup_complete
         self.coin_balance = coin_balance
+        self.ficore_credit_balance = ficore_credit_balance
         self.language = language
         self.dark_mode = dark_mode
 
@@ -796,6 +822,7 @@ def create_user(db, user_data):
             'is_admin': user_data.get('is_admin', False),
             'setup_complete': user_data.get('setup_complete', False),
             'coin_balance': user_data.get('coin_balance', 10),
+            'ficore_credit_balance': user_data.get('ficore_credit_balance', 0),
             'language': user_data.get('lang', 'en'),
             'dark_mode': user_data.get('dark_mode', False),
             'created_at': user_data.get('created_at', datetime.utcnow()),
@@ -818,6 +845,7 @@ def create_user(db, user_data):
             is_admin=user_doc['is_admin'],
             setup_complete=user_doc['setup_complete'],
             coin_balance=user_doc['coin_balance'],
+            ficore_credit_balance=user_doc['ficore_credit_balance'],
             language=user_doc['language'],
             dark_mode=user_doc['dark_mode']
         )
@@ -856,6 +884,7 @@ def get_user_by_email(db, email):
                 is_admin=user_doc.get('is_admin', False),
                 setup_complete=user_doc.get('setup_complete', False),
                 coin_balance=user_doc.get('coin_balance', 0),
+                ficore_credit_balance=user_doc.get('ficore_credit_balance', 0),
                 language=user_doc.get('language', 'en'),
                 dark_mode=user_doc.get('dark_mode', False)
             )
@@ -891,6 +920,7 @@ def get_user(db, user_id):
                 is_admin=user_doc.get('is_admin', False),
                 setup_complete=user_doc.get('setup_complete', False),
                 coin_balance=user_doc.get('coin_balance', 0),
+                ficore_credit_balance=user_doc.get('ficore_credit_balance', 0),
                 language=user_doc.get('language', 'en'),
                 dark_mode=user_doc.get('dark_mode', False)
             )
@@ -899,6 +929,94 @@ def get_user(db, user_id):
         logger.error(f"{trans('general_user_fetch_error', default='Error getting user by ID')} {user_id}: {str(e)}", 
                     exc_info=True, extra={'session_id': 'no-session-id'})
         raise
+
+def create_credit_request(db, request_data):
+    """
+    Create a new credit request in the credit_requests collection.
+    
+    Args:
+        db: MongoDB database instance
+        request_data: Dictionary containing credit request information
+    
+    Returns:
+        str: ID of the created credit request
+    """
+    try:
+        required_fields = ['user_id', 'amount', 'payment_method', 'status', 'created_at']
+        if not all(field in request_data for field in required_fields):
+            raise ValueError(trans('credits_missing_request_fields', default='Missing required credit request fields'))
+        result = db.credit_requests.insert_one(request_data)
+        logger.info(f"{trans('credits_request_created', default='Created credit request with ID')}: {result.inserted_id}", 
+                   extra={'session_id': request_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('credits_request_creation_error', default='Error creating credit request')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': request_data.get('session_id', 'no-session-id')})
+        raise
+
+def update_credit_request(db, request_id, update_data):
+    """
+    Update a credit request in the credit_requests collection.
+    
+    Args:
+        db: MongoDB database instance
+        request_id: The ID of the credit request to update
+        update_data: Dictionary containing fields to update (e.g., status, admin_id)
+    
+    Returns:
+        bool: True if updated, False if not found or no changes made
+    """
+    try:
+        update_data['updated_at'] = datetime.utcnow()
+        result = db.credit_requests.update_one(
+            {'_id': ObjectId(request_id)},
+            {'$set': update_data}
+        )
+        if result.modified_count > 0:
+            logger.info(f"{trans('credits_request_updated', default='Updated credit request with ID')}: {request_id}", 
+                       extra={'session_id': 'no-session-id'})
+            return True
+        logger.info(f"{trans('credits_request_no_change', default='No changes made to credit request with ID')}: {request_id}", 
+                   extra={'session_id': 'no-session-id'})
+        return False
+    except Exception as e:
+        logger.error(f"{trans('credits_request_update_error', default='Error updating credit request with ID')} {request_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def get_credit_requests(db, filter_kwargs):
+    """
+    Retrieve credit request records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of credit request records
+    """
+    try:
+        return list(db.credit_requests.find(filter_kwargs).sort('created_at', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('credits_requests_fetch_error', default='Error getting credit requests')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def to_dict_credit_request(record):
+    """Convert credit request record to dictionary."""
+    if not record:
+        return {'user_id': None, 'amount': None, 'status': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'amount': record.get('amount', 0),
+        'payment_method': record.get('payment_method', ''),
+        'receipt_file_id': str(record.get('receipt_file_id', '')) if record.get('receipt_file_id') else None,
+        'status': record.get('status', ''),
+        'created_at': record.get('created_at'),
+        'updated_at': record.get('updated_at'),
+        'admin_id': record.get('admin_id')
+    }
 
 def get_agent(db, agent_id):
     """
@@ -1283,7 +1401,7 @@ def create_vat_rule(db, vat_rule_data):
             raise ValueError(trans('general_missing_vat_rule_fields', default='Missing required VAT rule fields'))
         result = db.vat_rules.insert_one(vat_rule_data)
         logger.info(f"{trans('general_vat_rule_created', default='Created VAT rule with ID')}: {result.inserted_id}", 
-                    extra={'session_id': vat_rule_data.get('session_id', 'no-session-id')})
+                   extra={'session_id': vat_rule_data.get('session_id', 'no-session-id')})
         return str(result.inserted_id)
     except DuplicateKeyError as e:
         logger.error(f"{trans('general_vat_rule_creation_error', default='Error creating VAT rule')}: {trans('general_duplicate_key_error', default='Duplicate category error')} - {str(e)}", 
@@ -1365,7 +1483,7 @@ def create_tax_deadline(db, deadline_data):
             raise ValueError(trans('general_missing_deadline_fields', default='Missing required tax deadline fields'))
         result = db.tax_deadlines.insert_one(deadline_data)
         logger.info(f"{trans('general_tax_deadline_created', default='Created tax deadline with ID')}: {result.inserted_id}", 
-                    extra={'session_id': deadline_data.get('session_id', 'no-session-id')})
+                   extra={'session_id': deadline_data.get('session_id', 'no-session-id')})
         return str(result.inserted_id)
     except Exception as e:
         logger.error(f"{trans('general_tax_deadline_creation_error', default='Error creating tax deadline')}: {str(e)}", 
@@ -1564,11 +1682,9 @@ def to_dict_payment_location(record):
 def to_dict_tax_reminder(record):
     """Convert tax reminder record to dictionary."""
     if not record:
-        return {'tax_type': None, 'amount': None}
-    return {
+        return {
         'id': str(record.get('_id', '')),
         'user_id': record.get('user_id', ''),
-        'session_id': record.get('session_id'),
         'tax_type': record.get('tax_type', ''),
         'due_date': record.get('due_date'),
         'amount': record.get('amount', 0),
@@ -1577,13 +1693,524 @@ def to_dict_tax_reminder(record):
         'updated_at': record.get('updated_at')
     }
 
-def to_dict_tax_deadline(record):
-    """Convert tax deadline record to dictionary."""
+def create_financial_health(db, health_data):
+    """
+    Create a new financial health record in the financial_health_scores collection.
+    
+    Args:
+        db: MongoDB database instance
+        health_data: Dictionary containing financial health information
+    
+    Returns:
+        str: ID of the created financial health record
+    """
+    try:
+        required_fields = ['user_id', 'score', 'status', 'created_at']
+        if not all(field in health_data for field in required_fields):
+            raise ValueError(trans('general_missing_health_fields', default='Missing required financial health fields'))
+        result = db.financial_health_scores.insert_one(health_data)
+        logger.info(f"{trans('general_financial_health_created', default='Created financial health record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': health_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_financial_health_creation_error', default='Error creating financial health record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': health_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_budget(db, budget_data):
+    """
+    Create a new budget record in the budgets collection.
+    
+    Args:
+        db: MongoDB database instance
+        budget_data: Dictionary containing budget information
+    
+    Returns:
+        str: ID of the created budget record
+    """
+    try:
+        required_fields = ['user_id', 'income', 'fixed_expenses', 'variable_expenses', 'created_at']
+        if not all(field in budget_data for field in required_fields):
+            raise ValueError(trans('general_missing_budget_fields', default='Missing required budget fields'))
+        result = db.budgets.insert_one(budget_data)
+        logger.info(f"{trans('general_budget_created', default='Created budget record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': budget_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_budget_creation_error', default='Error creating budget record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': budget_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_bill(db, bill_data):
+    """
+    Create a new bill record in the bills collection.
+    
+    Args:
+        db: MongoDB database instance
+        bill_data: Dictionary containing bill information
+    
+    Returns:
+        str: ID of the created bill record
+    """
+    try:
+        required_fields = ['user_id', 'bill_name', 'amount', 'due_date', 'status']
+        if not all(field in bill_data for field in required_fields):
+            raise ValueError(trans('general_missing_bill_fields', default='Missing required bill fields'))
+        result = db.bills.insert_one(bill_data)
+        logger.info(f"{trans('general_bill_created', default='Created bill record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': bill_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_bill_creation_error', default='Error creating bill record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': bill_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_net_worth(db, net_worth_data):
+    """
+    Create a new net worth record in the net_worth_data collection.
+    
+    Args:
+        db: MongoDB database instance
+        net_worth_data: Dictionary containing net worth information
+    
+    Returns:
+        str: ID of the created net worth record
+    """
+    try:
+        required_fields = ['user_id', 'total_assets', 'total_liabilities', 'net_worth', 'created_at']
+        if not all(field in net_worth_data for field in required_fields):
+            raise ValueError(trans('general_missing_net_worth_fields', default='Missing required net worth fields'))
+        result = db.net_worth_data.insert_one(net_worth_data)
+        logger.info(f"{trans('general_net_worth_created', default='Created net worth record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': net_worth_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_net_worth_creation_error', default='Error creating net worth record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': net_worth_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_emergency_fund(db, emergency_fund_data):
+    """
+    Create a new emergency fund record in the emergency_funds collection.
+    
+    Args:
+        db: MongoDB database instance
+        emergency_fund_data: Dictionary containing emergency fund information
+    
+    Returns:
+        str: ID of the created emergency fund record
+    """
+    try:
+        required_fields = ['user_id', 'monthly_expenses', 'current_savings', 'target_amount', 'created_at']
+        if not all(field in emergency_fund_data for field in required_fields):
+            raise ValueError(trans('general_missing_emergency_fund_fields', default='Missing required emergency fund fields'))
+        result = db.emergency_funds.insert_one(emergency_fund_data)
+        logger.info(f"{trans('general_emergency_fund_created', default='Created emergency fund record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': emergency_fund_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_emergency_fund_creation_error', default='Error creating emergency fund record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': emergency_fund_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_quiz_result(db, quiz_result_data):
+    """
+    Create a new quiz result record in the quiz_responses collection.
+    
+    Args:
+        db: MongoDB database instance
+        quiz_result_data: Dictionary containing quiz result information
+    
+    Returns:
+        str: ID of the created quiz result record
+    """
+    try:
+        required_fields = ['user_id', 'personality', 'score', 'created_at']
+        if not all(field in quiz_result_data for field in required_fields):
+            raise ValueError(trans('general_missing_quiz_result_fields', default='Missing required quiz result fields'))
+        result = db.quiz_responses.insert_one(quiz_result_data)
+        logger.info(f"{trans('general_quiz_result_created', default='Created quiz result record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': quiz_result_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_quiz_result_creation_error', default='Error creating quiz result record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': quiz_result_data.get('session_id', 'no-session-id')})
+        raise
+
+def create_bill_reminder(db, reminder_data):
+    """
+    Create a new bill reminder in the bill_reminders collection.
+    
+    Args:
+        db: MongoDB database instance
+        reminder_data: Dictionary containing bill reminder information
+    
+    Returns:
+        str: ID of the created bill reminder
+    """
+    try:
+        required_fields = ['user_id', 'notification_id', 'type', 'message', 'sent_at']
+        if not all(field in reminder_data for field in required_fields):
+            raise ValueError(trans('general_missing_bill_reminder_fields', default='Missing required bill reminder fields'))
+        result = db.bill_reminders.insert_one(reminder_data)
+        logger.info(f"{trans('general_bill_reminder_created', default='Created bill reminder with ID')}: {result.inserted_id}", 
+                   extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_bill_reminder_creation_error', default='Error creating bill reminder')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': reminder_data.get('session_id', 'no-session-id')})
+        raise
+
+def get_records(db, filter_kwargs):
+    """
+    Retrieve records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of records
+    """
+    try:
+        return list(db.records.find(filter_kwargs).sort('created_at', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_records_fetch_error', default='Error getting records')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def create_record(db, record_data):
+    """
+    Create a new record in the records collection.
+    
+    Args:
+        db: MongoDB database instance
+        record_data: Dictionary containing record information
+    
+    Returns:
+        str: ID of the created record
+    """
+    try:
+        required_fields = ['user_id', 'type', 'name', 'amount_owed']
+        if not all(field in record_data for field in required_fields):
+            raise ValueError(trans('general_missing_record_fields', default='Missing required record fields'))
+        result = db.records.insert_one(record_data)
+        logger.info(f"{trans('general_record_created', default='Created record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': record_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_record_creation_error', default='Error creating record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': record_data.get('session_id', 'no-session-id')})
+        raise
+
+def get_cashflows(db, filter_kwargs):
+    """
+    Retrieve cashflow records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of cashflow records
+    """
+    try:
+        return list(db.cashflows.find(filter_kwargs).sort('created_at', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_cashflows_fetch_error', default='Error getting cashflows')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def create_cashflow(db, cashflow_data):
+    """
+    Create a new cashflow record in the cashflows collection.
+    
+    Args:
+        db: MongoDB database instance
+        cashflow_data: Dictionary containing cashflow information
+    
+    Returns:
+        str: ID of the created cashflow record
+    """
+    try:
+        required_fields = ['user_id', 'type', 'party_name', 'amount']
+        if not all(field in cashflow_data for field in required_fields):
+            raise ValueError(trans('general_missing_cashflow_fields', default='Missing required cashflow fields'))
+        result = db.cashflows.insert_one(cashflow_data)
+        logger.info(f"{trans('general_cashflow_created', default='Created cashflow record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': cashflow_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_cashflow_creation_error', default='Error creating cashflow record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': cashflow_data.get('session_id', 'no-session-id')})
+        raise
+
+def get_inventory(db, filter_kwargs):
+    """
+    Retrieve inventory records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of inventory records
+    """
+    try:
+        return list(db.inventory.find(filter_kwargs).sort('created_at', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_inventory_fetch_error', default='Error getting inventory')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def create_inventory(db, inventory_data):
+    """
+    Create a new inventory record in the inventory collection.
+    
+    Args:
+        db: MongoDB database instance
+        inventory_data: Dictionary containing inventory information
+    
+    Returns:
+        str: ID of the created inventory record
+    """
+    try:
+        required_fields = ['user_id', 'item_name', 'qty', 'unit', 'buying_price', 'selling_price']
+        if not all(field in inventory_data for field in required_fields):
+            raise ValueError(trans('general_missing_inventory_fields', default='Missing required inventory fields'))
+        result = db.inventory.insert_one(inventory_data)
+        logger.info(f"{trans('general_inventory_created', default='Created inventory record with ID')}: {result.inserted_id}", 
+                   extra={'session_id': inventory_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_inventory_creation_error', default='Error creating inventory record')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': inventory_data.get('session_id', 'no-session-id')})
+        raise
+
+def get_ficore_credit_transactions(db, filter_kwargs):
+    """
+    Retrieve ficore credit transaction records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of ficore credit transaction records
+    """
+    try:
+        return list(db.ficore_credit_transactions.find(filter_kwargs).sort('date', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('credits_transactions_fetch_error', default='Error getting ficore credit transactions')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def create_ficore_credit_transaction(db, transaction_data):
+    """
+    Create a new ficore credit transaction in the ficore_credit_transactions collection.
+    
+    Args:
+        db: MongoDB database instance
+        transaction_data: Dictionary containing transaction information
+    
+    Returns:
+        str: ID of the created transaction
+    """
+    try:
+        required_fields = ['user_id', 'amount', 'type', 'date']
+        if not all(field in transaction_data for field in required_fields):
+            raise ValueError(trans('credits_missing_transaction_fields', default='Missing required ficore credit transaction fields'))
+        result = db.ficore_credit_transactions.insert_one(transaction_data)
+        logger.info(f"{trans('credits_transaction_created', default='Created ficore credit transaction with ID')}: {result.inserted_id}", 
+                   extra={'session_id': transaction_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('credits_transaction_creation_error', default='Error creating ficore credit transaction')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': transaction_data.get('session_id', 'no-session-id')})
+        raise
+
+def get_audit_logs(db, filter_kwargs):
+    """
+    Retrieve audit log records based on filter criteria.
+    
+    Args:
+        db: MongoDB database instance
+        filter_kwargs: Dictionary of filter criteria
+    
+    Returns:
+        list: List of audit log records
+    """
+    try:
+        return list(db.audit_logs.find(filter_kwargs).sort('timestamp', DESCENDING))
+    except Exception as e:
+        logger.error(f"{trans('general_audit_logs_fetch_error', default='Error getting audit logs')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def create_audit_log(db, audit_data):
+    """
+    Create a new audit log in the audit_logs collection.
+    
+    Args:
+        db: MongoDB database instance
+        audit_data: Dictionary containing audit log information
+    
+    Returns:
+        str: ID of the created audit log
+    """
+    try:
+        required_fields = ['admin_id', 'action', 'timestamp']
+        if not all(field in audit_data for field in required_fields):
+            raise ValueError(trans('general_missing_audit_fields', default='Missing required audit log fields'))
+        result = db.audit_logs.insert_one(audit_data)
+        logger.info(f"{trans('general_audit_log_created', default='Created audit log with ID')}: {result.inserted_id}", 
+                   extra={'session_id': audit_data.get('session_id', 'no-session-id')})
+        return str(result.inserted_id)
+    except Exception as e:
+        logger.error(f"{trans('general_audit_log_creation_error', default='Error creating audit log')}: {str(e)}", 
+                    exc_info=True, extra={'session_id': audit_data.get('session_id', 'no-session-id')})
+        raise
+
+def update_user(db, user_id, update_data):
+    """
+    Update a user in the users collection.
+    
+    Args:
+        db: MongoDB database instance
+        user_id: The ID of the user to update
+        update_data: Dictionary containing fields to update
+    
+    Returns:
+        bool: True if updated, False if not found or no changes made
+    """
+    try:
+        if 'password' in update_data:
+            update_data['password_hash'] = generate_password_hash(update_data.pop('password'))
+        result = db.users.update_one(
+            {'_id': user_id},
+            {'$set': update_data}
+        )
+        if result.modified_count > 0:
+            logger.info(f"{trans('general_user_updated', default='Updated user with ID')}: {user_id}", 
+                       extra={'session_id': 'no-session-id'})
+            get_user.cache_clear()
+            get_user_by_email.cache_clear()
+            return True
+        logger.info(f"{trans('general_user_no_change', default='No changes made to user with ID')}: {user_id}", 
+                   extra={'session_id': 'no-session-id'})
+        return False
+    except Exception as e:
+        logger.error(f"{trans('general_user_update_error', default='Error updating user with ID')} {user_id}: {str(e)}", 
+                    exc_info=True, extra={'session_id': 'no-session-id'})
+        raise
+
+def to_dict_record(record):
+    """Convert record to dictionary."""
     if not record:
-        return {'deadline_date': None, 'description': None}
+        return {'name': None, 'amount_owed': None}
     return {
         'id': str(record.get('_id', '')),
-        'deadline_date': record.get('deadline_date'),
+        'user_id': record.get('user_id', ''),
+        'type': record.get('type', ''),
+        'name': record.get('name', ''),
+        'contact': record.get('contact', ''),
+        'amount_owed': record.get('amount_owed', 0),
         'description': record.get('description', ''),
-        'created_at': record.get('created_at')
+        'reminder_count': record.get('reminder_count', 0),
+        'created_at': record.get('created_at'),
+        'updated_at': record.get('updated_at')
+    }
+
+def to_dict_cashflow(record):
+    """Convert cashflow record to dictionary."""
+    if not record:
+        return {'party_name': None, 'amount': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'type': record.get('type', ''),
+        'party_name': record.get('party_name', ''),
+        'amount': record.get('amount', 0),
+        'method': record.get('method', ''),
+        'category': record.get('category', ''),
+        'created_at': record.get('created_at'),
+        'updated_at': record.get('updated_at')
+    }
+
+def to_dict_inventory(record):
+    """Convert inventory record to dictionary."""
+    if not record:
+        return {'item_name': None, 'qty': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'item_name': record.get('item_name', ''),
+        'qty': record.get('qty', 0),
+        'unit': record.get('unit', ''),
+        'buying_price': record.get('buying_price', 0),
+        'selling_price': record.get('selling_price', 0),
+        'threshold': record.get('threshold', 0),
+        'created_at': record.get('created_at'),
+        'updated_at': record.get('updated_at')
+    }
+
+def to_dict_ficore_credit_transaction(record):
+    """Convert ficore credit transaction record to dictionary."""
+    if not record:
+        return {'amount': None, 'type': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'amount': record.get('amount', 0),
+        'type': record.get('type', ''),
+        'ref': record.get('ref', ''),
+        'date': record.get('date'),
+        'facilitated_by_agent': record.get('facilitated_by_agent', ''),
+        'payment_method': record.get('payment_method', ''),
+        'cash_amount': record.get('cash_amount', 0),
+        'notes': record.get('notes', '')
+    }
+
+def to_dict_audit_log(record):
+    """Convert audit log record to dictionary."""
+    if not record:
+        return {'action': None, 'timestamp': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'admin_id': record.get('admin_id', ''),
+        'action': record.get('action', ''),
+        'details': record.get('details', {}),
+        'timestamp': record.get('timestamp')
+    }
+
+def to_dict_user(user):
+    """Convert user object to dictionary."""
+    if not user:
+        return {'id': None, 'email': None}
+    return {
+        'id': user.id,
+        'email': user.email,
+        'username': user.username,
+        'role': user.role,
+        'display_name': user.display_name,
+        'is_admin': user.is_admin,
+        'setup_complete': user.setup_complete,
+        'coin_balance': user.coin_balance,
+        'ficore_credit_balance': user.ficore_credit_balance,
+        'language': user.language,
+        'dark_mode': user.dark_mode
+    }
+
+def to_dict_bill_reminder(record):
+    """Convert bill reminder record to dictionary."""
+    if not record:
+        return {'notification_id': None, 'message': None}
+    return {
+        'id': str(record.get('_id', '')),
+        'user_id': record.get('user_id', ''),
+        'notification_id': record.get('notification_id', ''),
+        'type': record.get('type', ''),
+        'message': record.get('message', ''),
+        'sent_at': record.get('sent_at'),
+        'read_status': record.get('read_status', False)
     }
