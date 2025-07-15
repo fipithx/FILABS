@@ -69,7 +69,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.monthly_income.id }}" class="form-label">{{ t('emergency_fund_monthly_income', default='Monthly Income (Optional)') }}</label>
-                                    {{ form.monthly_income(class="form-control number-input", placeholder=t('emergency_fund_monthly_income_placeholder', default='e.g., 50,000.00'), value=form.monthly_income.data or '') }}
+                                    {{ form.monthly_income(class  = "form-control number-input", placeholder=t('emergency_fund_monthly_income_placeholder', default='e.g., 50,000.00'), value=form.monthly_income.data or '') }}
                                     <div class="invalid-feedback">{{ t('emergency_fund_monthly_income_invalid', default='Please enter a valid number (e.g., 50000 or 50000.00)') }}</div>
                                     <small id="monthly_income_help" class="form-text text-muted">{{ t('emergency_fund_monthly_income_help', default='Enter amount without commas (e.g., 50000 or 50000.00)') }}</small>
                                 </div>
@@ -101,7 +101,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.risk_tolerance_level.id }}" class="form-label">{{ t('emergency_fund_risk_tolerance_level', default='Risk Level') }}</label>
-                                    {{ form.risk_tolerance_level(class="form-select") }}
+                                    {{ form.risk_tolerance_level(class="…form-select") }}
                                     <div class="invalid-feedback">{{ t('emergency_fund_risk_tolerance_required', default='Risk level is required') }}</div>
                                     <small id="risk_tolerance_level_help" class="form-text text-muted">{{ t('emergency_fund_risk_tolerance_level_example', default='Example: Choose "Low" if your job is not steady') }}</small>
                                 </div>
@@ -271,6 +271,17 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Translation map for help text
+    const helpTextTranslations = {
+        'monthly_expenses': "{{ t('emergency_fund_monthly_expenses_help', default='Enter amount without commas (e.g., 30000 or 30000.00)') | e }}",
+        'monthly_income': "{{ t('emergency_fund_monthly_income_help', default='Enter amount without commas (e.g., 50000 or 50000.00)') | e }}",
+        'current_savings': "{{ t('emergency_fund_current_savings_help', default='Enter amount without commas (e.g., 20000 or 20000.00)') | e }}",
+        'dependents': "{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') | e }}",
+        'dependents_max': "{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') | e }}",
+        'amount_exceed': "{{ t('emergency_fund_monthly_exceed', default='Amount must be between 0 and 10 billion') | e }}",
+        'amount_positive': "{{ t('emergency_fund_amount_positive', default='Amount must be positive') | e }}"
+    };
+
     // Number input validation and formatting with comma separation
     function formatNumberInput(input) {
         const isDependents = input.id === 'dependents';
@@ -283,9 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!value) {
                 input.value = '';
                 input.classList.remove('is-invalid');
-                document.getElementById(`${input.id}_help`).innerText = isDependents ? 
-                    "{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') | e }}" :
-                    "{{ t('emergency_fund_' + input.id + '_help', default='Enter amount without commas (e.g., 30000 or 30000.00)') | e }}";
+                document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['dependents'];
                 return;
             }
 
@@ -295,10 +304,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (numValue > 100) {
                     numValue = 100;
                     input.classList.add('is-invalid');
-                    document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') | e }}";
+                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') | e }}";
+                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents'];
                 }
                 input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
             } else {
@@ -315,14 +324,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (numericValue > 10000000000) {
                     numericValue = 10000000000;
                     input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_monthly_exceed', default='Amount must be between 0 and 10 billion') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_exceed'];
                 } else if (numericValue < 0) {
                     numericValue = 0;
                     input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_amount_positive', default='Amount must be positive') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_positive'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_' + input.id + '_help', default='Enter amount without commas (e.g., 30000 or 30000.00)') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['monthly_expenses'];
                 }
                 input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -350,10 +359,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (numValue > 100) {
                     numValue = 100;
                     input.classList.add('is-invalid');
-                    document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') | e }}";
+                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') | e }}";
+                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents'];
                 }
                 input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
             } else {
@@ -369,14 +378,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (numericValue > 10000000000) {
                     numericValue = 10000000000;
                     input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_monthly_exceed', default='Amount must be between 0 and 10 billion') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_exceed'];
                 } else if (numericValue < 0) {
                     numericValue = 0;
                     input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_amount_positive', default='Amount must be positive') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_positive'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_' + input.id + '_help', default='Enter amount without commas (e.g., 30000 or 30000.00)') | e }}";
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['monthly_expenses'];
                 }
                 input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
@@ -390,10 +399,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (numValue > 100) {
                         numValue = 100;
                         input.classList.add('is-invalid');
-                        document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_max', default='Number of dependents cannot exceed 100') | e }}";
+                        document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
                     } else {
                         input.classList.remove('is-invalid');
-                        document.getElementById('dependents_help').innerText = "{{ t('emergency_fund_dependents_example', default='Example: 3 for your two kids and one parent') | e }}";
+                        document.getElementById('dependents_help').innerText = helpTextTranslations['dependents'];
                     }
                     e.target.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
                 } else {
@@ -409,14 +418,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (numericValue > 10000000000) {
                         numericValue = 10000000000;
                         input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_monthly_exceed', default='Amount must be between 0 and 10 billion') | e }}";
+                        document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_exceed'];
                     } else if (numericValue < 0) {
                         numericValue = 0;
                         input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_amount_positive', default='Amount must be positive') | e }}";
+                        document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_positive'];
                     } else {
                         input.classList.remove('is-invalid');
-                        document.getElementById(`${input.id}_help`).innerText = "{{ t('emergency_fund_' + input.id + '_help', default='Enter amount without commas (e.g., 30000 or 30000.00)') | e }}";
+                        document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['monthly_expenses'];
                     }
                     e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
