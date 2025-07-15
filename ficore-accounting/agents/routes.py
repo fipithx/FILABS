@@ -38,13 +38,13 @@ class RegisterTraderForm(FlaskForm):
     ], validators=[validators.DataRequired()], render_kw={'class': 'form-select'})
     submit = SubmitField(trans('agents_register_trader', default='Register Trader'), render_kw={'class': 'btn btn-primary w-100'})
 
-class TokenManagementForm(FlaskForm):
+class CreditRequestForm(FlaskForm):
     trader_username = StringField(trans('agents_trader_username', default='Trader Username'), [
         validators.DataRequired(message=trans('agents_trader_username_required', default='Trader username is required'))
     ], render_kw={'class': 'form-control'})
-    token_amount = FloatField(trans('agents_token_amount', default='Token Amount (₦)'), [
-        validators.DataRequired(message=trans('agents_token_amount_required', default='Token amount is required')),
-        validators.NumberRange(min=100, message=trans('agents_minimum_token_amount', default='Minimum token amount is ₦100'))
+    credit_amount = FloatField(trans('agents_credit_amount', default='Credit Amount (FCs)'), [
+        validators.DataRequired(message=trans('agents_credit_amount_required', default='Credit amount is required')),
+        validators.NumberRange(min=1, message=trans('agents_minimum_credit_amount', default='Minimum credit amount is 1 FC'))
     ], render_kw={'class': 'form-control'})
     payment_method = SelectField(trans('general_payment_method', default='Payment Method'), choices=[
         ('cash', trans('general_cash', default='Cash')),
@@ -52,7 +52,7 @@ class TokenManagementForm(FlaskForm):
         ('mobile_money', trans('general_mobile_money', default='Mobile Money'))
     ], validators=[validators.DataRequired()], render_kw={'class': 'form-select'})
     notes = TextAreaField(trans('general_notes', default='Notes'), render_kw={'class': 'form-control', 'rows': 3})
-    submit = SubmitField(trans('agents_process_tokens', default='Process Tokens'), render_kw={'class': 'btn btn-success w-100'})
+    submit = SubmitField(trans('agents_submit_credit_request', default='Submit Credit Request'), render_kw={'class': 'btn btn-success w-100'})
 
 @agents_bp.route('/')
 @login_required
@@ -72,10 +72,10 @@ def agent_portal():
             'registered_by_agent': agent_id
         }) or 0
         
-        # Count token transactions facilitated today
-        tokens_today = db.coin_transactions.count_documents({
+        # Count credit requests facilitated today
+        credit_requests_today = db.credit_requests.count_documents({
             'facilitated_by_agent': agent_id,
-            'date': {'$gte': today}
+            'created_at': {'$gte': today}
         }) or 0
         
         # Get recent activities
@@ -97,7 +97,7 @@ def agent_portal():
         return render_template(
             'agents/portal.html',
             traders_registered=traders_registered,
-            tokens_today=tokens_today,
+            credit_requests_today=credit_requests_today,
             recent_activities=recent_activities,
             assisted_traders=assisted_traders,
             title=trans('agents_dashboard_title', default='Agent Dashboard', lang=session.get('lang', 'en'))
@@ -148,7 +148,7 @@ def register_trader():
                 'email': email,
                 'password': generate_password_hash(temp_password),
                 'role': 'trader',
-                'coin_balance': 20,  # Bonus for agent registration
+                'ficore_credit_balance': 20,  # Bonus for agent registration
                 'language': 'en',
                 'setup_complete': False,
                 'registered_by_agent': current_user.id,
@@ -188,7 +188,7 @@ def register_trader():
             })
             
             # Credit signup bonus
-            db.coin_transactions.insert_one({
+            db.ficore_credit_transactions.insert_one({
                 'user_id': username,
                 'amount': 20,
                 'type': 'credit',
@@ -201,7 +201,6 @@ def register_trader():
             # TODO: Implement SMS/Email service to send temp_password to trader
             # Example: send_email(to=email, subject="Your Account Credentials", body=f"Username: {username}\nPassword: {temp_password}")
             
-            # Modified flash message
             try:
                 flash(
                     trans(
@@ -234,17 +233,17 @@ def register_trader():
         title=trans('agents_register_trader_title', default='Register Trader', lang=session.get('lang', 'en'))
     )
 
-@agents_bp.route('/manage_tokens', methods=['GET', 'POST'])
+@agents_bp.route('/manage_credits', methods=['GET', 'POST'])
 @login_required
 @utils.requires_role('agent')
-def manage_tokens():
-    """Facilitate token purchases for traders."""
-    form = TokenManagementForm()
+def manage_credits():
+    """Facilitate Ficore Credit requests for traders."""
+    form = CreditRequestForm()
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
             trader_username = form.trader_username.data.strip().lower()
-            amount = form.token_amount.data
+            amount = form.credit_amount.data
             
             # Verify trader exists
             trader = db.users.find_one({'_id': trader_username, 'role': 'trader'})
@@ -253,63 +252,53 @@ def manage_tokens():
                 return render_template(
                     'agents/portal.html',
                     form=form,
-                    title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
+                    title=trans('agents_manage_credits_title', default='Manage Credits', lang=session.get('lang', 'en'))
                 )
             
-            # Calculate coins (₦50 = 1 coin)
-            coins = int(amount / 50)
-            
-            # Credit coins to trader
-            db.users.update_one(
-                {'_id': trader_username},
-                {'$inc': {'coin_balance': coins}}
-            )
-            
-            # Record transaction
-            ref = f"AGENT_FACILITATED_{datetime.utcnow().isoformat()}"
-            db.coin_transactions.insert_one({
+            # Create credit request
+            request_id = str(ObjectId())
+            db.credit_requests.insert_one({
+                '_id': ObjectId(request_id),
                 'user_id': trader_username,
-                'amount': coins,
-                'type': 'purchase',
-                'ref': ref,
-                'facilitated_by_agent': current_user.id,
+                'amount': amount,
                 'payment_method': form.payment_method.data,
-                'cash_amount': amount,
                 'notes': form.notes.data.strip() if form.notes.data else '',
-                'date': datetime.utcnow()
+                'status': 'pending',
+                'facilitated_by_agent': current_user.id,
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
             })
             
             # Log agent activity
             db.agent_activities.insert_one({
                 'agent_id': current_user.id,
-                'activity_type': 'token_facilitation',
+                'activity_type': 'credit_request',
                 'trader_id': trader_username,
                 'details': {
                     'amount': amount,
-                    'coins': coins,
                     'payment_method': form.payment_method.data,
                     'business_name': trader.get('business_details', {}).get('name', 'N/A')
                 },
                 'timestamp': datetime.utcnow()
             })
             
-            flash(trans('agents_tokens_processed_success', default=f'Successfully credited {coins} coins to {trader_username}'), 'success')
-            logger.info(f"Agent {current_user.id} facilitated {coins} coins for trader {trader_username} at {datetime.utcnow()}")
+            flash(trans('agents_credit_request_submitted', default=f'Credit request for {amount} FCs submitted for {trader_username}'), 'success')
+            logger.info(f"Agent {current_user.id} submitted credit request for {amount} FCs for trader {trader_username} at {datetime.utcnow()}")
             return redirect(url_for('agents_bp.agent_portal'))
             
         except Exception as e:
-            logger.error(f"Error processing tokens by agent {current_user.id}: {str(e)}")
-            flash(trans('agents_token_processing_error', default='An error occurred while processing tokens'), 'danger')
+            logger.error(f"Error submitting credit request by agent {current_user.id}: {str(e)}")
+            flash(trans('agents_credit_request_error', default='An error occurred while submitting the credit request'), 'danger')
             return render_template(
                 'agents/portal.html',
                 form=form,
-                title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
+                title=trans('agents_manage_credits_title', default='Manage Credits', lang=session.get('lang', 'en'))
             )
     
     return render_template(
         'agents/portal.html',
         form=form,
-        title=trans('agents_manage_tokens_title', default='Manage Tokens', lang=session.get('lang', 'en'))
+        title=trans('agents_manage_credits_title', default='Manage Credits', lang=session.get('lang', 'en'))
     )
 
 @agents_bp.route('/assist_trader_records/<trader_id>')
@@ -510,13 +499,10 @@ def recent_activity():
             'registered_by_agent': agent_id
         }) or 0
         
-        # Get total tokens facilitated
-        total_tokens_amount = db.coin_transactions.aggregate([
-            {'$match': {'facilitated_by_agent': agent_id}},
-            {'$group': {'_id': None, 'total': {'$sum': '$cash_amount'}}}
-        ])
-        total_tokens_amount = list(total_tokens_amount)
-        total_tokens_amount = total_tokens_amount[0]['total'] if total_tokens_amount else 0
+        # Get total credit requests facilitated
+        total_credit_requests = db.credit_requests.count_documents({
+            'facilitated_by_agent': agent_id
+        }) or 0
         
         # Get recent activities
         activities = list(db.agent_activities.find({
@@ -536,7 +522,7 @@ def recent_activity():
         return render_template(
             'agents/portal.html',
             total_traders_registered=total_traders_registered,
-            total_tokens_amount=total_tokens_amount,
+            total_credit_requests=total_credit_requests,
             activities=activities,
             performance_rating=performance_rating,
             title=trans('agents_my_activity_title', default='My Activity', lang=session.get('lang', 'en'))
