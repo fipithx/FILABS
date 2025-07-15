@@ -35,11 +35,13 @@ def clean_currency(value):
             return '0'
         try:
             float_value = float(value)
+            if float_value > 1e308:
+                raise ValueError("Value exceeds maximum float limit")
             current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
             return str(float_value)
         except ValueError as e:
             current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            return '0'
+            raise ValidationError(trans('budget_number_invalid', default='Invalid number format'))
     return str(float(value))
 
 def strip_commas(value):
@@ -78,65 +80,112 @@ class CommaSeparatedIntegerField(IntegerField):
         if valuelist:
             try:
                 cleaned_value = clean_currency(valuelist[0])
-                self.data = int(cleaned_value) if cleaned_value else None
+                self.data = int(float(cleaned_value)) if cleaned_value else None
             except (ValueError, TypeError):
                 self.data = None
-                raise ValidationError(self.gettext('Not a valid integer'))
+                raise ValidationError(trans('budget_dependents_invalid', default='Not a valid integer'))
 
 class BudgetForm(FlaskForm):
     income = FloatField(
         trans('budget_monthly_income', default='Monthly Income'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_income_required', default='Income is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_income_max', default='Income must be between 0 and 10 billion'))
+        ]
     )
     housing = FloatField(
         trans('budget_housing_rent', default='Housing/Rent'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_housing_required', default='Housing cost is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     food = FloatField(
         trans('budget_food', default='Food'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_food_required', default='Food cost is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     transport = FloatField(
         trans('budget_transport', default='Transport'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_transport_required', default='Transport cost is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     dependents = CommaSeparatedIntegerField(
-        trans('budget_dependents_support', default='Dependents Support')
+        trans('budget_dependents_support', default='Dependents Support'),
+        validators=[
+            DataRequired(message=trans('budget_dependents_required', default='Number of dependents is required')),
+            NumberRange(min=0, max=100, message=trans('budget_dependents_max', default='Number of dependents cannot exceed 100'))
+        ]
     )
     miscellaneous = FloatField(
         trans('budget_miscellaneous', default='Miscellaneous'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_miscellaneous_required', default='Miscellaneous cost is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     others = FloatField(
         trans('budget_others', default='Others'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_others_required', default='Other expenses are required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     savings_goal = FloatField(
         trans('budget_savings_goal', default='Savings Goal'),
-        filters=[strip_commas]
+        filters=[strip_commas],
+        validators=[
+            DataRequired(message=trans('budget_savings_goal_required', default='Savings goal is required')),
+            NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', default='Amount must be between 0 and 10 billion'))
+        ]
     )
     submit = SubmitField(trans('budget_submit', default='Submit'))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         lang = session.get('lang', 'en')
-        self.income.validators = [
-            DataRequired(message=trans('budget_income_required', lang)),
-            NumberRange(min=0, max=10000000000, message=trans('budget_income_max', lang))
-        ]
-        for field in [self.housing, self.food, self.transport, self.miscellaneous, self.others, self.savings_goal]:
-            field.validators = [
-                DataRequired(message=trans(f'budget_{field.name}_required', lang)),
-                NumberRange(min=0, max=10000000000, message=trans('budget_amount_max', lang))
-            ]
-        self.dependents.validators = [
-            DataRequired(message=trans('budget_dependents_required', lang)),
-            NumberRange(min=0, max=100, message=trans('budget_dependents_max', lang))
-        ]
+        self.income.label.text = trans('budget_monthly_income', lang) or 'Monthly Income'
+        self.housing.label.text = trans('budget_housing_rent', lang) or 'Housing/Rent'
+        self.food.label.text = trans('budget_food', lang) or 'Food'
+        self.transport.label.text = trans('budget_transport', lang) or 'Transport'
+        self.dependents.label.text = trans('budget_dependents_support', lang) or 'Dependents Support'
+        self.miscellaneous.label.text = trans('budget_miscellaneous', lang) or 'Miscellaneous'
+        self.others.label.text = trans('budget_others', lang) or 'Others'
+        self.savings_goal.label.text = trans('budget_savings_goal', lang) or 'Savings Goal'
+        self.submit.label.text = trans('budget_submit', lang) or 'Submit'
 
     def validate(self, extra_validators=None):
-        """Rely on WTForms validators and filters for validation."""
-        return super().validate(extra_validators)
+        """Custom validation for all float fields to ensure proper number format."""
+        if not super().validate(extra_validators):
+            return False
+        for field in [self.income, self.housing, self.food, self.transport, self.miscellaneous, self.others, self.savings_goal]:
+            try:
+                if isinstance(field.data, str):
+                    field.data = float(strip_commas(field.data))
+                current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
+            except ValueError as e:
+                current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
+                field.errors.append(trans(f'budget_{field.name}_invalid', session.get('lang', 'en')) or f'Invalid {field.label.text} format')
+                return False
+        try:
+            if isinstance(self.dependents.data, str):
+                self.dependents.data = int(float(strip_commas(self.dependents.data)))
+            current_app.logger.debug(f"Validated dependents for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid dependents value for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
+            self.dependents.errors.append(trans('budget_dependents_invalid', session.get('lang', 'en')) or 'Invalid dependents format')
+            return False
+        return True
 
 @budget_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
@@ -292,7 +341,7 @@ def main():
                         current_app.logger.info(f"Deleted budget ID {budget_id} for session {session['sid']}", extra={'session_id': session['sid']})
                         flash(trans("budget_deleted_success", default='Budget deleted successfully!'), "success")
                     else:
-                        current_app.logger.warning(f"Budget ID {budget_id} not found for session {session['sid']}", extra={'session_id': session['sid']})
+                        current_app.logger.warning(f"Budget ID {budget_id} not found for session {session['sid']}", extra={'session_id': session.get('sid')})
                         flash(trans("budget_not_found", default='Budget not found.'), "danger")
                 except Exception as e:
                     current_app.logger.error(f"Failed to delete budget ID {budget_id} for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
