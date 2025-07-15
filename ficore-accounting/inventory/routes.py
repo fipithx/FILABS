@@ -96,9 +96,9 @@ def low_stock():
 def add():
     """Add a new inventory item."""
     form = InventoryForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('inventory_insufficient_coins', default='Insufficient coins to add an item. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to add an item. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
@@ -117,14 +117,14 @@ def add():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
                     user_query,
-                    {'$inc': {'coin_balance': -1}}
+                    {'$inc': {'ficore_credit_balance': -1}}
                 )
-                db.coin_transactions.insert_one({
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': f"Inventory item creation: {item['item_name']}"
+                    'ref': f"Inventory item creation: {item['item_name']} (Ficore Credits)"
                 })
             flash(trans('inventory_add_success', default='Inventory item added successfully'), 'success')
             return redirect(url_for('inventory.index'))
@@ -255,14 +255,14 @@ def add_stock(id):
                     user_query = utils.get_user_query(str(current_user.id))
                     db.users.update_one(
                         user_query,
-                        {'$inc': {'coin_balance': -1}}
+                        {'$inc': {'ficore_credit_balance': -1}}
                     )
-                    db.coin_transactions.insert_one({
+                    db.credit_transactions.insert_one({
                         'user_id': str(current_user.id),
                         'amount': -1,
                         'type': 'spend',
                         'date': datetime.utcnow(),
-                        'ref': f"Added stock to inventory item: {item['item_name']}"
+                        'ref': f"Added stock to inventory item: {item['item_name']} (Ficore Credits)"
                     })
                 flash(trans('inventory_add_stock_success', default='Stock added successfully'), 'success')
                 return redirect(url_for('inventory.manage'))
@@ -318,14 +318,14 @@ def remove_stock(id):
                     user_query = utils.get_user_query(str(current_user.id))
                     db.users.update_one(
                         user_query,
-                        {'$inc': {'coin_balance': -1}}
+                        {'$inc': {'ficore_credit_balance': -1}}
                     )
-                    db.coin_transactions.insert_one({
+                    db.credit_transactions.insert_one({
                         'user_id': str(current_user.id),
                         'amount': -1,
                         'type': 'spend',
                         'date': datetime.utcnow(),
-                        'ref': f"Removed stock from inventory item: {item['item_name']}"
+                        'ref': f"Removed stock from inventory item: {item['item_name']} (Ficore Credits)"
                     })
                 flash(trans('inventory_remove_stock_success', default='Stock removed successfully'), 'success')
                 return redirect(url_for('inventory.manage'))
