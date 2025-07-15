@@ -810,35 +810,32 @@ img {
         padding: 20px;
     }
 }
-.gamification {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px; /* Space between image and text */
-    padding: 20px;
-    background-color: #f9f9f9; /* Light background for contrast */
-    border-radius: 10px; /* Rounded corners for a modern look */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-    max-width: 400px; /* Limit width for better control */
-    margin: 20px auto; /* Center the div with margin */
-    transition: transform 0.2s ease-in-out; /* Smooth hover effect */
-}
-
-.gamification:hover {
-    transform: scale(1.05); /* Slight zoom on hover for interactivity */
-}
 
 .gamification img {
-    width: 50px; /* Adjust coin image size */
-    height: 50px;
-    object-fit: contain; /* Ensure image scales properly */
+    width: 50px;
+    height: auto;
+    max-height: 50px;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
-.gamification p {
-    font-size:
 @media (max-width: 600px) {
     .gamification {
-        flex-direction: column; /* Stack image and text on small screens */
+        flex-direction: column;
         text-align: center;
     }
+
+    .gamification img {
+        width: 40px;
+        max-height: 40px;
+    }
+
+    .gamification p {
+        font-size: 0.9rem;
+    }
+}
+
+img {
+    max-width: 100%;
+    height: auto;
 }
