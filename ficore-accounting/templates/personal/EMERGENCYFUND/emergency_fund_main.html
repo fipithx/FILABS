@@ -69,7 +69,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.monthly_income.id }}" class="form-label">{{ t('emergency_fund_monthly_income', default='Monthly Income (Optional)') }}</label>
-                                    {{ form.monthly_income(class  = "form-control number-input", placeholder=t('emergency_fund_monthly_income_placeholder', default='e.g., 50,000.00'), value=form.monthly_income.data or '') }}
+                                    {{ form.monthly_income(class="form-control number-input", placeholder=t('emergency_fund_monthly_income_placeholder', default='e.g., 50,000.00'), value=form.monthly_income.data or '') }}
                                     <div class="invalid-feedback">{{ t('emergency_fund_monthly_income_invalid', default='Please enter a valid number (e.g., 50000 or 50000.00)') }}</div>
                                     <small id="monthly_income_help" class="form-text text-muted">{{ t('emergency_fund_monthly_income_help', default='Enter amount without commas (e.g., 50000 or 50000.00)') }}</small>
                                 </div>
@@ -101,7 +101,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.risk_tolerance_level.id }}" class="form-label">{{ t('emergency_fund_risk_tolerance_level', default='Risk Level') }}</label>
-                                    {{ form.risk_tolerance_level(class="…form-select") }}
+                                    {{ form.risk_tolerance_level(class="form-select") }}
                                     <div class="invalid-feedback">{{ t('emergency_fund_risk_tolerance_required', default='Risk level is required') }}</div>
                                     <small id="risk_tolerance_level_help" class="form-text text-muted">{{ t('emergency_fund_risk_tolerance_level_example', default='Example: Choose "Low" if your job is not steady') }}</small>
                                 </div>
@@ -282,9 +282,18 @@ document.addEventListener('DOMContentLoaded', function() {
         'amount_positive': "{{ t('emergency_fund_amount_positive', default='Amount must be positive') | e }}"
     };
 
+    // Store original values for restoration
+    const originalValues = {};
+
     // Number input validation and formatting with comma separation
     function formatNumberInput(input) {
         const isDependents = input.id === 'dependents';
+        
+        // Store original value on focus
+        input.addEventListener('focus', function() {
+            originalValues[input.id] = input.value;
+        });
+
         input.addEventListener('input', function(e) {
             let cursor = input.selectionStart;
             let oldLength = input.value.length;
@@ -436,9 +445,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Apply formatting to all number inputs
     document.querySelectorAll('.number-input').forEach(formatNumberInput);
 
-    // Clean inputs before form submission
-    document.querySelectorAll('#emergencyFundForm').forEach(form => {
+    // Enhanced form submission with better error handling
+    const form = document.getElementById('emergencyFundForm');
+    if (form) {
         form.addEventListener('submit', function(e) {
+            // Check CSRF token
             const csrfToken = form.querySelector('input[name="csrf_token"]');
             if (!csrfToken || !csrfToken.value) {
                 e.preventDefault();
@@ -452,13 +463,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            form.querySelectorAll('.number-input').forEach(input => {
+            // Clean and validate numeric inputs before submission
+            const numberInputs = form.querySelectorAll('.number-input');
+            let hasError = false;
+
+            numberInputs.forEach(input => {
                 if (input.value) {
-                    input.value = input.value.replace(/,/g, '');
+                    // Remove commas and validate
+                    const cleanValue = input.value.replace(/,/g, '');
+                    const numValue = parseFloat(cleanValue);
+                    
+                    // Check if it's a valid number
+                    if (isNaN(numValue)) {
+                        hasError = true;
+                        input.classList.add('is-invalid');
+                        return;
+                    }
+                    
+                    // Store clean value for submission
+                    input.setAttribute('data-clean-value', cleanValue);
+                    
+                    // Temporarily set clean value for form submission
+                    const originalValue = input.value;
+                    input.value = cleanValue;
+                    
+                    // Restore formatted value after a brief delay
+                    setTimeout(() => {
+                        input.value = originalValue;
+                    }, 100);
+                } else if (input.hasAttribute('required')) {
+                    hasError = true;
+                    input.classList.add('is-invalid');
                 }
             });
+
+            if (hasError) {
+                e.preventDefault();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+                errorDiv.innerHTML = `
+                    {{ t('emergency_fund_validation_error', default='Please correct the errors in the form before submitting.') | e }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                `;
+                form.prepend(errorDiv);
+                return;
+            }
+
+            // Show loading state
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ t('emergency_fund_calculating', default='Calculating...') | e }}';
+            }
         });
-    });
+    }
 
     // Tab persistence with sessionStorage
     const validTabs = ['create-plan', 'dashboard'];
