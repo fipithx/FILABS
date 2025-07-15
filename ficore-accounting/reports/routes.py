@@ -175,9 +175,9 @@ def index():
 def profit_loss():
     """Generate profit/loss report with filters."""
     form = ReportForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('reports_insufficient_coins', default='Insufficient coins to generate a report. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate a report. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     cashflows = []
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
@@ -199,14 +199,14 @@ def profit_loss():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
                     user_query,
-                    {'$inc': {'coin_balance': -1}}
+                    {'$inc': {'ficore_credit_balance': -1}}
                 )
-                db.coin_transactions.insert_one({
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': 'Profit/Loss report generation'
+                    'ref': 'Profit/Loss report generation (Ficore Credits)'
                 })
         except Exception as e:
             logger.error(f"Error generating profit/loss report for user {current_user.id}: {str(e)}")
@@ -227,9 +227,9 @@ def profit_loss():
 def inventory():
     """Generate inventory report with filters."""
     form = InventoryReportForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('reports_insufficient_coins', default='Insufficient coins to generate a report. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate a report. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     items = []
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
@@ -244,17 +244,17 @@ def inventory():
             elif output_format == 'csv':
                 return generate_inventory_csv(items)
             if not utils.is_admin():
-                user_query = utils.get_user_query(str(current_user.id))
+                user_query = utils.get_user_query(str('current_user.id'))
                 db.users.update_one(
                     user_query,
-                    {'$inc': {'coin_balance': -1}}
+                    {'$inc': {'ficore_credit_balance': -1}}
                 )
-                db.coin_transactions.insert_one({
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': 'Inventory report generation'
+                    'ref': 'Inventory report generation (Ficore Credits)'
                 })
         except Exception as e:
             logger.error(f"Error generating inventory report for user {current_user.id}: {str(e)}")
@@ -383,7 +383,7 @@ def customer_reports():
                     'username': user['_id'],
                     'email': user.get('email', ''),
                     'role': user.get('role', ''),
-                    'coin_balance': user.get('coin_balance', 0),
+                    'ficore_credit_balance': user.get('ficore_credit_balance', 0),
                     'language': user.get('language', 'en'),
                     'financial_health_score': financial_health['score'] if financial_health['score'] is not None else '-',
                     'financial_health_status': financial_health['status'] if financial_health['status'] is not None else '-',
@@ -411,7 +411,7 @@ def customer_reports():
                 report_data.append(data)
 
             if report_format == 'html':
-                return render_template('reports/customer_reports.html', report_data=report_data, title='Customer Reports')
+                return render_template('reports/customer_reports.html', report_data=report_data, title=' Facore Credits')
             elif report_format == 'pdf':
                 return generate_customer_report_pdf(report_data)
             elif report_format == 'csv':
@@ -528,11 +528,11 @@ def generate_customer_report_pdf(report_data):
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=A4)
     p.setFont("Helvetica", 8)
-    p.drawString(0.5 * inch, 10.5 * inch, "Customer Report")
-    p.drawString(0.5 * inch, 10.2 * inch, f"Generated on: {utils.format_date(datetime.utcnow())}")
+    p.drawString(0.5 * inch, 10.5 * inch, trans('reports_customer_report', default='Customer Report'))
+    p.drawString(0.5 * inch, 10.2 * inch, f"{trans('reports_generated_on', default='Generated on')}: {utils.format_date(datetime.utcnow())}")
     y = 9.5 * inch
     headers = [
-        'Username', 'Email', 'Role', 'Coins', 'Lang', 'FH Score', 'FH Status', 'DTI', 'Savings',
+        'Username', 'Email', 'Role', 'Credits', 'Lang', 'FH Score', 'FH Status', 'DTI', 'Savings',
         'Income', 'Fixed Exp', 'Var Exp', 'Surplus', 'Pending Bills', 'Paid Bills', 'Overdue Bills',
         'Net Worth', 'Assets', 'Liabs', 'EF Target', 'EF Savings', 'EF Gap', 'Lessons', 'Quiz Pers', 'Quiz Score',
         'Tax Due', 'Tax Amt'
@@ -543,7 +543,7 @@ def generate_customer_report_pdf(report_data):
     y -= 0.2 * inch
     for data in report_data:
         values = [
-            data['username'], data['email'], data['role'], str(data['coin_balance']), data['language'],
+            data['username'], data['email'], data['role'], str(data['ficore_credit_balance']), data['language'],
             str(data['financial_health_score']), data['financial_health_status'], str(data['debt_to_income']), str(data['savings_rate']),
             str(data['budget_income']), str(data['budget_fixed_expenses']), str(data['budget_variable_expenses']), str(data['budget_surplus_deficit']),
             str(data['pending_bills']), str(data['paid_bills']), str(data['overdue_bills']),
@@ -566,7 +566,7 @@ def generate_customer_report_pdf(report_data):
 def generate_customer_report_csv(report_data):
     output = []
     headers = [
-        'Username', 'Email', 'Role', 'Coin Balance', 'Language',
+        'Username', 'Email', 'Role', 'Ficore Credit Balance', 'Language',
         'Financial Health Score', 'Financial Health Status', 'Debt-to-Income', 'Savings Rate',
         'Budget Income', 'Budget Fixed Expenses', 'Budget Variable Expenses', 'Budget Surplus/Deficit',
         'Pending Bills', 'Paid Bills', 'Overdue Bills',
@@ -578,7 +578,7 @@ def generate_customer_report_csv(report_data):
     output.append(headers)
     for data in report_data:
         row = [
-            data['username'], data['email'], data['role'], data['coin_balance'], data['language'],
+            data['username'], data['email'], data['role'], data['ficore_credit_balance'], data['language'],
             data['financial_health_score'], data['financial_health_status'], data['debt_to_income'], data['savings_rate'],
             data['budget_income'], data['budget_fixed_expenses'], data['budget_variable_expenses'], data['budget_surplus_deficit'],
             data['pending_bills'], data['paid_bills'], data['overdue_bills'],
