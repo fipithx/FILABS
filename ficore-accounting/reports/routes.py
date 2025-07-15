@@ -177,7 +177,7 @@ def profit_loss():
     form = ReportForm()
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate a report. Request more credits.'), 'danger')
-        return redirect(url_for('credits.request'))
+        return redirect(url_for('credits.request_credits'))
     cashflows = []
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
@@ -229,7 +229,7 @@ def inventory():
     form = InventoryReportForm()
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate a report. Request more credits.'), 'danger')
-        return redirect(url_for('credits.request'))
+        return redirect(url_for('credits.request_credits'))
     items = []
     query = {} if utils.is_admin() else {'user_id': str(current_user.id)}
     if form.validate_on_submit():
