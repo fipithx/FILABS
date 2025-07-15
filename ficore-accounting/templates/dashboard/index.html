@@ -210,7 +210,7 @@
                 <a href="{{ url_for('payments.add') }}" class="btn btn-primary">{{ t('payments_add_money_out', default='Add Money Out') }}</a>
                 <a href="{{ url_for('receipts.add') }}" class="btn btn-primary">{{ t('receipts_add_money_in', default='Add Money In') }}</a>
                 <a href="{{ url_for('inventory.add') }}" class="btn btn-primary">{{ t('inventory_add_goods_stock', default='Add Goods & Stock') }}</a>
-                <a href="{{ url_for('credits.add') }}" class="btn btn-success">{{ t('credits_add_credits', default='Add Ficore Credits') }}</a>
+                <a href="{{ url_for('credits.request') }}" class="btn btn-success">{{ t('credits_add_credits', default='Add Ficore Credits') }}</a>
                 {% if current_user.role == 'admin' %}
                     <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning">{{ t('admin_dashboard', default='Admin Dashboard') }}</a>
                 {% endif %}
