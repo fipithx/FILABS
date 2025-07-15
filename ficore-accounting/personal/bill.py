@@ -13,7 +13,7 @@ from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_
 from session_utils import create_anonymous_session
 import re
 
-bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL', url_prefix=None)
+bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL', url_prefix='/bill')
 
 csrf = CSRFProtect()
 
