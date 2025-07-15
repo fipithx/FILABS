@@ -293,7 +293,7 @@ def receipt_upload():
     form = ReceiptUploadForm()
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('credits_insufficient_credits', default='Insufficient Ficore Credits to upload receipt. Get more Ficore Credits.'), 'danger')
-        return redirect(url_for('credits.request'))
+        return redirect(url_for('credits.request_credits'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
