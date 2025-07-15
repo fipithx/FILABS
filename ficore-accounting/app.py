@@ -20,8 +20,7 @@ from models import (
     get_net_worth, get_emergency_funds, get_quiz_results, get_tax_rates, get_payment_locations,
     get_tax_reminders, get_vat_rules, get_tax_deadlines, to_dict_financial_health, to_dict_budget,
     to_dict_bill, to_dict_net_worth, to_dict_emergency_fund, to_dict_quiz_result, to_dict_tax_rate,
-    to_dict_payment_location, to_dict_tax_reminder, to_dict_vat_rule, to_dict_tax_deadline,
-    initialize_app_data
+    to_dict_payment_location, to_dict_tax_reminder, to_dict_vat_rule, initialize_app_data
 )
 from learning_hub.models import get_progress, to_dict_learning_progress
 import utils
