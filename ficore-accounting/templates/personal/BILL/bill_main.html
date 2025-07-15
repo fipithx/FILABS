@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}
-{{ t('bill_bill_planner', default='Bill Planner') }}
+{{ trans('bill_bill_planner', default='Bill Planner') }}
 {% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
     <!-- Tool Header -->
     {% set tool_name = 'bill_bill_planner' %}
     {% set tool_icon = 'fa-file-invoice' %}
-    {% set subtitle = t('bill_manage_track_bills', default='Manage and track all your bills in one place') %}
+    {% set subtitle = trans('bill_manage_track_bills', default='Manage and track all your bills in one place') %}
     {% include 'personal/GENERAL/tool_header.html' %}
 
     <!-- Flashed Messages -->
@@ -16,40 +16,28 @@
         {% if messages %}
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ t(message, default=message) | safe }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
+                    {{ trans(message, default=message) | safe }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ trans('general_close', default='Close') }}"></button>
                 </div>
             {% endfor %}
         {% endif %}
     {% endwith %}
 
-    <!-- Display form errors only after POST -->
-    {% if form.errors and request.method == 'POST' %}
-        {% for field, errors in form.errors.items() %}
-            {% for error in errors %}
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    {{ t(error, default=error) | safe }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
-                </div>
-            {% endfor %}
-        {% endfor %}
-    {% endif %}
-
     <!-- Navigation Tabs -->
     <ul class="nav nav-tabs mb-4" id="billTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ 'active' if active_tab == 'add-bill' else '' }}" id="add-bill-tab" data-bs-toggle="tab" data-bs-target="#add-bill" type="button" role="tab" aria-controls="add-bill" aria-selected="{{ 'true' if active_tab == 'add-bill' else 'false' }}">
-                <i class="fas fa-plus"></i> {{ t('bill_add_bill', default='Add Bill') }}
+                <i class="fas fa-plus"></i> {{ trans('bill_add_bill', default='Add Bill') }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ 'active' if active_tab == 'manage-bills' else '' }}" id="manage-bills-tab" data-bs-toggle="tab" data-bs-target="#manage-bills" type="button" role="tab" aria-controls="manage-bills" aria-selected="{{ 'true' if active_tab == 'manage-bills' else 'false' }}">
-                <i class="fas fa-list"></i> {{ t('bill_manage_bills', default='Manage Bills') }}
+                <i class="fas fa-list"></i> {{ trans('bill_manage_bills', default='Manage Bills') }}
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link {{ 'active' if active_tab == 'dashboard' else '' }}" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="{{ 'true' if active_tab == 'dashboard' else 'false' }}">
-                <i class="fas fa-tachometer-alt"></i> {{ t('bill_dashboard', default='Dashboard') }}
+                <i class="fas fa-tachometer-alt"></i> {{ trans('bill_dashboard', default='Dashboard') }}
             </button>
         </li>
     </ul>
@@ -60,7 +48,7 @@
         <div class="tab-pane fade {{ 'show active' if active_tab == 'add-bill' else '' }}" id="add-bill" role="tabpanel" aria-labelledby="add-bill-tab">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-plus-circle"></i> {{ t('bill_add_new_bill', default='Add New Bill') }}</h5>
+                    <h5><i class="fas fa-plus-circle"></i> {{ trans('bill_add_new_bill', default='Add New Bill') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('personal.bill.main') }}" id="addBillForm" class="validate-form">
@@ -71,17 +59,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.bill_name.id }}" class="form-label">{{ t('bill_bill_name', default='Bill Name') }}</label>
-                                    {{ form.bill_name(class="form-control", placeholder=t('bill_bill_name_placeholder', default='e.g., NEPA, MTN Data, Ajo Contribution'), value=form.bill_name.data or '') }}
-                                    <div class="invalid-feedback">{{ t('bill_bill_name_required', default='Bill name is required') }}</div>
+                                    <label for="{{ form.bill_name.id }}" class="form-label">{{ trans('bill_bill_name', default='Bill Name') }}</label>
+                                    {{ form.bill_name(class="form-control", placeholder=trans('bill_bill_name_placeholder', default='e.g., NEPA, MTN Data, Ajo Contribution'), value=form.bill_name.data or '') }}
+                                    <div class="invalid-feedback">{{ trans('bill_bill_name_required', default='Bill name is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.amount.id }}" class="form-label">{{ t('bill_amount', default='Amount') }}</label>
-                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5000.00'), value='' if form.amount.data is none else format_currency(form.amount.data)) }}
-                                    <div class="invalid-feedback">{{ t('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
-                                    <small id="amount_help" class="form-text text-muted">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
+                                    <label for="{{ form.amount.id }}" class="form-label">{{ trans('bill_amount', default='Amount') }}</label>
+                                    {{ form.amount(class="form-control number-input", placeholder=trans('bill_amount_placeholder', default='e.g., 5000.00'), value='' if form.amount.data is none else format_currency(form.amount.data)) }}
+                                    <div class="invalid-feedback">{{ trans('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
+                                    <small id="amount_help" class="form-text text-muted">{{ trans('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -89,17 +77,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.due_date.id }}" class="form-label">{{ t('bill_due_date', default='Due Date') }}</label>
-                                    {{ form.due_date(class="form-control", type="date", value='' if form.due_date.data is none else form.due_date.data) }}
-                                    <div class="invalid-feedback">{{ t('bill_due_date_required', default='Valid due date is required') }}</div>
-                                    <small id="due_date_help" class="form-text text-muted">{{ t('bill_due_date_future_validation', default='Due date must be today or in the future') }}</small>
+                                    <label for="{{ form.due_date.id }}" class="form-label">{{ trans('bill_due_date', default='Due Date') }}</label>
+                                    {{ form.due_date(class="form-control", type="date", value='' if form.due_date.data is none else form.due_date.data.strftime('%Y-%m-%d')) }}
+                                    <div class="invalid-feedback">{{ trans('bill_due_date_required', default='Valid due date is required') }}</div>
+                                    <small id="due_date_help" class="form-text text-muted">{{ trans('bill_due_date_future_validation', default='Due date must be today or in the future') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.frequency.id }}" class="form-label">{{ t('bill_frequency', default='Frequency') }}</label>
+                                    <label for="{{ form.frequency.id }}" class="form-label">{{ trans('bill_frequency', default='Frequency') }}</label>
                                     {{ form.frequency(class="form-select") }}
-                                    <div class="invalid-feedback">{{ t('bill_frequency_required', default='Frequency is required') }}</div>
+                                    <div class="invalid-feedback">{{ trans('bill_frequency_required', default='Frequency is required') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -107,16 +95,16 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.category.id }}" class="form-label">{{ t('bill_category', default='Category') }}</label>
+                                    <label for="{{ form.category.id }}" class="form-label">{{ trans('general_category', default='Category') }}</label>
                                     {{ form.category(class="form-select") }}
-                                    <div class="invalid-feedback">{{ t('bill_category_required', default='Category is required') }}</div>
+                                    <div class="invalid-feedback">{{ trans('bill_category_required', default='Category is required') }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="{{ form.status.id }}" class="form-label">{{ t('bill_status', default='Status') }}</label>
+                                    <label for="{{ form.status.id }}" class="form-label">{{ trans('bill_status', default='Status') }}</label>
                                     {{ form.status(class="form-select") }}
-                                    <div class="invalid-feedback">{{ t('bill_status_required', default='Status is required') }}</div>
+                                    <div class="invalid-feedback">{{ trans('bill_status_required', default='Status is required') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -124,25 +112,25 @@
                         <!-- Reminder Settings -->
                         <div class="card mb-3">
                             <div class="card-header">
-                                <h6>{{ t('bill_reminder_settings', default='Reminder Settings') }}</h6>
+                                <h6>{{ trans('bill_reminder_settings', default='Reminder Settings') }}</h6>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 form-check">
                                     {{ form.send_email(class="form-check-input", id="send_email") }}
-                                    <label class="form-check-label" for="send_email">{{ t('bill_send_email', default='Send Email Reminders') }}</label>
-                                    <div class="invalid-feedback">{{ t('bill_email_required', default='Email notifications require an authenticated user') }}</div>
+                                    <label class="form-check-label" for="send_email">{{ trans('general_send_email', default='Send Email Reminders') }}</label>
+                                    <div class="invalid-feedback">{{ trans('bill_email_required', default='Email notifications require an authenticated user') }}</div>
                                 </div>
                                 <div class="mb-3" id="reminder_days_container" style="display: {{ 'block' if form.send_email.data else 'none' }};">
-                                    <label for="{{ form.reminder_days.id }}" class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
-                                    {{ form.reminder_days(class="form-control number-input", placeholder=t('bill_reminder_days_placeholder', default='e.g., 7'), value='' if form.reminder_days.data is none else form.reminder_days.data) }}
-                                    <div class="invalid-feedback">{{ t('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
-                                    <small id="reminder_days_help" class="form-text text-muted">{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
+                                    <label for="{{ form.reminder_days.id }}" class="form-label">{{ trans('bill_reminder_days', default='Reminder Days') }}</label>
+                                    {{ form.reminder_days(class="form-control number-input", placeholder=trans('bill_reminder_days_placeholder', default='e.g., 7'), value='' if form.reminder_days.data is none else form.reminder_days.data) }}
+                                    <div class="invalid-feedback">{{ trans('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
+                                    <small id="reminder_days_help" class="form-text text-muted">{{ trans('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
                                 </div>
                             </div>
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> {{ t('bill_save_bill', default='Save Bill') }}
+                            <i class="fas fa-save"></i> {{ trans('bill_save_bill', default='Save Bill') }}
                         </button>
                     </form>
                 </div>
@@ -153,7 +141,7 @@
         <div class="tab-pane fade {{ 'show active' if active_tab == 'manage-bills' else '' }}" id="manage-bills" role="tabpanel" aria-labelledby="manage-bills-tab">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-edit"></i> {{ t('bill_manage_bills', default='Manage Bills') }}</h5>
+                    <h5><i class="fas fa-edit"></i> {{ trans('bill_manage_bills', default='Manage Bills') }}</h5>
                 </div>
                 <div class="card-body">
                     {% if bills_data %}
@@ -169,24 +157,24 @@
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label">{{ t('bill_amount', default='Amount') }}</label>
+                                                    <label class="form-label">{{ trans('bill_amount', default='Amount') }}</label>
                                                     {{ edit_form.amount(class="form-control number-input", value='' if edit_form.amount.data is none else format_currency(edit_form.amount.data)) }}
-                                                    <div class="invalid-feedback">{{ t('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
-                                                    <small id="amount_help_{{ bill_id }}" class="form-text text-muted">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
+                                                    <div class="invalid-feedback">{{ trans('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
+                                                    <small id="amount_help_{{ bill_id }}" class="form-text text-muted">{{ trans('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label">{{ t('bill_frequency', default='Frequency') }}</label>
+                                                    <label class="form-label">{{ trans('bill_frequency', default='Frequency') }}</label>
                                                     {{ edit_form.frequency(class="form-select") }}
-                                                    <div class="invalid-feedback">{{ t('bill_frequency_required', default='Frequency is required') }}</div>
+                                                    <div class="invalid-feedback">{{ trans('bill_frequency_required', default='Frequency is required') }}</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label">{{ t('bill_category', default='Category') }}</label>
+                                                    <label class="form-label">{{ trans('general_category', default='Category') }}</label>
                                                     {{ edit_form.category(class="form-select") }}
-                                                    <div class="invalid-feedback">{{ t('bill_category_required', default='Category is required') }}</div>
+                                                    <div class="invalid-feedback">{{ trans('bill_category_required', default='Category is required') }}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -194,32 +182,32 @@
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label">{{ t('bill_status', default='Status') }}</label>
+                                                    <label class="form-label">{{ trans('bill_status', default='Status') }}</label>
                                                     {{ edit_form.status(class="form-select") }}
-                                                    <div class="invalid-feedback">{{ t('bill_status_required', default='Status is required') }}</div>
+                                                    <div class="invalid-feedback">{{ trans('bill_status_required', default='Status is required') }}</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="form-check mt-4">
                                                     {{ edit_form.send_email(class="form-check-input", id="send_email_" + bill_id) }}
-                                                    <label class="form-check-label" for="send_email_{{ bill_id }}">{{ t('bill_send_email', default='Send Email Reminders') }}</label>
-                                                    <div class="invalid-feedback">{{ t('bill_email_required', default='Email notifications require an authenticated user') }}</div>
+                                                    <label class="form-check-label" for="send_email_{{ bill_id }}">{{ trans('general_send_email', default='Send Email Reminders') }}</label>
+                                                    <div class="invalid-feedback">{{ trans('bill_email_required', default='Email notifications require an authenticated user') }}</div>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="reminder-days-container" style="display: {{ 'block' if edit_form.send_email.data else 'none' }};">
-                                                    <label class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
+                                                    <label class="form-label">{{ trans('bill_reminder_days', default='Reminder Days') }}</label>
                                                     {{ edit_form.reminder_days(class="form-control number-input", value='' if edit_form.reminder_days.data is none else edit_form.reminder_days.data) }}
-                                                    <div class="invalid-feedback">{{ t('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
-                                                    <small id="reminder_days_help_{{ bill_id }}" class="form-text text-muted">{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
+                                                    <div class="invalid-feedback">{{ trans('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
+                                                    <small id="reminder_days_help_{{ bill_id }}" class="form-text text-muted">{{ trans('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div class="mt-3">
-                                            <button type="submit" class="btn btn-success btn-sm">{{ t('general_update', default='Update') }}</button>
-                                            <button type="submit" name="action" value="delete_bill" class="btn btn-danger btn-sm" onclick="return confirm('{{ t('bill_confirm_delete', default='Are you sure you want to delete this bill?') }}');">{{ t('general_delete', default='Delete') }}</button>
-                                            <button type="submit" name="action" value="toggle_status" class="btn btn-secondary btn-sm">{{ t('bill_toggle_status', default='Toggle Status') }}</button>
+                                            <button type="submit" class="btn btn-success btn-sm">{{ trans('general_update', default='Update') }}</button>
+                                            <button type="submit" name="action" value="delete_bill" class="btn btn-danger btn-sm" onclick="return confirm('{{ trans('bill_confirm_delete', default='Are you sure you want to delete this bill?') }}');">{{ trans('general_delete', default='Delete') }}</button>
+                                            <button type="submit" name="action" value="toggle_status" class="btn btn-secondary btn-sm">{{ trans('bill_toggle_status', default='Toggle Status') }}</button>
                                         </div>
                                     </form>
                                 </div>
@@ -228,7 +216,7 @@
                     {% else %}
                         <div class="text-center">
                             <i class="fas fa-file-invoice fa-3x mb-3 text-muted"></i>
-                            <p>{{ t('bill_no_bills_empty_state', default='No bills added yet. Start by adding one!') }}</p>
+                            <p>{{ trans('bill_no_bills_empty_state', default='No bills added yet. Start by adding one!') }}</p>
                         </div>
                     {% endif %}
                 </div>
@@ -239,7 +227,7 @@
         <div class="tab-pane fade {{ 'show active' if active_tab == 'dashboard' else '' }}" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
             <div class="card">
                 <div class="card-header">
-                    <h5><i class="fas fa-chart-line"></i> {{ t('bill_dashboard', default='Bill Dashboard') }}</h5>
+                    <h5><i class="fas fa-chart-line"></i> {{ trans('bill_dashboard', default='Bill Dashboard') }}</h5>
                 </div>
                 <div class="card-body">
                     {% if bills_data %}
@@ -248,7 +236,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-success text-white">
                                     <div class="card-body">
-                                        <h6>{{ t('bill_paid_count', default='Paid Bills') }}</h6>
+                                        <h6>{{ trans('bill_paid_count', default='Paid Bills') }}</h6>
                                         <h4>{{ paid_count }}</h4>
                                     </div>
                                 </div>
@@ -256,7 +244,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning text-white">
                                     <div class="card-body">
-                                        <h6>{{ t('bill_pending_count', default='Pending Bills') }}</h6>
+                                        <h6>{{ trans('bill_pending_count', default='Pending Bills') }}</h6>
                                         <h4>{{ pending_count }}</h4>
                                     </div>
                                 </div>
@@ -264,7 +252,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-danger text-white">
                                     <div class="card-body">
-                                        <h6>{{ t('bill_overdue_count', default='Overdue Bills') }}</h6>
+                                        <h6>{{ trans('bill_overdue_count', default='Overdue Bills') }}</h6>
                                         <h4>{{ overdue_count }}</h4>
                                     </div>
                                 </div>
@@ -272,8 +260,8 @@
                             <div class="col-md-3">
                                 <div class="card bg-info text-white">
                                     <div class="card-body">
-                                        <h6>{{ t('bill_total_bills', default='Total Bills') }}</h6>
-                                        <h4>{{ total_bills }}</h4>
+                                        <h6>{{ trans('bill_unpaid_count', default='Unpaid Bills') }}</h6>
+                                        <h4>{{ unpaid_count }}</h4>
                                     </div>
                                 </div>
                             </div>
@@ -283,7 +271,7 @@
                         {% if categories and categories|length > 0 %}
                             <div class="card mb-4">
                                 <div class="card-header">
-                                    <h6>{{ t('bill_category_breakdown', default='Category Breakdown') }}</h6>
+                                    <h6>{{ trans('bill_category_breakdown', default='Category Breakdown') }}</h6>
                                 </div>
                                 <div class="card-body">
                                     <canvas id="categoryChart" height="200"></canvas>
@@ -291,7 +279,7 @@
                             </div>
                         {% else %}
                             <div class="text-center">
-                                <p>{{ t('bill_no_categories', default='No bill data available for the chart.') }}</p>
+                                <p>{{ trans('bill_no_categories', default='No bill data available for the chart.') }}</p>
                             </div>
                         {% endif %}
 
@@ -300,11 +288,11 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>{{ t('bill_bill_name', default='Bill Name') }}</th>
-                                        <th>{{ t('bill_amount', default='Amount') }}</th>
-                                        <th>{{ t('bill_due_date', default='Due Date') }}</th>
-                                        <th>{{ t('bill_category', default='Category') }}</th>
-                                        <th>{{ t('bill_status', default='Status') }}</th>
+                                        <th>{{ trans('bill_bill_name', default='Bill Name') }}</th>
+                                        <th>{{ trans('bill_amount', default='Amount') }}</th>
+                                        <th>{{ trans('bill_due_date', default='Due Date') }}</th>
+                                        <th>{{ trans('general_category', default='Category') }}</th>
+                                        <th>{{ trans('bill_status', default='Status') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -313,10 +301,10 @@
                                             <td>{{ bill.bill_name }}</td>
                                             <td>{{ bill.amount }}</td>
                                             <td>{{ bill.due_date | format_date }}</td>
-                                            <td>{{ t('bill_category_' + bill.category, default=bill.category) }}</td>
+                                            <td>{{ trans('bill_category_' + bill.category, default=bill.category) }}</td>
                                             <td>
-                                                <span class="badge bg-{{ 'success' if bill.status == 'paid' else 'warning' if bill.status == 'pending' else 'danger' }}">
-                                                    {{ t('bill_status_' + bill.status, default=bill.status) }}
+                                                <span class="badge bg-{{ 'success' if bill.status == 'paid' else 'warning' if bill.status == 'pending' else 'danger' if bill.status == 'overdue' else 'info' }}">
+                                                    {{ trans('bill_status_' + bill.status, default=bill.status) }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -327,7 +315,7 @@
                     {% else %}
                         <div class="text-center">
                             <i class="fas fa-file-invoice fa-3x mb-3 text-muted"></i>
-                            <p>{{ t('bill_no_bills_empty_state', default='No bills added yet. Start by adding one!') }}</p>
+                            <p>{{ trans('bill_no_bills_empty_state', default='No bills added yet. Start by adding one!') }}</p>
                         </div>
                     {% endif %}
                 </div>
@@ -339,20 +327,20 @@
     {% if current_user.is_authenticated %}
         <div class="card mt-4">
             <div class="card-header">
-                <h5>{{ t('general_share_ficore', default='Share Ficore Africa with Friends') }}</h5>
+                <h5>{{ trans('general_share_ficore', default='Share Ficore Africa with Friends') }}</h5>
             </div>
             <div class="card-body">
-                <p>{{ t('general_share_ficore_invite', default='Invite your friends to join Ficore Africa and manage their finances better!') }}</p>
+                <p>{{ trans('general_share_ficore_invite', default='Invite your friends to join Ficore Africa and manage their finances better!') }}</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else t('general_profile_no_referral', default='No referral link available.') }}" readonly>
-                    <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ t('general_profile_copy_link', default='Copy') }}</button>
+                    <input type="text" class="form-control" id="referralLink" value="{{ url_for('users.signup', ref=current_user.referral_code, _external=True) if current_user.referral_code else trans('general_profile_no_referral', default='No referral link available.') }}" readonly>
+                    <button class="btn btn-primary" type="button" onclick="copyReferralLink()">{{ trans('general_profile_copy_link', default='Copy') }}</button>
                 </div>
                 <div class="mt-3">
-                    <h6>{{ t('bill_email_preferences', default='Email Preferences') }}</h6>
-                    <p>{{ t('bill_unsubscribe_description', default='Click below to unsubscribe from bill reminder emails.') }}</p>
+                    <h6>{{ trans('bill_email_preferences', default='Email Preferences') }}</h6>
+                    <p>{{ trans('bill_unsubscribe_description', default='Click below to unsubscribe from bill reminder emails.') }}</p>
                     <form method="POST" action="{{ url_for('personal.bill.unsubscribe') }}" class="d-inline">
                         {{ form.csrf_token }}
-                        <button type="submit" class="btn btn-warning btn-sm">{{ t('bill_unsubscribe', default='Unsubscribe') }}</button>
+                        <button type="submit" class="btn btn-warning btn-sm">{{ trans('bill_unsubscribe', default='Unsubscribe') }}</button>
                     </form>
                 </div>
             </div>
@@ -363,292 +351,42 @@
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/bill_validator.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Number input validation and formatting with comma separation
-    function formatNumberInput(input) {
-        const isReminderDays = input.id === 'reminder_days' || input.id.startsWith('reminder_days_');
-        input.addEventListener('input', function(e) {
-            let cursor = input.selectionStart;
-            let oldLength = input.value.length;
-            let oldValue = input.value;
-            let value = input.value.replace(/[^0-9.]/g, ''); // Allow numbers and decimal point
-
-            if (!value) {
-                input.value = '';
-                input.classList.remove('is-invalid');
-                document.getElementById(`${input.id}_help${isReminderDays ? '_' + input.id.replace('reminder_days_', '') : ''}`).innerText = isReminderDays ? 
-                    "{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') | e }}" :
-                    "{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') | e }}";
-                return;
-            }
-
-            // Handle reminder_days (integer only)
-            if (isReminderDays) {
-                let numValue = parseInt(value) || 0;
-                if (numValue > 30) {
-                    numValue = 30;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                } else if (numValue < 1) {
-                    numValue = 1;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                } else {
-                    input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') | e }}";
-                }
-                input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
-            } else {
-                // Handle amount field (allow decimals)
-                const parts = value.split('.');
-                if (parts.length > 2) {
-                    value = parts[0] + '.' + parts.slice(1).join('');
-                }
-                if (parts.length > 1) {
-                    parts[1] = parts[1].slice(0, 2); // Limit to 2 decimal places
-                    value = parts[0] + (parts[1] ? '.' + parts[1] : '');
-                }
-                let numericValue = parseFloat(value) || 0;
-                if (numericValue > 10000000000) {
-                    numericValue = 10000000000;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_exceed', default='Amount must be between 0 and 10 billion') | e }}";
-                } else if (numericValue < 0) {
-                    numericValue = 0;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_positive', default='Amount must be positive') | e }}";
-                } else {
-                    input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') | e }}";
-                }
-                input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
-
-            // Adjust cursor position
-            const newLength = input.value.length;
-            const delta = newLength - oldLength;
-            let newCursor = cursor + delta;
-            if (delta < 0 && oldValue[cursor - 1] === ',') {
-                newCursor--;
-            } else if (delta > 0 && input.value[cursor] === ',') {
-                newCursor++;
-            }
-            input.setSelectionRange(newCursor, newCursor);
-        });
-
-        input.addEventListener('paste', function(e) {
-            e.preventDefault();
-            let pasted = (e.clipboardData || window.clipboardData).getData('text');
-            let clean = pasted.replace(/[^0-9.]/g, '');
-            if (!clean) return;
-
-            if (isReminderDays) {
-                let numValue = parseInt(clean) || 0;
-                if (numValue > 30) {
-                    numValue = 30;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                } else if (numValue < 1) {
-                    numValue = 1;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                } else {
-                    input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') | e }}";
-                }
-                input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
-            } else {
-                const parts = clean.split('.');
-                if (parts.length > 2) {
-                    clean = parts[0] + '.' + parts.slice(1).join('');
-                }
-                if (parts.length > 1) {
-                    parts[1] = parts[1].slice(0, 2);
-                    clean = parts[0] + (parts[1] ? '.' + parts[1] : '');
-                }
-                let numericValue = parseFloat(clean) || 0;
-                if (numericValue > 10000000000) {
-                    numericValue = 10000000000;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_exceed', default='Amount must be between 0 and 10 billion') | e }}";
-                } else if (numericValue < 0) {
-                    numericValue = 0;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_positive', default='Amount must be positive') | e }}";
-                } else {
-                    input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') | e }}";
-                }
-                input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
-        });
-
-        input.addEventListener('blur', function(e) {
-            if (e.target.value) {
-                let value = e.target.value.replace(/[^0-9.]/g, '');
-                if (isReminderDays) {
-                    let numValue = parseInt(value) || 0;
-                    if (numValue > 30) {
-                        numValue = 30;
-                        input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                    } else if (numValue < 1) {
-                        numValue = 1;
-                        input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_invalid_range', default='Number of days must be between 1 and 30') | e }}";
-                    } else {
-                        input.classList.remove('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id.replace('reminder_days', '')}`).innerText = "{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') | e }}";
-                    }
-                    e.target.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
-                } else {
-                    const parts = value.split('.');
-                    if (parts.length > 2) {
-                        value = parts[0] + '.' + parts.slice(1).join('');
-                    }
-                    if (parts.length > 1) {
-                        parts[1] = parts[1].slice(0, 2);
-                        value = parts[0] + (parts[1] ? '.' + parts[1] : '');
-                    }
-                    let numericValue = parseFloat(value) || 0;
-                    if (numericValue > 10000000000) {
-                        numericValue = 10000000000;
-                        input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_exceed', default='Amount must be between 0 and 10 billion') | e }}";
-                    } else if (numericValue < 0) {
-                        numericValue = 0;
-                        input.classList.add('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_positive', default='Amount must be positive') | e }}";
-                    } else {
-                        input.classList.remove('is-invalid');
-                        document.getElementById(`${input.id}_help${input.id === 'amount' ? '' : '_' + input.id.replace('amount_', '')}`).innerText = "{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') | e }}";
-                    }
-                    e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                }
-            }
-        });
-    }
-
-    // Apply formatting to all number inputs
-    document.querySelectorAll('.number-input').forEach(formatNumberInput);
-
-    // Clean inputs before form submission
-    document.querySelectorAll('.validate-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const csrfToken = form.querySelector('input[name="csrf_token"]');
-            if (!csrfToken || !csrfToken.value) {
-                e.preventDefault();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-                errorDiv.innerHTML = `
-                    {{ t('bill_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.') | e }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
-                `;
-                form.prepend(errorDiv);
-                return;
-            }
-
-            form.querySelectorAll('.number-input').forEach(input => {
-                if (input.value) {
-                    input.value = input.value.replace(/,/g, '');
-                }
-            });
-        });
-    });
-
-    // Tab persistence with sessionStorage
-    const validTabs = ['add-bill', 'manage-bills', 'dashboard'];
-    let savedTab = sessionStorage.getItem('activeBillTab') || '{{ active_tab }}';
-    if (!validTabs.includes(savedTab)) {
-        savedTab = 'add-bill';
-    }
-    if (savedTab) {
-        const tabButton = document.getElementById(`${savedTab}-tab`);
-        if (tabButton) {
-            const bsTab = new bootstrap.Tab(tabButton);
-            bsTab.show();
-        }
-    }
-
-    document.querySelectorAll('#billTabs .nav-link').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(e) {
-            const activeTabId = e.target.id.replace('-tab', '');
-            if (validTabs.includes(activeTabId)) {
-                sessionStorage.setItem('activeBillTab', activeTabId);
-                const url = new URL(window.location);
-                url.searchParams.set('tab', activeTabId);
-                window.history.replaceState({}, '', url);
-            }
-        });
-    });
-
     // Chart rendering
     {% if categories and categories|length > 0 %}
-        ```chartjs
-        {
-            type: 'pie',
-            data: {
-                labels: {{ categories.keys() | list | tojson }},
-                datasets: [{
-                    data: {{ categories.values() | list | tojson }},
-                    backgroundColor: [
-                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-                        '#FF6347', '#FFD700', '#6A5ACD', '#20B2AA', '#FF4500', '#4682B4',
-                        '#9ACD32', '#DC143C'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                let value = context.raw || 0;
-                                return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                            }
+    
+    {
+        type: 'pie',
+        data: {
+            labels: {{ categories.keys() | list | tojson }},
+            datasets: [{
+                data: {{ categories.values() | list | tojson }},
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                    '#FF6347', '#FFD700', '#6A5ACD', '#20B2AA', '#FF4500', '#4682B4',
+                    '#9ACD32', '#DC143C'
+                ],
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            let value = context.raw || 0;
+                            return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                         }
                     }
                 }
             }
         }
-        ```
-    {% endif %}
-
-    // Handle reminder email toggle
-    const sendEmailCheckbox = document.getElementById('send_email');
-    const reminderDaysContainer = document.getElementById('reminder_days_container');
-    
-    if (sendEmailCheckbox && reminderDaysContainer) {
-        sendEmailCheckbox.addEventListener('change', function() {
-            reminderDaysContainer.style.display = this.checked ? 'block' : 'none';
-        });
     }
-
-    // Handle reminder toggles for existing bills
-    document.querySelectorAll('[id^="send_email_"]').forEach(checkbox => {
-        const billId = checkbox.id.replace('send_email_', '');
-        const container = checkbox.closest('.card-body').querySelector('.reminder-days-container');
-        
-        if (container) {
-            checkbox.addEventListener('change', function() {
-                container.style.display = this.checked ? 'block' : 'none';
-            });
-        }
-    });
-
-    // Copy referral link
-    function copyReferralLink() {
-        const referralLink = document.getElementById('referralLink');
-        referralLink.select();
-        document.execCommand('copy');
-        alert('{{ t('general_profile_copy_success', default='Referral link copied to clipboard!') }}');
-    }
-});
+{% endif %}
 </script>
 {% endblock %}
