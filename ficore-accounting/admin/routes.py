@@ -3,7 +3,7 @@ from bson import ObjectId
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, Response
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField, DateField, validators
+from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField, DateField, IntegerField, validators
 from wtforms.validators import DataRequired, NumberRange, ValidationError
 from translations import trans
 import utils
@@ -23,6 +23,8 @@ from learning_hub.forms import UploadForm
 from werkzeug.utils import secure_filename
 import os
 from credits import ApproveCreditRequestForm
+import random
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,13 @@ class AgentManagementForm(FlaskForm):
         ('inactive', trans('agents_inactive', default='Inactive'))
     ], validators=[DataRequired(message=trans('agents_status_required', default='Status is required'))], render_kw={'class': 'form-select'})
     submit = SubmitField(trans('agents_manage_submit', default='Add/Update Agent'), render_kw={'class': 'btn btn-primary w-100'})
+
+class BulkAgentIDForm(FlaskForm):
+    count = IntegerField(trans('agents_count', default='Number of IDs to Generate'), [
+        DataRequired(message=trans('agents_count_required', default='Number of IDs is required')),
+        NumberRange(min=1, max=100, message=trans('agents_count_range', default='Must be between 1 and 100'))
+    ], render_kw={'class': 'form-control'})
+    submit = SubmitField(trans('agents_generate_bulk', default='Generate IDs'), render_kw={'class': 'btn btn-primary w-100'})
 
 class NewsForm(FlaskForm):
     title = StringField(trans('news_title', default='Title'), validators=[DataRequired()], render_kw={'class': 'form-control'})
@@ -132,7 +141,6 @@ def dashboard():
         payment_locations_count = db.payment_locations.count_documents({})
         tax_deadlines_count = db.tax_deadlines.count_documents({})
         
-        # Tool usage statistics, including log tool (audit_logs)
         tool_usage = db.tool_usage.aggregate([
             {'$group': {
                 '_id': '$tool_name',
@@ -172,6 +180,145 @@ def dashboard():
         logger.error(f"Error loading admin dashboard: {str(e)}")
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return render_template('500.html', error=str(e)), 500
+
+@admin_bp.route('/feedbacks', methods=['GET'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("50 per hour")
+def view_feedbacks():
+    """View all feedbacks."""
+    try:
+        db = utils.get_mongo_db()
+        feedbacks = list(db.feedback.find().sort('timestamp', -1))
+        for feedback in feedbacks:
+            feedback['_id'] = str(feedback['_id'])
+        return render_template('admin/feedback_list.html', feedbacks=feedbacks, title=trans('admin_feedbacks_title', default='Feedbacks'))
+    except Exception as e:
+        logger.error(f"Error fetching feedbacks for admin: {str(e)}")
+        flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
+        return render_template('admin/feedback_list.html', feedbacks=[]), 500
+
+@admin_bp.route('/generate-agent-id', methods=['POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("10 per hour")
+def generate_agent_id():
+    """Generate a single new agent ID."""
+    try:
+        db = utils.get_mongo_db()
+        agent_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        while db.agents.find_one({'_id': agent_id}):
+            agent_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        db.agents.insert_one({
+            '_id': agent_id,
+            'status': 'active',
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        })
+        flash(trans('agents_agent_id_generated', default=f'Agent ID {agent_id} generated successfully'), 'success')
+        logger.info(f"Admin {current_user.id} generated agent ID {agent_id}")
+        log_audit_action('generate_agent_id', {'agent_id': agent_id})
+        return redirect(url_for('admin.manage_agents'))
+    except Exception as e:
+        logger.error(f"Error generating agent ID: {str(e)}")
+        flash(trans('admin_database_error', default='An error occurred while generating the agent ID'), 'danger')
+        return redirect(url_for('admin.manage_agents'))
+
+@admin_bp.route('/generate-agent-ids', methods=['GET', 'POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("10 per hour")
+def generate_agent_ids():
+    """Generate multiple agent IDs and provide a CSV download."""
+    form = BulkAgentIDForm()
+    if form.validate_on_submit():
+        try:
+            db = utils.get_mongo_db()
+            count = form.count.data
+            agent_ids = []
+            for _ in range(count):
+                agent_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                while db.agents.find_one({'_id': agent_id}):
+                    agent_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                agent_ids.append({
+                    '_id': agent_id,
+                    'status': 'active',
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                })
+            db.agents.insert_many(agent_ids)
+            for agent in agent_ids:
+                logger.info(f"Admin {current_user.id} generated agent ID {agent['_id']}")
+                log_audit_action('generate_agent_id', {'agent_id': agent['_id']})
+            
+            # Generate CSV
+            output = [['Agent ID', 'Status', 'Created At']]
+            for agent in agent_ids:
+                output.append([agent['_id'], agent['status'], agent['created_at'].strftime('%Y-%m-%d %H:%M:%S')])
+            buffer = BytesIO()
+            writer = csv.writer(buffer, lineterminator='\n')
+            writer.writerows(output)
+            buffer.seek(0)
+            flash(trans('agents_bulk_generated', default=f'{count} Agent IDs generated successfully'), 'success')
+            return Response(
+                buffer,
+                mimetype='text/csv',
+                headers={'Content-Disposition': 'attachment;filename=agent_ids.csv'}
+            )
+        except Exception as e:
+            logger.error(f"Error generating bulk agent IDs: {str(e)}")
+            flash(trans('admin_database_error', default='An error occurred while generating agent IDs'), 'danger')
+            return redirect(url_for('admin.manage_agents'))
+    return render_template('admin/generate_agent_ids.html', form=form, title=trans('admin_generate_agent_ids_title', default='Generate Agent IDs'))
+
+@admin_bp.route('/manage_agents', methods=['GET', 'POST'])
+@login_required
+@utils.requires_role('admin')
+@utils.limiter.limit("50 per hour")
+def manage_agents():
+    """Manage agent IDs (add or update status)."""
+    form = AgentManagementForm()
+    try:
+        db = utils.get_mongo_db()
+        agents = list(db.agents.find().sort('created_at', -1))
+        for agent in agents:
+            agent['_id'] = str(agent['_id'])
+        
+        if form.validate_on_submit():
+            agent_id = form.agent_id.data.strip().upper()
+            status = form.status.data
+            
+            existing_agent = db.agents.find_one({'_id': agent_id})
+            if existing_agent:
+                result = db.agents.update_one(
+                    {'_id': agent_id},
+                    {'$set': {'status': status, 'updated_at': datetime.utcnow()}}
+                )
+                if result.modified_count == 0:
+                    flash(trans('agents_not_updated', default='Agent status could not be updated'), 'danger')
+                else:
+                    flash(trans('agents_status_updated', default='Agent status updated successfully'), 'success')
+                    logger.info(f"Admin {current_user.id} updated agent {agent_id} to status {status}")
+                    log_audit_action('update_agent_status', {'agent_id': agent_id, 'status': status})
+            else:
+                db.agents.insert_one({
+                    '_id': agent_id,
+                    'status': status,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                })
+                flash(trans('agents_added', default='Agent ID added successfully'), 'success')
+                logger.info(f"Admin {current_user.id} added agent {agent_id} with status {status}")
+                log_audit_action('add_agent', {'agent_id': agent_id, 'status': status})
+            
+            return redirect(url_for('admin.manage_agents'))
+        
+        return render_template('admin/manage_agents.html', form=form, agents=agents, title=trans('admin_manage_agents_title', default='Manage Agents'))
+    
+    except Exception as e:
+        logger.error(f"Error managing agents for admin {current_user.id}: {str(e)}")
+        flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
+        return render_template('admin/manage_agents.html', form=form, agents=[])
 
 @admin_bp.route('/users', methods=['GET'])
 @login_required
@@ -386,55 +533,6 @@ def audit():
         logger.error(f"Error fetching audit logs for admin {current_user.id}: {str(e)}")
         flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
         return render_template('admin/audit.html', logs=[])
-
-@admin_bp.route('/manage_agents', methods=['GET', 'POST'])
-@login_required
-@utils.requires_role('admin')
-@utils.limiter.limit("50 per hour")
-def manage_agents():
-    """Manage agent IDs (add or update status)."""
-    form = AgentManagementForm()
-    try:
-        db = utils.get_mongo_db()
-        agents = list(db.agents.find().sort('created_at', -1))
-        for agent in agents:
-            agent['_id'] = str(agent['_id'])
-        
-        if form.validate_on_submit():
-            agent_id = form.agent_id.data.strip().upper()
-            status = form.status.data
-            
-            existing_agent = db.agents.find_one({'_id': agent_id})
-            if existing_agent:
-                result = db.agents.update_one(
-                    {'_id': agent_id},
-                    {'$set': {'status': status, 'updated_at': datetime.datetime.utcnow()}}
-                )
-                if result.modified_count == 0:
-                    flash(trans('agents_not_updated', default='Agent status could not be updated'), 'danger')
-                else:
-                    flash(trans('agents_status_updated', default='Agent status updated successfully'), 'success')
-                    logger.info(f"Admin {current_user.id} updated agent {agent_id} to status {status}")
-                    log_audit_action('update_agent_status', {'agent_id': agent_id, 'status': status})
-            else:
-                db.agents.insert_one({
-                    '_id': agent_id,
-                    'status': status,
-                    'created_at': datetime.datetime.utcnow(),
-                    'updated_at': datetime.datetime.utcnow()
-                })
-                flash(trans('agents_added', default='Agent ID added successfully'), 'success')
-                logger.info(f"Admin {current_user.id} added agent {agent_id} with status {status}")
-                log_audit_action('add_agent', {'agent_id': agent_id, 'status': status})
-            
-            return redirect(url_for('admin.manage_agents'))
-        
-        return render_template('admin/manage_agents.html', form=form, agents=agents, title=trans('admin_manage_agents_title', default='Manage Agents'))
-    
-    except Exception as e:
-        logger.error(f"Error managing agents for admin {current_user.id}: {str(e)}")
-        flash(trans('admin_database_error', default='An error occurred while accessing the database'), 'danger')
-        return render_template('admin/manage_agents.html', form=form, agents=[])
 
 @admin_bp.route('/budgets', methods=['GET'])
 @login_required
