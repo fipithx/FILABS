@@ -4,7 +4,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import FloatField, IntegerField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, ValidationError
 from flask_login import current_user, login_required
-from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, check_ficore_credit_balance
 from datetime import datetime
 import re
 from translations import trans
@@ -74,6 +74,41 @@ def custom_login_required(f):
             return f(*args, **kwargs)
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
+
+def deduct_ficore_credits(db, user_id, amount, action, budget_id=None):
+    """Deduct Ficore Credits from user balance and log the transaction."""
+    try:
+        user = db.users.find_one({'_id': user_id})
+        if not user:
+            current_app.logger.error(f"User {user_id} not found for credit deduction", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        current_balance = user.get('ficore_credit_balance', 0)
+        if current_balance < amount:
+            current_app.logger.warning(f"Insufficient credits for user {user_id}: required {amount}, available {current_balance}", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        result = db.users.update_one(
+            {'_id': user_id},
+            {'$inc': {'ficore_credit_balance': -amount}}
+        )
+        if result.modified_count == 0:
+            current_app.logger.error(f"Failed to deduct {amount} credits for user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        transaction = {
+            '_id': ObjectId(),
+            'user_id': user_id,
+            'action': action,
+            'amount': -amount,
+            'budget_id': str(budget_id) if budget_id else None,
+            'timestamp': datetime.utcnow(),
+            'session_id': session.get('sid', 'unknown'),
+            'status': 'completed'
+        }
+        db.credit_transactions.insert_one(transaction)
+        current_app.logger.info(f"Deducted {amount} Ficore Credits for {action} by user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error deducting {amount} Ficore Credits for {action} by user {user_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return False
 
 class CommaSeparatedIntegerField(IntegerField):
     def process_formdata(self, valuelist):
@@ -236,6 +271,11 @@ def main():
         if request.method == 'POST':
             action = request.form.get('action')
             if action == 'create_budget' and form.validate_on_submit():
+                if current_user.is_authenticated and not is_admin():
+                    if not check_ficore_credit_balance(required_amount=1, user_id=current_user.id):
+                        current_app.logger.warning(f"Insufficient Ficore Credits for creating budget by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('budget_insufficient_credits', default='Insufficient Ficore Credits to create a budget. Please purchase more credits.'), 'danger')
+                        return redirect(url_for('agents_bp.manage_credits'))
                 try:
                     log_tool_usage(
                         tool_name='budget',
@@ -259,8 +299,9 @@ def main():
                 ])
                 savings_goal = float(form.savings_goal.data)
                 surplus_deficit = income - expenses
+                budget_id = ObjectId()
                 budget_data = {
-                    '_id': ObjectId(),
+                    '_id': budget_id,
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'],
                     'user_email': current_user.email if current_user.is_authenticated else '',
@@ -280,11 +321,17 @@ def main():
                 current_app.logger.debug(f"Saving budget data: {budget_data}", extra={'session_id': session['sid']})
                 try:
                     db.budgets.insert_one(budget_data)
-                    current_app.logger.info(f"Budget saved successfully to MongoDB for session {session['sid']}", extra={'session_id': session['sid']})
+                    if current_user.is_authenticated and not is_admin():
+                        if not deduct_ficore_credits(db, current_user.id, 1, 'create_budget', budget_id):
+                            db.budgets.delete_one({'_id': budget_id})  # Rollback on failure
+                            current_app.logger.error(f"Failed to deduct Ficore Credit for creating budget {budget_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('budget_credit_deduction_failed', default='Failed to deduct Ficore Credit for creating budget.'), 'danger')
+                            return redirect(url_for('personal.budget.main', tab='create-budget'))
+                    current_app.logger.info(f"Budget {budget_id} saved successfully to MongoDB for session {session['sid']}", extra={'session_id': session['sid']})
                     flash(trans("budget_completed_success", default='Budget created successfully!'), "success")
                     return redirect(url_for('personal.budget.main', tab='dashboard'))
                 except Exception as e:
-                    current_app.logger.error(f"Failed to save budget to MongoDB for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
+                    current_app.logger.error(f"Failed to save budget {budget_id} to MongoDB for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("budget_storage_error", default='Error saving budget.'), "danger")
                     return render_template(
                         'personal/BUDGET/budget_main.html',
@@ -328,6 +375,16 @@ def main():
                     )
             elif action == 'delete':
                 budget_id = request.form.get('budget_id')
+                budget = db.budgets.find_one({'_id': ObjectId(budget_id), **filter_criteria})
+                if not budget:
+                    current_app.logger.warning(f"Budget {budget_id} not found for deletion", extra={'session_id': session.get('sid', 'unknown')})
+                    flash(trans("budget_not_found", default='Budget not found.'), "danger")
+                    return redirect(url_for('personal.budget.main', tab='dashboard'))
+                if current_user.is_authenticated and not is_admin():
+                    if not check_ficore_credit_balance(required_amount=1, user_id=current_user.id):
+                        current_app.logger.warning(f"Insufficient Ficore Credits for deleting budget {budget_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('budget_insufficient_credits', default='Insufficient Ficore Credits to delete a budget. Please purchase more credits.'), 'danger')
+                        return redirect(url_for('agents_bp.manage_credits'))
                 try:
                     log_tool_usage(
                         tool_name='budget',
@@ -338,14 +395,21 @@ def main():
                     )
                     result = db.budgets.delete_one({'_id': ObjectId(budget_id), **filter_criteria})
                     if result.deleted_count > 0:
+                        if current_user.is_authenticated and not is_admin():
+                            if not deduct_ficore_credits(db, current_user.id, 1, 'delete_budget', budget_id):
+                                current_app.logger.error(f"Failed to deduct Ficore Credit for deleting budget {budget_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('budget_credit_deduction_failed', default='Failed to deduct Ficore Credit for deleting budget.'), 'danger')
+                                return redirect(url_for('personal.budget.main', tab='dashboard'))
                         current_app.logger.info(f"Deleted budget ID {budget_id} for session {session['sid']}", extra={'session_id': session['sid']})
                         flash(trans("budget_deleted_success", default='Budget deleted successfully!'), "success")
                     else:
-                        current_app.logger.warning(f"Budget ID {budget_id} not found for session {session['sid']}", extra={'session_id': session.get('sid')})
+                        current_app.logger.warning(f"Budget ID {budget_id} not found for session {session['sid']}", extra={'session_id': session['sid']})
                         flash(trans("budget_not_found", default='Budget not found.'), "danger")
                 except Exception as e:
                     current_app.logger.error(f"Failed to delete budget ID {budget_id} for session {session['sid']}: {str(e)}", extra={'session_id': session['sid']})
                     flash(trans("budget_delete_failed", default='Error deleting budget.'), "danger")
+                return redirect(url_for('personal.budget.main', tab='dashboard'))
+
         budgets = list(db.budgets.find(filter_criteria).sort('created_at', -1).limit(10))
         current_app.logger.info(f"Read {len(budgets)} records from MongoDB budgets collection [session: {session['sid']}]", extra={'session_id': session['sid']})
         budgets_dict = {}
