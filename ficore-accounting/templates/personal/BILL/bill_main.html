@@ -275,6 +275,9 @@
                                 </div>
                                 <div class="card-body">
                                     <canvas id="categoryChart" height="200"></canvas>
+                                    <div id="chartError" class="text-danger mt-2" style="display: none;">
+                                        {{ trans('bill_chart_error', default='Error rendering category chart. Please try again later.') }}
+                                    </div>
                                 </div>
                             </div>
                         {% else %}
@@ -351,42 +354,281 @@
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='js/bill_validator.js') }}"></script>
 <script>
-    // Chart rendering
-    {% if categories and categories|length > 0 %}
-    
-    {
-        type: 'pie',
-        data: {
-            labels: {{ categories.keys() | list | tojson }},
-            datasets: [{
-                data: {{ categories.values() | list | tojson }},
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-                    '#FF6347', '#FFD700', '#6A5ACD', '#20B2AA', '#FF4500', '#4682B4',
-                    '#9ACD32', '#DC143C'
-                ],
-                borderColor: '#fff',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            let value = context.raw || 0;
-                            return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                        }
+document.addEventListener('DOMContentLoaded', function() {
+    // Translation map for help text
+    const helpTextTranslations = {
+        'amount': "{{ trans('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') | e }}",
+        'reminder_days': "{{ trans('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') | e }}",
+        'amount_max': "{{ trans('bill_amount_max', default='Amount cannot exceed 10 billion') | e }}",
+        'amount_positive': "{{ trans('bill_amount_positive', default='Amount must be positive') | e }}",
+        'reminder_days_invalid': "{{ trans('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') | e }}",
+        'due_date_future': "{{ trans('bill_due_date_future_validation', default='Due date must be today or in the future') | e }}"
+    };
+
+    // Helper function to format a number for display
+    function formatForDisplay(value, isReminderDays) {
+        if (value === null || value === undefined || isNaN(value)) {
+            return '';
+        }
+        if (isReminderDays) {
+            return Math.floor(value).toString();
+        } else {
+            return parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    }
+
+    // Helper function to clean input for parsing
+    function cleanForParse(value) {
+        if (!value) return '';
+        let clean = value.replace(/,/g, '');
+        const parts = clean.split('.');
+        if (parts.length > 2) {
+            clean = parts[0] + '.' + parts.slice(1).join('');
+        }
+        return clean;
+    }
+
+    // Handle number inputs
+    document.querySelectorAll('.number-input').forEach(input => {
+        const isReminderDays = input.id === 'reminder_days' || input.id.startsWith('reminder_days_');
+        const helpId = isReminderDays ? `reminder_days_help${input.id.replace('reminder_days', '')}` : `amount_help${input.id.replace('amount', '')}`;
+        const originalHelpText = helpTextTranslations[isReminderDays ? 'reminder_days' : 'amount'];
+
+        // Show raw value on focus
+        input.addEventListener('focus', function() {
+            input.value = cleanForParse(input.value);
+        });
+
+        // Format and validate on blur
+        input.addEventListener('blur', function() {
+            let rawValue = cleanForParse(input.value);
+            let numValue;
+
+            if (isReminderDays) {
+                numValue = parseInt(rawValue) || 0;
+                if (numValue > 30) {
+                    numValue = 30;
+                    input.classList.add('is-invalid');
+                    document.getElementById(helpId).innerText = helpTextTranslations['reminder_days_invalid'];
+                } else if (numValue < 1 && rawValue !== '') {
+                    numValue = 1;
+                    input.classList.add('is-invalid');
+                    document.getElementById(helpId).innerText = helpTextTranslations['reminder_days_invalid'];
+                } else {
+                    input.classList.remove('is-invalid');
+                    document.getElementById(helpId).innerText = originalHelpText;
+                }
+            } else {
+                numValue = parseFloat(rawValue) || 0;
+                if (numValue > 10000000000) {
+                    numValue = 10000000000;
+                    input.classList.add('is-invalid');
+                    document.getElementById(helpId).innerText = helpTextTranslations['amount_max'];
+                } else if (numValue < 0) {
+                    numValue = 0;
+                    input.classList.add('is-invalid');
+                    document.getElementById(helpId).innerText = helpTextTranslations['amount_positive'];
+                } else {
+                    input.classList.remove('is-invalid');
+                    document.getElementById(helpId).innerText = originalHelpText;
+                }
+            }
+            input.value = formatForDisplay(numValue, isReminderDays);
+        });
+
+        // Clean invalid characters while typing
+        input.addEventListener('input', function() {
+            let value = input.value;
+            let cleanedValue;
+
+            if (isReminderDays) {
+                cleanedValue = value.replace(/[^0-9]/g, '');
+            } else {
+                cleanedValue = value.replace(/[^0-9.]/g, '');
+                const parts = cleanedValue.split('.');
+                if (parts.length > 2) {
+                    cleanedValue = parts[0] + '.' + parts.slice(1).join('');
+                }
+            }
+
+            if (input.value !== cleanedValue) {
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                input.value = cleanedValue;
+                input.setSelectionRange(start, end);
+            }
+        });
+
+        // Handle pasted input
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text');
+            let clean = cleanForParse(pasted);
+            let numValue;
+
+            if (isReminderDays) {
+                numValue = parseInt(clean) || 0;
+                numValue = Math.max(1, Math.min(30, numValue));
+                input.value = numValue.toString();
+                input.classList.remove('is-invalid');
+                document.getElementById(helpId).innerText = originalHelpText;
+            } else {
+                clean = cleanForParse(clean);
+                numValue = parseFloat(clean) || 0;
+                numValue = Math.max(0, Math.min(10000000000, numValue));
+                input.value = formatForDisplay(numValue, false);
+                input.classList.remove('is-invalid');
+                document.getElementById(helpId).innerText = originalHelpText;
+            }
+        });
+
+        // Format pre-filled values
+        input.dispatchEvent(new Event('blur'));
+    });
+
+    // Form submission validation
+    document.querySelectorAll('.validate-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            form.querySelectorAll('.number-input').forEach(input => {
+                const isReminderDays = input.id === 'reminder_days' || input.id.startsWith('reminder_days_');
+                const helpId = isReminderDays ? `reminder_days_help${input.id.replace('reminder_days', '')}` : `amount_help${input.id.replace('amount', '')}`;
+                let rawValue = cleanForParse(input.value);
+                let numValue;
+
+                if (isReminderDays) {
+                    numValue = parseInt(rawValue) || 0;
+                    if (numValue > 30 || (numValue < 1 && rawValue !== '')) {
+                        input.classList.add('is-invalid');
+                        document.getElementById(helpId).innerText = helpTextTranslations['reminder_days_invalid'];
+                        isValid = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                        document.getElementById(helpId).innerText = helpTextTranslations['reminder_days'];
+                        input.value = numValue.toString();
+                    }
+                } else {
+                    numValue = parseFloat(rawValue) || 0;
+                    if (numValue > 10000000000 || numValue < 0) {
+                        input.classList.add('is-invalid');
+                        document.getElementById(helpId).innerText = numValue > 10000000000 ? helpTextTranslations['amount_max'] : helpTextTranslations['amount_positive'];
+                        isValid = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                        document.getElementById(helpId).innerText = helpTextTranslations['amount'];
+                        input.value = numValue.toFixed(2);
                     }
                 }
+            });
+
+            // Validate other required fields
+            form.querySelectorAll('input[required], select[required]').forEach(input => {
+                if (!input.classList.contains('number-input') && !input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else if (!input.classList.contains('number-input')) {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate due date
+            form.querySelectorAll('input[type="date"]').forEach(input => {
+                if (input.value && input.value < new Date().toISOString().split('T')[0]) {
+                    input.classList.add('is-invalid');
+                    document.getElementById('due_date_help').innerText = helpTextTranslations['due_date_future'];
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                    document.getElementById('due_date_help').innerText = helpTextTranslations['due_date_future'];
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalid.focus();
+                }
+            }
+        });
+    });
+
+    // Reminder toggle
+    document.querySelectorAll('.form-check-input[id^="send_email"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const form = this.closest('form');
+            const container = form.querySelector('.reminder-days-container') || form.querySelector('#reminder_days_container');
+            if (container) {
+                container.style.display = this.checked ? 'block' : 'none';
+            }
+        });
+    });
+
+    // Chart rendering
+    const categoryChartCtx = document.getElementById('categoryChart');
+    if (categoryChartCtx) {
+        const categoriesData = {{ categories | tojson }};
+        if (categoriesData && Object.keys(categoriesData).length > 0) {
+            try {
+                const labels = Object.keys(categoriesData).map(key => key.charAt(0).toUpperCase() + key.slice(1));
+                const data = Object.values(categoriesData);
+
+                new Chart(categoryChartCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                                '#FF6347', '#FFD700', '#6A5ACD', '#20B2AA', '#FF4500', '#4682B4',
+                                '#9ACD32', '#DC143C'
+                            ],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        let value = context.raw || 0;
+                                        return `${label}: ${formatForDisplay(value, false)}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                document.getElementById('chartError').style.display = 'none';
+            } catch (error) {
+                console.error("Error drawing chart:", error);
+                document.getElementById('chartError').style.display = 'block';
             }
         }
     }
-{% endif %}
+
+    // Copy referral link
+    window.copyReferralLink = function() {
+        const referralLinkInput = document.getElementById('referralLink');
+        if (referralLinkInput) {
+            referralLinkInput.select();
+            referralLinkInput.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                alert("{{ trans('general_link_copied', default='Referral link copied to clipboard!') | e }}");
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                alert("{{ trans('general_link_copy_failed', default='Failed to copy link. Please copy manually.') | e }}");
+            }
+        }
+    };
+});
 </script>
 {% endblock %}
