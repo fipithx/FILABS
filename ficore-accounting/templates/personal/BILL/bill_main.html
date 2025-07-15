@@ -79,7 +79,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.amount.id }}" class="form-label">{{ t('bill_amount', default='Amount') }}</label>
-                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5000.00'), value='' if form.amount.data is None else format_currency(form.amount.data)) }}
+                                    {{ form.amount(class="form-control number-input", placeholder=t('bill_amount_placeholder', default='e.g., 5000.00'), value='' if form.amount.data is none else format_currency(form.amount.data)) }}
                                     <div class="invalid-feedback">{{ t('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
                                     <small id="amount_help" class="form-text text-muted">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
                                 </div>
@@ -90,7 +90,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.due_date.id }}" class="form-label">{{ t('bill_due_date', default='Due Date') }}</label>
-                                    {{ form.due_date(class="form-control", type="date", value='' if form.due_date.data is None else form.due_date.data) }}
+                                    {{ form.due_date(class="form-control", type="date", value='' if form.due_date.data is none else form.due_date.data) }}
                                     <div class="invalid-feedback">{{ t('bill_due_date_required', default='Valid due date is required') }}</div>
                                     <small id="due_date_help" class="form-text text-muted">{{ t('bill_due_date_future_validation', default='Due date must be today or in the future') }}</small>
                                 </div>
@@ -134,7 +134,7 @@
                                 </div>
                                 <div class="mb-3" id="reminder_days_container" style="display: {{ 'block' if form.send_email.data else 'none' }};">
                                     <label for="{{ form.reminder_days.id }}" class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
-                                    {{ form.reminder_days(class="form-control number-input", placeholder=t('bill_reminder_days_placeholder', default='e.g., 7'), value='' if form.reminder_days.data is None else form.reminder_days.data) }}
+                                    {{ form.reminder_days(class="form-control number-input", placeholder=t('bill_reminder_days_placeholder', default='e.g., 7'), value='' if form.reminder_days.data is none else form.reminder_days.data) }}
                                     <div class="invalid-feedback">{{ t('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
                                     <small id="reminder_days_help" class="form-text text-muted">{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
                                 </div>
@@ -170,7 +170,7 @@
                                             <div class="col-md-4">
                                                 <div class="mb-3">
                                                     <label class="form-label">{{ t('bill_amount', default='Amount') }}</label>
-                                                    {{ edit_form.amount(class="form-control number-input", value='' if edit_form.amount.data is None else format_currency(edit_form.amount.data)) }}
+                                                    {{ edit_form.amount(class="form-control number-input", value='' if edit_form.amount.data is none else format_currency(edit_form.amount.data)) }}
                                                     <div class="invalid-feedback">{{ t('bill_amount_invalid', default='Please enter a valid number (e.g., 5000 or 5000.00)') }}</div>
                                                     <small id="amount_help_{{ bill_id }}" class="form-text text-muted">{{ t('bill_amount_help', default='Enter amount without commas (e.g., 5000 or 5000.00)') }}</small>
                                                 </div>
@@ -207,9 +207,9 @@
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
-                                                <div class="reminder-days-container" style="display: {{ 'block subvblock' if edit_form.send_email.data else 'none' }};">
+                                                <div class="reminder-days-container" style="display: {{ 'block' if edit_form.send_email.data else 'none' }};">
                                                     <label class="form-label">{{ t('bill_reminder_days', default='Reminder Days') }}</label>
-                                                    {{ edit_form.reminder_days(class="form-control number-input", value='' if edit_form.reminder_days.data is None else edit_form.reminder_days.data) }}
+                                                    {{ edit_form.reminder_days(class="form-control number-input", value='' if edit_form.reminder_days.data is none else edit_form.reminder_days.data) }}
                                                     <div class="invalid-feedback">{{ t('bill_reminder_days_invalid', default='Please enter a valid integer (e.g., 7)') }}</div>
                                                     <small id="reminder_days_help_{{ bill_id }}" class="form-text text-muted">{{ t('bill_reminder_days_example', default='Example: 7 for a reminder 7 days before due date') }}</small>
                                                 </div>
@@ -269,7 +269,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-'Agents: Agents in this context likely refer to users or entities managing financial transactions or services within the Ficore Africa platform, as implied by the `agents_bp.manage_credits` route. If you need a specific definition or context for "Agents," please provide more details.'3">
+                            <div class="col-md-3">
                                 <div class="card bg-info text-white">
                                     <div class="card-body">
                                         <h6>{{ t('bill_total_bills', default='Total Bills') }}</h6>
