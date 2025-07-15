@@ -1,7 +1,7 @@
 from flask import Blueprint, request, session, redirect, url_for, render_template, flash, current_app, jsonify
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
-from wtforms import StringField, FloatField, SelectField, BooleanField, IntegerField, DateField
+from wtforms import StringField, DecimalField, SelectField, BooleanField, IntegerField, DateField
 from wtforms.validators import DataRequired, NumberRange, Optional, ValidationError
 from flask_login import current_user
 from mailersend_email import send_email, EMAIL_CONFIG
@@ -11,6 +11,7 @@ from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage, check_ficore_credit_balance
 from session_utils import create_anonymous_session
+from decimal import Decimal, InvalidOperation
 import re
 
 bill_bp = Blueprint('bill', __name__, template_folder='templates/personal/BILL', url_prefix='/bill')
@@ -27,39 +28,143 @@ def custom_login_required(f):
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
 
-def clean_currency(value):
-    """Strip commas and handle edge cases for numeric inputs."""
-    if not value or value == '0':
-        return '0'
-    if isinstance(value, str):
-        value = re.sub(r'[^\d.]', '', value.strip())
-        parts = value.split('.')
-        if len(parts) > 2:
-            value = parts[0] + '.' + ''.join(parts[1:])
-        if not value or value == '.':
-            return '0'
+class BillFormProcessor:
+    """Handles proper form data validation and type conversion for bill management."""
+    
+    @staticmethod
+    def clean_currency_input(value):
+        """Clean and convert currency input to Decimal."""
+        if not value:
+            return None
+        if isinstance(value, str):
+            cleaned = re.sub(r'[^\d.]', '', value.strip())
+            if not cleaned:
+                return None
+        else:
+            cleaned = str(value)
         try:
-            float_value = float(value)
-            if float_value > 1e308:
-                raise ValueError("Value exceeds maximum float limit")
-            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
-            return str(float_value)
+            decimal_value = Decimal(cleaned)
+            if decimal_value < 0:
+                raise ValueError("Amount must be positive")
+            if decimal_value > 10000000000:
+                raise ValueError("Amount exceeds maximum limit")
+            return decimal_value
+        except (InvalidOperation, ValueError) as e:
+            raise ValueError(f"Invalid amount format: {e}")
+    
+    @staticmethod
+    def clean_integer_input(value, min_val=None, max_val=None):
+        """Clean and convert integer input (like reminder days)."""
+        if not value:
+            return None
+        if isinstance(value, str):
+            cleaned = re.sub(r'[^\d]', '', value.strip())
+            if not cleaned:
+                return None
+        else:
+            cleaned = str(value)
+        try:
+            int_value = int(cleaned)
+            if min_val is not None and int_value < min_val:
+                raise ValueError(f"Value must be at least {min_val}")
+            if max_val is not None and int_value > max_val:
+                raise ValueError(f"Value must be at most {max_val}")
+            return int_value
         except ValueError as e:
-            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            raise ValidationError(trans('bill_number_invalid', default='Invalid number format'))
-    return str(float(value))
-
-def strip_commas(value):
-    """Strip commas from string values, delegating to clean_currency."""
-    if isinstance(value, str):
-        return clean_currency(value)
-    return str(value)
+            raise ValueError(f"Invalid integer format: {e}")
+    
+    @staticmethod
+    def validate_date_input(value):
+        """Validate and convert date input."""
+        if not value:
+            return None
+        if isinstance(value, str):
+            try:
+                parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError("Invalid date format. Use YYYY-MM-DD")
+        elif isinstance(value, datetime):
+            parsed_date = value.date()
+        elif isinstance(value, date):
+            parsed_date = value
+        else:
+            raise ValueError("Invalid date type")
+        if parsed_date < date.today():
+            raise ValueError("Due date cannot be in the past")
+        return parsed_date
+    
+    @staticmethod
+    def process_bill_form_data(form_data):
+        """Process and validate all bill form data."""
+        cleaned_data = {}
+        errors = []
+        required_fields = ['bill_name', 'amount', 'due_date', 'frequency', 'category', 'status']
+        
+        for field in required_fields:
+            if field not in form_data or not form_data[field]:
+                errors.append(f"{field.replace('_', ' ').title()} is required")
+        
+        if errors:
+            raise ValueError("Validation errors: " + "; ".join(errors))
+        
+        try:
+            cleaned_data['bill_name'] = form_data['bill_name'].strip()
+            if not cleaned_data['bill_name']:
+                errors.append("Bill name cannot be empty")
+            
+            cleaned_data['amount'] = BillFormProcessor.clean_currency_input(form_data['amount'])
+            if cleaned_data['amount'] is None:
+                errors.append("Valid amount is required")
+            
+            cleaned_data['due_date'] = BillFormProcessor.validate_date_input(form_data['due_date'])
+            if cleaned_data['due_date'] is None:
+                errors.append("Valid due date is required")
+            
+            valid_frequencies = ['one-time', 'weekly', 'monthly', 'quarterly']
+            frequency = form_data['frequency'].strip().lower()
+            if frequency not in valid_frequencies:
+                errors.append(f"Frequency must be one of: {', '.join(valid_frequencies)}")
+            cleaned_data['frequency'] = frequency
+            
+            valid_categories = ['utilities', 'rent', 'data_internet', 'ajo_esusu_adashe', 'food', 'transport',
+                               'clothing', 'education', 'healthcare', 'entertainment', 'airtime', 'school_fees',
+                               'savings_investments', 'other']
+            category = form_data['category'].strip().lower()
+            if category not in valid_categories:
+                errors.append(f"Category must be one of: {', '.join(valid_categories)}")
+            cleaned_data['category'] = category
+            
+            valid_statuses = ['unpaid', 'paid', 'pending', 'overdue']
+            status = form_data['status'].strip().lower()
+            if status not in valid_statuses:
+                errors.append(f"Status must be one of: {', '.join(valid_statuses)}")
+            cleaned_data['status'] = status
+            
+            cleaned_data['send_email'] = bool(form_data.get('send_email', False))
+            
+            reminder_days = form_data.get('reminder_days')
+            if cleaned_data['send_email'] and reminder_days:
+                cleaned_data['reminder_days'] = BillFormProcessor.clean_integer_input(
+                    reminder_days, min_val=1, max_val=30
+                )
+            elif cleaned_data['send_email']:
+                cleaned_data['reminder_days'] = 7
+            else:
+                cleaned_data['reminder_days'] = None
+            
+        except ValueError as e:
+            errors.append(str(e))
+        
+        if errors:
+            raise ValueError("Validation errors: " + "; ".join(errors))
+        
+        return cleaned_data
 
 def format_currency(value):
     """Format a numeric value with comma separation, no currency symbol."""
     try:
         if isinstance(value, str):
-            cleaned_value = clean_currency(value)
+            cleaned_value = BillFormProcessor.clean_currency_input(value)
             numeric_value = float(cleaned_value)
         else:
             numeric_value = float(value)
@@ -115,24 +220,13 @@ def deduct_ficore_credits(db, user_id, amount, action, bill_id=None):
         current_app.logger.error(f"Error deducting {amount} Ficore Credits for {action} by user {user_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         return False
 
-class CommaSeparatedIntegerField(IntegerField):
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                cleaned_value = clean_currency(valuelist[0])
-                self.data = int(float(cleaned_value)) if cleaned_value else None
-            except (ValueError, TypeError):
-                self.data = None
-                raise ValidationError(trans('bill_reminder_days_invalid', default='Not a valid integer'))
-
 class BillForm(FlaskForm):
     bill_name = StringField(
         trans('bill_bill_name', default='Bill Name'),
         validators=[DataRequired(message=trans('bill_bill_name_required', default='Bill name is required'))]
     )
-    amount = FloatField(
+    amount = DecimalField(
         trans('bill_amount', default='Amount'),
-        filters=[strip_commas],
         validators=[
             DataRequired(message=trans('bill_amount_required', default='Valid amount is required')),
             NumberRange(min=0, max=10000000000, message=trans('bill_amount_exceed', default='Amount must be between 0 and 10 billion'))
@@ -189,7 +283,7 @@ class BillForm(FlaskForm):
         trans('general_send_email', default='Send Email Reminders'),
         default=False
     )
-    reminder_days = CommaSeparatedIntegerField(
+    reminder_days = IntegerField(
         trans('bill_reminder_days', default='Reminder Days'),
         default=7,
         validators=[
@@ -211,30 +305,10 @@ class BillForm(FlaskForm):
         self.reminder_days.label.text = trans('bill_reminder_days', lang) or 'Reminder Days'
 
     def validate(self, extra_validators=None):
-        """Custom validation for float and integer fields to ensure proper number format."""
+        """Custom validation for decimal and integer fields."""
         if not super().validate(extra_validators):
             return False
-        for field in [self.amount]:
-            if field.data is not None:
-                try:
-                    if isinstance(field.data, str):
-                        field.data = float(strip_commas(field.data))
-                    current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
-                except ValueError as e:
-                    current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
-                    field.errors.append(trans(f'bill_{field.name}_invalid', session.get('lang', 'en')) or f'Invalid {field.label.text} format')
-                    return False
-        if self.reminder_days.data is not None:
-            try:
-                if isinstance(self.reminder_days.data, str):
-                    self.reminder_days.data = int(float(strip_commas(self.reminder_days.data)))
-                current_app.logger.debug(f"Validated reminder_days for session {session.get('sid', 'no-session-id')}: {self.reminder_days.data}")
-            except ValueError as e:
-                current_app.logger.warning(f"Invalid reminder_days value for session {session.get('sid', 'no-session-id')}: {self.reminder_days.data}")
-                self.reminder_days.errors.append(trans('bill_reminder_days_invalid', session.get('lang', 'en')) or 'Invalid reminder days format')
-                return False
         if self.send_email.data and not current_user.is_authenticated:
-            current_app.logger.warning(f"Email opt-in selected but no email available for session {session.get('sid', 'no-session-id')}")
             self.send_email.errors.append(trans('bill_email_required', session.get('lang', 'en')) or 'Email notifications require an authenticated user')
             return False
         if self.due_date.data and self.due_date.data < date.today():
@@ -243,9 +317,8 @@ class BillForm(FlaskForm):
         return True
 
 class EditBillForm(FlaskForm):
-    amount = FloatField(
+    amount = DecimalField(
         trans('bill_amount', default='Amount'),
-        filters=[strip_commas],
         validators=[
             DataRequired(message=trans('bill_amount_required', default='Valid amount is required')),
             NumberRange(min=0, max=10000000000, message=trans('bill_amount_exceed', default='Amount must be between 0 and 10 billion'))
@@ -298,7 +371,7 @@ class EditBillForm(FlaskForm):
         trans('general_send_email', default='Send Email Reminders'),
         default=False
     )
-    reminder_days = CommaSeparatedIntegerField(
+    reminder_days = IntegerField(
         trans('bill_reminder_days', default='Reminder Days'),
         default=7,
         validators=[
@@ -318,30 +391,10 @@ class EditBillForm(FlaskForm):
         self.reminder_days.label.text = trans('bill_reminder_days', lang) or 'Reminder Days'
 
     def validate(self, extra_validators=None):
-        """Custom validation for float and integer fields to ensure proper number format."""
+        """Custom validation for decimal and integer fields."""
         if not super().validate(extra_validators):
             return False
-        for field in [self.amount]:
-            if field.data is not None:
-                try:
-                    if isinstance(field.data, str):
-                        field.data = float(strip_commas(field.data))
-                    current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
-                except ValueError as e:
-                    current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
-                    field.errors.append(trans(f'bill_{field.name}_invalid', session.get('lang', 'en')) or f'Invalid {field.label.text} format')
-                    return False
-        if self.reminder_days.data is not None:
-            try:
-                if isinstance(self.reminder_days.data, str):
-                    self.reminder_days.data = int(float(strip_commas(self.reminder_days.data)))
-                current_app.logger.debug(f"Validated reminder_days for session {session.get('sid', 'no-session-id')}: {self.reminder_days.data}")
-            except ValueError as e:
-                current_app.logger.warning(f"Invalid reminder_days value for session {session.get('sid', 'no-session-id')}: {self.reminder_days.data}")
-                self.reminder_days.errors.append(trans('bill_reminder_days_invalid', session.get('lang', 'en')) or 'Invalid reminder days format')
-                return False
         if self.send_email.data and not current_user.is_authenticated:
-            current_app.logger.warning(f"Email opt-in selected but no email available for session {session.get('sid', 'no-session-id')}")
             self.send_email.errors.append(trans('bill_email_required', session.get('lang', 'en')) or 'Email notifications require an authenticated user')
             return False
         return True
@@ -355,7 +408,7 @@ def main():
     if 'sid' not in session:
         create_anonymous_session()
         session['is_anonymous'] = True
-        current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
+        current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session.get('sid', 'unknown')})
     session.permanent = True
     session.modified = True
     form = BillForm()
@@ -403,86 +456,98 @@ def main():
         bills_collection = db.bills
         if request.method == 'POST':
             action = request.form.get('action')
-            if action == 'add_bill' and form.validate_on_submit():
+            if action == 'add_bill':
                 if current_user.is_authenticated and not is_admin():
                     if not check_ficore_credit_balance(required_amount=1, user_id=current_user.id):
                         current_app.logger.warning(f"Insufficient Ficore Credits for adding bill by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans('bill_insufficient_credits', default='Insufficient Ficore Credits to add a bill. Please purchase more credits.'), 'danger')
                         return redirect(url_for('agents_bp.manage_credits'))
                 try:
-                    log_tool_usage(
-                        tool_name='bill',
-                        db=db,
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                        session_id=session.get('sid', 'unknown'),
-                        action='add_bill'
-                    )
+                    form_data = {
+                        'bill_name': request.form.get('bill_name', ''),
+                        'amount': request.form.get('amount', ''),
+                        'due_date': request.form.get('due_date', ''),
+                        'frequency': request.form.get('frequency', ''),
+                        'category': request.form.get('category', ''),
+                        'status': request.form.get('status', ''),
+                        'send_email': request.form.get('send_email', False),
+                        'reminder_days': request.form.get('reminder_days', '')
+                    }
+                    cleaned_data = BillFormProcessor.process_bill_form_data(form_data)
+                    if form.validate_on_submit():
+                        log_tool_usage(
+                            tool_name='bill',
+                            db=db,
+                            user_id=current_user.id if current_user.is_authenticated else None,
+                            session_id=session.get('sid', 'unknown'),
+                            action='add_bill'
+                        )
+                        bill_id = ObjectId()
+                        bill_data = {
+                            '_id': bill_id,
+                            'user_id': current_user.id if current_user.is_authenticated else None,
+                            'session_id': session['sid'] if not current_user.is_authenticated else None,
+                            'user_email': current_user.email if current_user.is_authenticated else '',
+                            'first_name': current_user.get_first_name() if current_user.is_authenticated else '',
+                            'bill_name': cleaned_data['bill_name'],
+                            'amount': float(cleaned_data['amount']),
+                            'due_date': cleaned_data['due_date'].isoformat(),
+                            'frequency': cleaned_data['frequency'],
+                            'category': cleaned_data['category'],
+                            'status': cleaned_data['status'],
+                            'send_email': cleaned_data['send_email'],
+                            'reminder_days': cleaned_data['reminder_days'],
+                            'created_at': datetime.utcnow()
+                        }
+                        bills_collection.insert_one(bill_data)
+                        if current_user.is_authenticated and not is_admin():
+                            if not deduct_ficore_credits(db, current_user.id, 1, 'add_bill', bill_id):
+                                bills_collection.delete_one({'_id': bill_id})
+                                current_app.logger.error(f"Failed to deduct Ficore Credit for adding bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for adding bill.'), 'danger')
+                                return redirect(url_for('personal.bill.main', tab='add-bill'))
+                        current_app.logger.info(f"Bill {bill_id} added successfully for user {bill_data['user_email']}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_added_success', default='Bill added successfully!'), 'success')
+                        if cleaned_data['send_email'] and bill_data['user_email']:
+                            try:
+                                config = EMAIL_CONFIG['bill_reminder']
+                                subject = trans(config['subject_key'], default='Your Bill Reminder')
+                                send_email(
+                                    app=current_app,
+                                    logger=current_app.logger,
+                                    to_email=bill_data['user_email'],
+                                    subject=subject,
+                                    template_name=config['template'],
+                                    data={
+                                        'first_name': bill_data['first_name'],
+                                        'bills': [{
+                                            'bill_name': bill_data['bill_name'],
+                                            'amount': format_currency(bill_data['amount']),
+                                            'due_date': bill_data['due_date'],
+                                            'category': bill_data['category'],
+                                            'status': bill_data['status']
+                                        }],
+                                        'cta_url': url_for('personal.bill.main', _external=True),
+                                        'unsubscribe_url': url_for('personal.bill.unsubscribe', _external=True)
+                                    },
+                                    lang=session.get('lang', 'en')
+                                )
+                                current_app.logger.info(f"Email sent to {bill_data['user_email']}", extra={'session_id': session.get('sid', 'unknown')})
+                            except Exception as e:
+                                current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
+                        return redirect(url_for('personal.bill.main', tab='dashboard'))
+                    else:
+                        for field, errors in form.errors.items():
+                            for error in errors:
+                                flash(trans(error, default=error), 'danger')
+                        return redirect(url_for('personal.bill.main', tab='add-bill'))
+                except ValueError as e:
+                    current_app.logger.error(f"Form validation error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    flash(str(e), 'danger')
+                    return redirect(url_for('personal.bill.main', tab='add-bill'))
                 except Exception as e:
-                    current_app.logger.error(f"Failed to log bill addition: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                    flash(trans('bill_log_error', default='Error logging bill addition. Continuing with submission.'), 'warning')
-
-                due_date = form.due_date.data
-                status = form.status.data
-                if status not in ['paid', 'pending'] and due_date < date.today():
-                    status = 'overdue'
-                bill_id = ObjectId()
-                bill_data = {
-                    '_id': bill_id,
-                    'user_id': current_user.id if current_user.is_authenticated else None,
-                    'session_id': session['sid'] if not current_user.is_authenticated else None,
-                    'user_email': current_user.email if current_user.is_authenticated else '',
-                    'first_name': current_user.get_first_name() if current_user.is_authenticated else '',
-                    'bill_name': form.bill_name.data,
-                    'amount': float(form.amount.data),
-                    'due_date': due_date.isoformat(),
-                    'frequency': form.frequency.data,
-                    'category': form.category.data,
-                    'status': status,
-                    'send_email': form.send_email.data,
-                    'reminder_days': int(form.reminder_days.data) if form.send_email.data and form.reminder_days.data else None,
-                    'created_at': datetime.utcnow()
-                }
-                try:
-                    bills_collection.insert_one(bill_data)
-                    if current_user.is_authenticated and not is_admin():
-                        if not deduct_ficore_credits(db, current_user.id, 1, 'add_bill', bill_id):
-                            bills_collection.delete_one({'_id': bill_id})  # Rollback on failure
-                            current_app.logger.error(f"Failed to deduct Ficore Credit for adding bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
-                            flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for adding bill.'), 'danger')
-                            return redirect(url_for('personal.bill.main', tab='add-bill'))
-                    current_app.logger.info(f"Bill {bill_id} added successfully for user {bill_data['user_email']}", extra={'session_id': session.get('sid', 'unknown')})
-                    flash(trans('bill_added_success', default='Bill added successfully!'), 'success')
-                    if form.send_email.data and bill_data['user_email']:
-                        try:
-                            config = EMAIL_CONFIG['bill_reminder']
-                            subject = trans(config['subject_key'], default='Your Bill Reminder')
-                            send_email(
-                                app=current_app,
-                                logger=current_app.logger,
-                                to_email=bill_data['user_email'],
-                                subject=subject,
-                                template_name=config['template'],
-                                data={
-                                    'first_name': bill_data['first_name'],
-                                    'bills': [{
-                                        'bill_name': bill_data['bill_name'],
-                                        'amount': format_currency(bill_data['amount']),
-                                        'due_date': bill_data['due_date'],
-                                        'category': bill_data['category'],
-                                        'status': bill_data['status']
-                                    }],
-                                    'cta_url': url_for('personal.bill.main', _external=True),
-                                    'unsubscribe_url': url_for('personal.bill.unsubscribe', _external=True)
-                                },
-                                lang=session.get('lang', 'en')
-                            )
-                            current_app.logger.info(f"Email sent to {bill_data['user_email']}", extra={'session_id': session.get('sid', 'unknown')})
-                        except Exception as e:
-                            current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                            flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
-                    return redirect(url_for('personal.bill.main', tab='dashboard'))
-                except Exception as e:
-                    current_app.logger.error(f"Failed to save bill {bill_id} to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    current_app.logger.error(f"Failed to save bill to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('bill_storage_error', default='Error saving bill.'), 'danger')
                     return redirect(url_for('personal.bill.main', tab='add-bill'))
             elif action in ['update_bill', 'delete_bill', 'toggle_status']:
@@ -498,18 +563,29 @@ def main():
                         flash(trans('bill_insufficient_credits', default='Insufficient Ficore Credits to perform this action. Please purchase more credits.'), 'danger')
                         return redirect(url_for('agents_bp.manage_credits'))
                 if action == 'update_bill':
-                    edit_form = EditBillForm(formdata=request.form)
-                    if edit_form.validate():
-                        update_data = {
-                            'amount': float(edit_form.amount.data),
-                            'frequency': edit_form.frequency.data,
-                            'category': edit_form.category.data,
-                            'status': edit_form.status.data,
-                            'send_email': edit_form.send_email.data,
-                            'reminder_days': int(edit_form.reminder_days.data) if edit_form.send_email.data and edit_form.reminder_days.data else None,
-                            'updated_at': datetime.utcnow()
+                    try:
+                        form_data = {
+                            'bill_name': bill['bill_name'],
+                            'amount': request.form.get('amount', ''),
+                            'due_date': bill['due_date'],
+                            'frequency': request.form.get('frequency', ''),
+                            'category': request.form.get('category', ''),
+                            'status': request.form.get('status', ''),
+                            'send_email': request.form.get('send_email', False),
+                            'reminder_days': request.form.get('reminder_days', '')
                         }
-                        try:
+                        cleaned_data = BillFormProcessor.process_bill_form_data(form_data)
+                        edit_form = EditBillForm(formdata=request.form)
+                        if edit_form.validate():
+                            update_data = {
+                                'amount': float(cleaned_data['amount']),
+                                'frequency': cleaned_data['frequency'],
+                                'category': cleaned_data['category'],
+                                'status': cleaned_data['status'],
+                                'send_email': cleaned_data['send_email'],
+                                'reminder_days': cleaned_data['reminder_days'],
+                                'updated_at': datetime.utcnow()
+                            }
                             bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': update_data})
                             if current_user.is_authenticated and not is_admin():
                                 if not deduct_ficore_credits(db, current_user.id, 1, 'update_bill', bill_id):
@@ -518,11 +594,17 @@ def main():
                                     return redirect(url_for('personal.bill.main', tab='manage-bills'))
                             current_app.logger.info(f"Bill {bill_id} updated successfully", extra={'session_id': session.get('sid', 'unknown')})
                             flash(trans('bill_updated_success', default='Bill updated successfully!'), 'success')
-                        except Exception as e:
-                            current_app.logger.error(f"Failed to update bill {bill_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-                            flash(trans('bill_update_failed', default='Failed to update bill.'), 'danger')
-                    else:
-                        current_app.logger.error(f"Edit form validation failed: {edit_form.errors}", extra={'session_id': session.get('sid', 'unknown')})
+                        else:
+                            for field, errors in edit_form.errors.items():
+                                for error in errors:
+                                    flash(trans(error, default=error), 'danger')
+                            return redirect(url_for('personal.bill.main', tab='manage-bills'))
+                    except ValueError as e:
+                        current_app.logger.error(f"Form validation error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(str(e), 'danger')
+                        return redirect(url_for('personal.bill.main', tab='manage-bills'))
+                    except Exception as e:
+                        current_app.logger.error(f"Failed to update bill {bill_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans('bill_update_failed', default='Failed to update bill.'), 'danger')
                     return redirect(url_for('personal.bill.main', tab='manage-bills'))
                 elif action == 'delete_bill':
@@ -562,7 +644,7 @@ def main():
                                 bills_collection.insert_one(new_bill)
                                 if current_user.is_authenticated and not is_admin():
                                     if not deduct_ficore_credits(db, current_user.id, 1, 'add_recurring_bill', new_bill['_id']):
-                                        bills_collection.delete_one({'_id': new_bill['_id']})  # Rollback on failure
+                                        bills_collection.delete_one({'_id': new_bill['_id']})
                                         current_app.logger.error(f"Failed to deduct Ficore Credit for adding recurring bill {new_bill['_id']} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
                                         flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for adding recurring bill.'), 'danger')
                                         return redirect(url_for('personal.bill.main', tab='manage-bills'))
