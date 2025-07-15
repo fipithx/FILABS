@@ -91,7 +91,7 @@ _PERSONAL_TOOLS = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -193,7 +193,7 @@ _PERSONAL_EXPLORE_FEATURES = [
         "icon": "bi-shield"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -284,7 +284,7 @@ _BUSINESS_TOOLS = [
         "icon": "bi-calculator"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -354,7 +354,7 @@ _BUSINESS_EXPLORE_FEATURES = [
         "icon": "bi-box"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -437,7 +437,7 @@ _AGENT_TOOLS = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -491,7 +491,7 @@ _AGENT_EXPLORE_FEATURES = [
         "icon": "bi-person-workspace"
     },
     {
-        "endpoint": "credits.history",
+        "endpoint": "agents_bp.manage_credits",
         "label": "Ficore Credits",
         "label_key": "credits_dashboard",
         "description_key": "credits_dashboard_desc",
@@ -560,7 +560,6 @@ _ADMIN_NAV = [
         "tooltip_key": "admin_dashboard_tooltip",
         "icon": "bi-speedometer"
     },
-    
     {
         "endpoint": "admin.credit_credits",
         "label": "Credit Ficore Credits",
@@ -1202,12 +1201,12 @@ def requires_role(role):
         return decorated_function
     return decorator
 
-def check_coin_balance(required_amount=1, user_id=None):
+def check_ficore_credit_balance(required_amount=1, user_id=None):
     """
-    Check if user has sufficient coin balance.
+    Check if user has sufficient Ficore Credit balance.
     
     Args:
-        required_amount: Required coin amount (default: 1)
+        required_amount: Required credit amount (default: 1)
         user_id: User ID (optional, will use current_user if not provided)
     
     Returns:
@@ -1227,10 +1226,10 @@ def check_coin_balance(required_amount=1, user_id=None):
             user = db.users.find_one(user_query)
             if not user:
                 return False
-            coin_balance = user.get('coin_balance', 0)
-            return coin_balance >= required_amount
+            credit_balance = user.get('ficore_credit_balance', 0)
+            return credit_balance >= required_amount
     except Exception as e:
-        logger.error(f"{trans('general_coin_balance_check_error', default='Error checking coin balance for user')} {user_id}: {str(e)}", exc_info=True)
+        logger.error(f"{trans('general_ficore_credit_balance_check_error', default='Error checking Ficore Credit balance for user')} {user_id}: {str(e)}", exc_info=True)
         return False
 
 def get_user_query(user_id):
@@ -1633,7 +1632,7 @@ def get_recent_activities(user_id=None, is_admin_user=False, db=None, session_id
                     'course_title': course_title,
                     'lessons_completed': len(progress.get('lessons_completed', [])),
                     'current_lesson': progress.get('current_lesson', 'N/A'),
-                    'coins_earned': progress.get('coins_earned', 0),
+                    'credits_earned': progress.get('credits_earned', 0),
                     'badges_earned': progress.get('badges_earned', [])
                 },
                 'icon': 'bi-book',
@@ -1676,7 +1675,7 @@ def get_all_recent_activities(user_id=None, is_admin_user=False, db=None, sessio
 __all__ = [
     'login_manager', 'clean_currency', 'log_tool_usage', 'flask_session', 'csrf', 'babel', 'compress', 'limiter',
     'get_limiter', 'create_anonymous_session', 'trans_function', 'is_valid_email',
-    'get_mongo_db', 'close_mongo_db', 'get_mail', 'requires_role', 'check_coin_balance',
+    'get_mongo_db', 'close_mongo_db', 'get_mail', 'requires_role', 'check_ficore_credit_balance',
     'get_user_query', 'is_admin', 'format_currency', 'format_date', 'sanitize_input',
     'generate_unique_id', 'validate_required_fields', 'get_user_language',
     'log_user_action', 'send_sms_reminder', 'send_whatsapp_reminder',
