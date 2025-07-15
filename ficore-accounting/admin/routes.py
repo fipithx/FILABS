@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, SelectField, SubmitField, TextAreaField, DateField, validators
 from wtforms.validators import DataRequired, NumberRange, ValidationError
-from translations import t
+from translations import trans
 import utils
 import bleach
 import datetime
