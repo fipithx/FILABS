@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session, jsonify, current_app
+from flask import Blueprint, session, request, render_template, redirect, url_for, flash, session, jsonify, current_app
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
