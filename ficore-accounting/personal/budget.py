@@ -23,46 +23,36 @@ budget_bp = Blueprint(
 csrf = CSRFProtect()
 
 def clean_currency(value):
-    """Strip commas and handle edge cases for numeric inputs."""
+    """Transform input into a float, returning None for invalid cases."""
     if not value or value == '0':
-        return '0'
+        return 0.0
     if isinstance(value, str):
         value = re.sub(r'[^\d.]', '', value.strip())
         parts = value.split('.')
         if len(parts) > 2:
             value = parts[0] + '.' + ''.join(parts[1:])
         if not value or value == '.':
-            return '0'
+            return 0.0
         try:
             float_value = float(value)
             if float_value > 1e308:
-                raise ValueError("Value exceeds maximum float limit")
-            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
-            return str(float_value)
-        except ValueError as e:
-            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            raise ValidationError(trans('budget_number_invalid', default='Invalid number format'))
-    return str(float(value))
+                return None  # Exceeds float limit
+            return float_value
+        except ValueError:
+            return None
+    return float(value) if value else 0.0
 
 def strip_commas(value):
-    """Strip commas from string values, delegating to clean_currency."""
-    if isinstance(value, str):
-        return clean_currency(value)
-    return str(value)
+    """Filter to remove commas and return a float."""
+    return clean_currency(value)
 
 def format_currency(value):
     """Format a numeric value with comma separation, no currency symbol."""
     try:
-        if isinstance(value, str):
-            cleaned_value = clean_currency(value)
-            numeric_value = float(cleaned_value)
-        else:
-            numeric_value = float(value)
+        numeric_value = float(value)
         formatted = f"{numeric_value:,.2f}"
-        current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
         return formatted
-    except (ValueError, TypeError) as e:
-        current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+    except (ValueError, TypeError):
         return "0.00"
 
 def custom_login_required(f):
@@ -80,18 +70,15 @@ def deduct_ficore_credits(db, user_id, amount, action, budget_id=None):
     try:
         user = db.users.find_one({'_id': user_id})
         if not user:
-            current_app.logger.error(f"User {user_id} not found for credit deduction", extra={'session_id': session.get('sid', 'unknown')})
             return False
         current_balance = user.get('ficore_credit_balance', 0)
         if current_balance < amount:
-            current_app.logger.warning(f"Insufficient credits for user {user_id}: required {amount}, available {current_balance}", extra={'session_id': session.get('sid', 'unknown')})
             return False
         result = db.users.update_one(
             {'_id': user_id},
             {'$inc': {'ficore_credit_balance': -amount}}
         )
         if result.modified_count == 0:
-            current_app.logger.error(f"Failed to deduct {amount} credits for user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
             return False
         transaction = {
             '_id': ObjectId(),
@@ -104,10 +91,8 @@ def deduct_ficore_credits(db, user_id, amount, action, budget_id=None):
             'status': 'completed'
         }
         db.credit_transactions.insert_one(transaction)
-        current_app.logger.info(f"Deducted {amount} Ficore Credits for {action} by user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
         return True
-    except Exception as e:
-        current_app.logger.error(f"Error deducting {amount} Ficore Credits for {action} by user {user_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+    except Exception:
         return False
 
 class CommaSeparatedIntegerField(IntegerField):
@@ -115,7 +100,7 @@ class CommaSeparatedIntegerField(IntegerField):
         if valuelist:
             try:
                 cleaned_value = clean_currency(valuelist[0])
-                self.data = int(float(cleaned_value)) if cleaned_value else None
+                self.data = int(cleaned_value) if cleaned_value is not None else None
             except (ValueError, TypeError):
                 self.data = None
                 raise ValidationError(trans('budget_dependents_invalid', default='Not a valid integer'))
@@ -200,34 +185,13 @@ class BudgetForm(FlaskForm):
         self.submit.label.text = trans('budget_submit', lang) or 'Submit'
 
     def validate(self, extra_validators=None):
-        """Custom validation for all float fields to ensure proper number format."""
-        if not super().validate(extra_validators):
-            return False
-        for field in [self.income, self.housing, self.food, self.transport, self.miscellaneous, self.others, self.savings_goal]:
-            try:
-                if isinstance(field.data, str):
-                    field.data = float(strip_commas(field.data))
-                current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
-            except ValueError as e:
-                current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
-                field.errors.append(trans(f'budget_{field.name}_invalid', session.get('lang', 'en')) or f'Invalid {field.label.text} format')
-                return False
-        try:
-            if isinstance(self.dependents.data, str):
-                self.dependents.data = int(float(strip_commas(self.dependents.data)))
-            current_app.logger.debug(f"Validated dependents for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
-        except ValueError as e:
-            current_app.logger.warning(f"Invalid dependents value for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
-            self.dependents.errors.append(trans('budget_dependents_invalid', session.get('lang', 'en')) or 'Invalid dependents format')
-            return False
-        return True
+        return super().validate(extra_validators)
 
 @budget_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
 @requires_role(['personal', 'admin'])
 @limiter.limit("10 per minute")
 def main():
-    """Main budget management interface with tabbed layout."""
     if 'sid' not in session:
         create_anonymous_session()
         session['is_anonymous'] = True
@@ -288,16 +252,16 @@ def main():
                     current_app.logger.error(f"Failed to log budget creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('budget_log_error', default='Error logging budget creation. Continuing with submission.'), 'warning')
 
-                income = float(form.income.data)
+                income = form.income.data
                 expenses = sum([
-                    float(form.housing.data),
-                    float(form.food.data),
-                    float(form.transport.data),
+                    form.housing.data,
+                    form.food.data,
+                    form.transport.data,
                     float(form.dependents.data),
-                    float(form.miscellaneous.data),
-                    float(form.others.data)
+                    form.miscellaneous.data,
+                    form.others.data
                 ])
-                savings_goal = float(form.savings_goal.data)
+                savings_goal = form.savings_goal.data
                 surplus_deficit = income - expenses
                 budget_id = ObjectId()
                 budget_data = {
@@ -310,12 +274,12 @@ def main():
                     'variable_expenses': 0.0,
                     'savings_goal': savings_goal,
                     'surplus_deficit': surplus_deficit,
-                    'housing': float(form.housing.data),
-                    'food': float(form.food.data),
-                    'transport': float(form.transport.data),
-                    'dependents': int(form.dependents.data),
-                    'miscellaneous': float(form.miscellaneous.data),
-                    'others': float(form.others.data),
+                    'housing': form.housing.data,
+                    'food': form.food.data,
+                    'transport': form.transport.data,
+                    'dependents': form.dependents.data,
+                    'miscellaneous': form.miscellaneous.data,
+                    'others': form.others.data,
                     'created_at': datetime.utcnow()
                 }
                 current_app.logger.debug(f"Saving budget data: {budget_data}", extra={'session_id': session['sid']})
@@ -420,27 +384,27 @@ def main():
                 'user_id': budget.get('user_id'),
                 'session_id': budget.get('session_id'),
                 'user_email': budget.get('user_email', current_user.email if current_user.is_authenticated else ''),
-                'income': format_currency(float(budget.get('income', 0.0))),
+                'income': format_currency(budget.get('income', 0.0)),
                 'income_raw': float(budget.get('income', 0.0)),
-                'fixed_expenses': format_currency(float(budget.get('fixed_expenses', 0.0))),
+                'fixed_expenses': format_currency(budget.get('fixed_expenses', 0.0)),
                 'fixed_expenses_raw': float(budget.get('fixed_expenses', 0.0)),
-                'variable_expenses': format_currency(float(budget.get('variable_expenses', 0.0))),
+                'variable_expenses': format_currency(budget.get('variable_expenses', 0.0)),
                 'variable_expenses_raw': float(budget.get('variable_expenses', 0.0)),
-                'savings_goal': format_currency(float(budget.get('savings_goal', 0.0))),
+                'savings_goal': format_currency(budget.get('savings_goal', 0.0)),
                 'savings_goal_raw': float(budget.get('savings_goal', 0.0)),
                 'surplus_deficit': float(budget.get('surplus_deficit', 0.0)),
-                'surplus_deficit_formatted': format_currency(float(budget.get('surplus_deficit', 0.0))),
-                'housing': format_currency(float(budget.get('housing', 0.0))),
+                'surplus_deficit_formatted': format_currency(budget.get('surplus_deficit', 0.0)),
+                'housing': format_currency(budget.get('housing', 0.0)),
                 'housing_raw': float(budget.get('housing', 0.0)),
-                'food': format_currency(float(budget.get('food', 0.0))),
+                'food': format_currency(budget.get('food', 0.0)),
                 'food_raw': float(budget.get('food', 0.0)),
-                'transport': format_currency(float(budget.get('transport', 0.0))),
+                'transport': format_currency(budget.get('transport', 0.0)),
                 'transport_raw': float(budget.get('transport', 0.0)),
                 'dependents': str(budget.get('dependents', 0)),
                 'dependents_raw': int(budget.get('dependents', 0)),
-                'miscellaneous': format_currency(float(budget.get('miscellaneous', 0.0))),
+                'miscellaneous': format_currency(budget.get('miscellaneous', 0.0)),
                 'miscellaneous_raw': float(budget.get('miscellaneous', 0.0)),
-                'others': format_currency(float(budget.get('others', 0.0))),
+                'others': format_currency(budget.get('others', 0.0)),
                 'others_raw': float(budget.get('others', 0.0)),
                 'created_at': budget.get('created_at').strftime('%Y-%m-%d') if budget.get('created_at') else 'N/A'
             }
@@ -571,7 +535,6 @@ def main():
 @requires_role(['personal', 'admin'])
 @limiter.limit("5 per minute")
 def summary():
-    """Return summary of the latest budget for the current user."""
     db = get_mongo_db()
     try:
         log_tool_usage(
@@ -604,7 +567,6 @@ def summary():
 
 @budget_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    """Handle CSRF errors with user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('budget_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
     return redirect(request.url), 403
