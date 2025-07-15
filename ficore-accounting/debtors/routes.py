@@ -130,8 +130,8 @@ def share(id):
             return jsonify({'success': False, 'message': trans('debtors_record_not_found', default='Record not found')}), 404
         if not debtor.get('contact'):
             return jsonify({'success': False, 'message': trans('debtors_no_contact', default='No contact provided for sharing')}), 400
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            return jsonify({'success': False, 'message': trans('debtors_insufficient_coins', default='Insufficient coins to share IOU')}), 400
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            return jsonify({'success': False, 'message': trans('debtors_insufficient_credits', default='Insufficient Ficore Credits to share IOU')}), 400
         
         contact = re.sub(r'\D', '', debtor['contact'])
         if contact.startswith('0'):
@@ -144,8 +144,8 @@ def share(id):
         
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
@@ -181,9 +181,9 @@ def send_reminder():
         if not debtor:
             return jsonify({'success': False, 'message': trans('debtors_record_not_found', default='Record not found')}), 404
         
-        coin_cost = 2 if recipient else 1
-        if not utils.is_admin() and not utils.check_coin_balance(coin_cost):
-            return jsonify({'success': False, 'message': trans('debtors_insufficient_coins', default='Insufficient coins to send reminder')}), 400
+        credit_cost = 2 if recipient else 1
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(credit_cost):
+            return jsonify({'success': False, 'message': trans('debtors_insufficient_credits', default='Insufficient Ficore Credits to send reminder')}), 400
         
         update_data = {'$inc': {'reminder_count': 1}}
         if snooze_days:
@@ -203,10 +203,10 @@ def send_reminder():
             
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
-                db.users.update_one(user_query, {'$inc': {'coin_balance': -coin_cost}})
-                db.coin_transactions.insert_one({
+                db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -credit_cost}})
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
-                    'amount': -coin_cost,
+                    'amount': -credit_cost,
                     'type': 'spend',
                     'date': datetime.utcnow(),
                     'ref': f"{'Reminder sent' if recipient else 'Snooze set'} for {debtor['name']}"
@@ -248,9 +248,9 @@ def generate_iou(id):
             flash(trans('debtors_record_not_found', default='Record not found'), 'danger')
             return redirect(url_for('debtors.index'))
         
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            flash(trans('debtors_insufficient_coins', default='Insufficient coins to generate IOU'), 'danger')
-            return redirect(url_for('coins.purchase'))
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            flash(trans('debtors_insufficient_credits', default='Insufficient Ficore Credits to generate IOU'), 'danger')
+            return redirect(url_for('agents_bp.manage_credits'))
         
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -281,8 +281,8 @@ def generate_iou(id):
         
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
@@ -310,9 +310,9 @@ def generate_iou(id):
 def add():
     """Add a new debtor record."""
     form = DebtorForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('debtors_insufficient_coins', default='Insufficient coins to add debtor'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient Ficore Credits to add debtor'), 'danger')
+        return redirect(url_for('agents_bp.manage_credits'))
 
     if form.validate_on_submit():
         try:
@@ -331,8 +331,8 @@ def add():
             
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
-                db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-                db.coin_transactions.insert_one({
+                db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
