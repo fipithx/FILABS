@@ -87,10 +87,10 @@ def generate_pdf(id):
             flash(trans('payments_record_not_found', default='Record not found'), 'danger')
             return redirect(url_for('payments.index'))
         
-        # Check coin balance for non-admin users
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            flash(trans('payments_insufficient_coins', default='Insufficient coins to generate receipt'), 'danger')
-            return redirect(url_for('coins.purchase'))
+        # Check credit balance for non-admin users
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate receipt'), 'danger')
+            return redirect(url_for('credits.request'))
         
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -122,16 +122,16 @@ def generate_pdf(id):
         p.showPage()
         p.save()
         
-        # Deduct coins for non-admin users
+        # Deduct credits for non-admin users
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
                 'date': datetime.utcnow(),
-                'ref': f"Payment PDF generated for {payment['party_name']}"
+                'ref': f"Payment PDF generated for {payment['party_name']} (Ficore Credits)"
             })
         
         buffer.seek(0)
@@ -153,11 +153,11 @@ def generate_pdf(id):
 def add():
     """Add a new payment cashflow."""
     form = PaymentForm()
-    # TEMPORARY: Bypass coin check for admin during testing
-    # TODO: Restore original check_coin_balance(1) for production
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('payments_insufficient_coins', default='Insufficient coins to add a payment. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    # TEMPORARY: Bypass credit check for admin during testing
+    # TODO: Restore original check_ficore_credit_balance(1) for production
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to add a payment. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
@@ -174,20 +174,20 @@ def add():
                 'updated_at': datetime.utcnow()
             }
             db.cashflows.insert_one(cashflow)
-            # TEMPORARY: Skip coin deduction for admin during testing
-            # TODO: Restore original coin deduction for production
+            # TEMPORARY: Skip credit deduction for admin during testing
+            # TODO: Restore original credit deduction for production
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
                 db.users.update_one(
                     user_query,
-                    {'$inc': {'coin_balance': -1}}
+                    {'$inc': {'ficore_credit_balance': -1}}
                 )
-                db.coin_transactions.insert_one({
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': f"Payment creation: {cashflow['party_name']}"
+                    'ref': f"Payment creation: {cashflow['party_name']} (Ficore Credits)"
                 })
             flash(trans('payments_add_success', default='Payment added successfully'), 'success')
             return redirect(url_for('payments.index'))
