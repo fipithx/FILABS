@@ -307,94 +307,107 @@ document.addEventListener('DOMContentLoaded', function() {
         'income_required': "{{ t('budget_income_required', default='This field is required and must be greater than 0') | e }}"
     };
 
-    // Helper function to clean values
-    function cleanNumberValue(input) {
-        if (!input.value || input.value.trim() === '') {
-            return;
+    // Helper function to format a number for display (with commas and decimals)
+    function formatForDisplay(value, isDependents) {
+        if (value === null || value === undefined || isNaN(value)) {
+            return '';
         }
-        
-        let cleanValue = input.value.replace(/,/g, '');
-        const isDependents = input.id === 'dependents';
-        
         if (isDependents) {
-            let numValue = parseInt(cleanValue) || 0;
-            if (numValue > 100) numValue = 100;
-            if (numValue < 0) numValue = 0;
-            input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            return Math.floor(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
         } else {
-            let numValue = parseFloat(cleanValue) || 0;
-            if (numValue > 10000000000) numValue = 10000000000;
-            if (numValue < 0) numValue = 0;
-            input.value = numValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
     }
 
-    // Number input validation and formatting with comma separation
-    function formatNumberInput(input) {
+    // Helper function to clean input for numeric parsing (remove commas, allow one decimal)
+    function cleanForParse(value) {
+        if (!value) return '';
+        let clean = value.replace(/,/g, ''); // Remove all commas
+        // Ensure only one decimal point
+        const parts = clean.split('.');
+        if (parts.length > 2) {
+            clean = parts[0] + '.' + parts.slice(1).join('');
+        }
+        return clean;
+    }
+
+    // Apply formatting and validation to all number inputs
+    document.querySelectorAll('.number-input').forEach(input => {
         const isDependents = input.id === 'dependents';
-        input.addEventListener('input', function(e) {
-            let cursor = input.selectionStart;
-            let oldLength = input.value.length;
-            let oldValue = input.value;
-            let value = input.value.replace(/[^0-9.]/g, ''); // Allow numbers and decimal point
+        const originalHelpText = helpTextTranslations[input.id] || helpTextTranslations['income'];
 
-            if (!value) {
-                input.value = '';
-                input.classList.remove('is-invalid');
-                document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['income'];
-                return;
-            }
+        // Restore raw value on focus to allow easier editing
+        input.addEventListener('focus', function() {
+            let currentValue = input.value;
+            input.value = cleanForParse(currentValue);
+        });
 
-            // Handle dependents (integer only)
+        // Apply formatting and validation on blur (when user leaves the field)
+        input.addEventListener('blur', function() {
+            let rawValue = cleanForParse(input.value);
+            let numValue;
+
             if (isDependents) {
-                let numValue = parseInt(value) || 0;
+                numValue = parseInt(rawValue) || 0;
+                // Client-side validation for dependents
                 if (numValue > 100) {
                     numValue = 100;
                     input.classList.add('is-invalid');
                     document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
+                } else if (numValue < 0) {
+                    numValue = 0;
+                    input.classList.add('is-invalid');
+                    document.getElementById('dependents_help').innerText = helpTextTranslations['amount_positive'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents'];
+                    document.getElementById('dependents_help').innerText = originalHelpText;
                 }
-                input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
             } else {
-                // Handle currency fields (allow decimals)
-                const parts = value.split('.');
-                if (parts.length > 2) {
-                    value = parts[0] + '.' + parts.slice(1).join('');
-                }
-                if (parts.length > 1) {
-                    parts[1] = parts[1].slice(0, 2); // Limit to 2 decimal places
-                    value = parts[0] + (parts[1] ? '.' + parts[1] : '');
-                }
-                let numericValue = parseFloat(value) || 0;
-                if (numericValue > 10000000000) {
-                    numericValue = 10000000000;
+                numValue = parseFloat(rawValue) || 0;
+                // Client-side validation for currency fields
+                if (numValue > 10000000000) {
+                    numValue = 10000000000;
                     input.classList.add('is-invalid');
                     document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_max'];
-                } else if (numericValue < 0) {
-                    numericValue = 0;
+                } else if (numValue < 0) {
+                    numValue = 0;
                     input.classList.add('is-invalid');
                     document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_positive'];
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['income'];
+                    document.getElementById(`${input.id}_help`).innerText = originalHelpText;
                 }
-                input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
-
-            // Adjust cursor position
-            const newLength = input.value.length;
-            const delta = newLength - oldLength;
-            let newCursor = cursor + delta;
-            if (delta < 0 && oldValue[cursor - 1] === ',') {
-                newCursor--;
-            } else if (delta > 0 && input.value[cursor] === ',') {
-                newCursor++;
-            }
-            input.setSelectionRange(newCursor, newCursor);
+            // Format the value for display
+            input.value = formatForDisplay(numValue, isDependents);
         });
 
+        // Clean input while typing to remove invalid characters
+        input.addEventListener('input', function() {
+            let value = input.value;
+            let cleanedValue;
+
+            if (isDependents) {
+                // For dependents, allow only digits
+                cleanedValue = value.replace(/[^0-9]/g, '');
+            } else {
+                // For currency, allow digits and one decimal point
+                cleanedValue = value.replace(/[^0-9.]/g, '');
+                const parts = cleanedValue.split('.');
+                if (parts.length > 2) {
+                    cleanedValue = parts[0] + '.' + parts.slice(1).join('');
+                }
+            }
+
+            if (input.value !== cleanedValue) {
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                input.value = cleanedValue;
+                input.setSelectionRange(start, end);
+            }
+        });
+
+        // Handle paste events
         input.addEventListener('paste', function(e) {
             e.preventDefault();
             let pasted = (e.clipboardData || window.clipboardData).getData('text');
@@ -403,15 +416,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (isDependents) {
                 let numValue = parseInt(clean) || 0;
-                if (numValue > 100) {
-                    numValue = 100;
-                    input.classList.add('is-invalid');
-                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
-                } else {
-                    input.classList.remove('is-invalid');
-                    document.getElementById('dependents_help').innerText = helpTextTranslations['dependents'];
-                }
-                input.value = numValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                if (numValue > 100) numValue = 100;
+                input.value = numValue.toString();
             } else {
                 const parts = clean.split('.');
                 if (parts.length > 2) {
@@ -421,120 +427,107 @@ document.addEventListener('DOMContentLoaded', function() {
                     parts[1] = parts[1].slice(0, 2);
                     clean = parts[0] + (parts[1] ? '.' + parts[1] : '');
                 }
-                let numericValue = parseFloat(clean) || 0;
-                if (numericValue > 10000000000) {
-                    numericValue = 10000000000;
+                input.value = clean;
+            }
+            // Trigger blur to format and validate
+            input.dispatchEvent(new Event('blur'));
+        });
+
+        // Format pre-filled values on page load
+        input.dispatchEvent(new Event('blur'));
+    });
+
+    // Handle form submission: Clean values for server
+    document.getElementById('budgetForm').addEventListener('submit', function(e) {
+        let formIsValid = true;
+        this.querySelectorAll('.number-input').forEach(input => {
+            const isDependents = input.id === 'dependents';
+            let rawValue = cleanForParse(input.value);
+            let numValue;
+
+            if (isDependents) {
+                numValue = parseInt(rawValue) || 0;
+                if (numValue > 100 || numValue < 0) {
                     input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_max'];
-                } else if (numericValue < 0) {
-                    numericValue = 0;
-                    input.classList.add('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['amount_positive'];
+                    document.getElementById(`${input.id}_help`).innerText = numValue > 100 ? helpTextTranslations['dependents_max'] : helpTextTranslations['amount_positive'];
+                    formIsValid = false;
                 } else {
                     input.classList.remove('is-invalid');
-                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id] || helpTextTranslations['income'];
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id];
                 }
-                input.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            }
-        });
-
-        input.addEventListener('blur', function(e) {
-            cleanNumberValue(e.target);
-            
-            // Update help text based on validation
-            const isDependents = e.target.id === 'dependents';
-            const value = isDependents ? parseInt(e.target.value.replace(/,/g, '')) : parseFloat(e.target.value.replace(/,/g, ''));
-            
-            if (isDependents && value > 100) {
-                e.target.classList.add('is-invalid');
-                document.getElementById('dependents_help').innerText = helpTextTranslations['dependents_max'];
-            } else if (!isDependents && value > 10000000000) {
-                e.target.classList.add('is-invalid');
-                document.getElementById(`${e.target.id}_help`).innerText = helpTextTranslations['amount_max'];
-            } else if (value < 0) {
-                e.target.classList.add('is-invalid');
-                document.getElementById(`${e.target.id}_help`).innerText = helpTextTranslations['amount_positive'];
             } else {
-                e.target.classList.remove('is-invalid');
-                document.getElementById(`${e.target.id}_help`).innerText = helpTextTranslations[e.target.id] || helpTextTranslations['income'];
-            }
-        });
-    }
-
-    // Apply formatting to all number inputs
-    document.querySelectorAll('.number-input').forEach(formatNumberInput);
-
-    // Clean inputs before form submission
-    document.querySelectorAll('#budgetForm').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            // Check CSRF token
-            const csrfToken = form.querySelector('input[name="csrf_token"]');
-            if (!csrfToken || !csrfToken.value) {
-                e.preventDefault();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-                errorDiv.innerHTML = `
-                    {{ t('budget_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.') | e }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
-                `;
-                form.prepend(errorDiv);
-                return;
-            }
-
-            // Clean all number inputs before submission
-            form.querySelectorAll('.number-input').forEach(input => {
-                if (input.value && input.value.trim() !== '') {
-                    // Remove all commas and ensure proper number format
-                    let cleanValue = input.value.replace(/,/g, '');
-                    
-                    // For dependents field, ensure it's an integer
-                    if (input.id === 'dependents') {
-                        cleanValue = parseInt(cleanValue) || 0;
-                        input.value = cleanValue.toString();
-                    } else {
-                        // For currency fields, ensure proper decimal format
-                        cleanValue = parseFloat(cleanValue) || 0;
-                        input.value = cleanValue.toString();
-                    }
+                numValue = parseFloat(rawValue) || 0;
+                if (input.id === 'income' && numValue === 0) {
+                    input.classList.add('is-invalid');
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations['income_required'];
+                    formIsValid = false;
+                } else if (numValue > 10000000000 || numValue < 0) {
+                    input.classList.add('is-invalid');
+                    document.getElementById(`${input.id}_help`).innerText = numValue > 10000000000 ? helpTextTranslations['amount_max'] : helpTextTranslations['amount_positive'];
+                    formIsValid = false;
                 } else {
-                    // Set empty values to 0 for proper backend processing
-                    input.value = input.id === 'dependents' ? '0' : '0.00';
+                    input.classList.remove('is-invalid');
+                    document.getElementById(`${input.id}_help`).innerText = helpTextTranslations[input.id];
                 }
-            });
+            }
+            // Set raw numeric values for server
+            input.value = isDependents ? numValue.toString() : numValue.toFixed(2);
+        });
 
-            // Additional validation to ensure no invalid values slip through
-            const requiredFields = ['income'];
-            let hasErrors = false;
+        if (!formIsValid) {
+            e.preventDefault();
+            const firstInvalid = this.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+        }
+    });
 
-            requiredFields.forEach(fieldName => {
-                const field = form.querySelector(`#${fieldName}`);
-                if (field) {
-                    const value = parseFloat(field.value) || 0;
-                    if (value <= 0) {
-                        hasErrors = true;
-                        field.classList.add('is-invalid');
-                        const helpText = document.getElementById(`${fieldName}_help`);
-                        if (helpText) {
-                            helpText.innerText = helpTextTranslations['income_required'];
-                            helpText.classList.add('text-danger');
+    // Chart.js rendering
+    const expenseChartCtx = document.getElementById('expenseChart');
+    if (expenseChartCtx) {
+        const categoriesData = {{ categories | tojson }};
+        if (categoriesData && Object.keys(categoriesData).length > 0) {
+            try {
+                const labels = Object.keys(categoriesData).map(key => key.charAt(0).toUpperCase() + key.slice(1));
+                const data = Object.values(categoriesData);
+
+                new Chart(expenseChartCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed !== null) label += formatForDisplay(context.parsed, label.toLowerCase() === 'dependents support');
+                                        return label;
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-            });
-
-            if (hasErrors) {
-                e.preventDefault();
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'alert alert-danger alert-dismissible fade show';
-                errorDiv.innerHTML = `
-                    {{ t('budget_form_errors', default='Please fix the errors above before submitting.') | e }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('general_close', default='Close') }}"></button>
-                `;
-                form.prepend(errorDiv);
-                return;
+                });
+                document.getElementById('chartError').style.display = 'none';
+            } catch (error) {
+                console.error("Error drawing chart:", error);
+                document.getElementById('chartError').style.display = 'block';
             }
-        });
-    });
+        }
+    }
 
     // Tab persistence with sessionStorage
     const validTabs = ['create-budget', 'dashboard'];
@@ -561,44 +554,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    // Chart rendering for expense breakdown
-    {% if categories and categories|length > 0 %}
-        try {
-            const expenseCtx = document.getElementById('expenseChart').getContext('2d');
-            new Chart(expenseCtx, {
-                type: 'pie',
-                data: {
-                    labels: {{ categories.keys() | list | tojson }},
-                    datasets: [{
-                        data: {{ categories.values() | list | tojson }},
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-                        borderColor: '#fff',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const isDependents = label === '{{ t('budget_dependents_support', default='Dependents Support') }}';
-                                    return `${label}: ${value.toLocaleString('en-US', { minimumFractionDigits: isDependents ? 0 : 2, maximumFractionDigits: isDependents ? 0 : 2 })}`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Error rendering expense chart:', error);
-            document.getElementById('chartError').style.display = 'block';
-        }
-    {% endif %}
 
     // Copy referral link
     window.copyReferralLink = function() {
