@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 input.classList.remove('is-invalid');
                 if (helpElement) {
-                    helpElement.innerText = "{{ t(`net_worth_${input.id}_help`, default=`Enter amount (e.g., ${input.placeholder})`, lang=lang) | escape }}";
+                    helpElement.innerText = "{{ t('net_worth_${input.id}_help', default='Enter amount (e.g., ${input.placeholder})', lang=lang) | escape }}";
                 }
             }
         });
