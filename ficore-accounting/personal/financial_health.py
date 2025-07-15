@@ -2,7 +2,7 @@ from flask import Blueprint, request, session, redirect, url_for, render_templat
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import BooleanField, SubmitField, FloatField
-from wtforms.validators import DataRequired, NumberRange, Optional
+from wtforms.validators import DataRequired, NumberRange, Optional, ValidationError
 from flask_login import current_user, login_required
 from datetime import datetime
 from bson import ObjectId
@@ -31,81 +31,75 @@ def custom_login_required(f):
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
 
-def clean_currency(value):
-    """Strip commas and handle edge cases for numeric inputs."""
-    if not value or value == '0':
-        return '0'
+def strip_commas(value):
+    """Strip commas from string values."""
     if isinstance(value, str):
-        value = re.sub(r'[^\d.]', '', value.strip())
-        parts = value.split('.')
-        if len(parts) > 2:
-            value = parts[0] + '.' + ''.join(parts[1:])
-        if not value or value == '.':
-            return '0'
-        try:
-            float_value = float(value)
-            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
-            return str(float_value)
-        except ValueError as e:
-            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            return '0'
-    return str(float(value))
-
-def format_currency(value):
-    """Format a numeric value with comma separation, no currency symbol."""
-    try:
-        if isinstance(value, str):
-            cleaned_value = clean_currency(value)
-            numeric_value = float(cleaned_value)
-        else:
-            numeric_value = float(value)
-        formatted = f"{numeric_value:,.2f}"
-        current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
-        return formatted
-    except (ValueError, TypeError) as e:
-        current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-        return "0.00"
-
-def get_mongo_collection():
-    return get_mongo_db()['financial_health_scores']
-
-class CommaSeparatedFloatField(FloatField):
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                cleaned_value = clean_currency(valuelist[0])
-                self.data = float(cleaned_value) if cleaned_value else None
-            except (ValueError, TypeError):
-                self.data = None
-                raise ValidationError(self.gettext('Not a valid number'))
+        return value.replace(',', '')
+    return value
 
 class FinancialHealthForm(FlaskForm):
     send_email = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False
     )
-    income = CommaSeparatedFloatField(
+    income = FloatField(
         trans('financial_health_monthly_income', default='Monthly Income'),
         validators=[
             DataRequired(message=trans('financial_health_income_required', default='Please enter your monthly income.')),
-            NumberRange(min=0, max=10000000000, message=trans('financial_health_income_max', default='Income exceeds maximum limit.'))
+            NumberRange(min=0, max=10000000000, message=trans('financial_health_income_max', default='Income must be positive and reasonable.'))
         ]
     )
-    expenses = CommaSeparatedFloatField(
+    expenses = FloatField(
         trans('financial_health_monthly_expenses', default='Monthly Expenses'),
         validators=[
             DataRequired(message=trans('financial_health_expenses_required', default='Please enter your monthly expenses.')),
-            NumberRange(min=0, max=10000000000, message=trans('financial_health_expenses_max', default='Expenses exceed maximum limit.'))
+            NumberRange(min=0, max=10000000000, message=trans('financial_health_expenses_max', default='Expenses must be positive and reasonable.'))
         ]
     )
-    debt = CommaSeparatedFloatField(
+    debt = FloatField(
         trans('financial_health_total_debt', default='Total Debt'),
         validators=[
             Optional(),
-            NumberRange(min=0, max=10000000000, message=trans('financial_health_debt_max', default='Debt exceeds maximum limit.'))
+            NumberRange(min=0, max=10000000000, message=trans('financial_health_debt_max', default='Debt must be positive and reasonable.'))
         ]
     )
     submit = SubmitField(trans('financial_health_submit', default='Submit'))
+
+    def validate_income(self, field):
+        """Custom validator to handle comma-separated numbers."""
+        if field.data is None:
+            return
+        try:
+            if isinstance(field.data, str):
+                field.data = float(strip_commas(field.data))
+            current_app.logger.debug(f"Validated income for session {session.get('sid', 'no-session-id')}: {field.data}")
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid income value for session {session.get('sid', 'no-session-id')}: {field.data}")
+            raise ValidationError(trans('financial_health_income_invalid', session.get('lang', 'en')) or 'Invalid income format')
+
+    def validate_expenses(self, field):
+        """Custom validator to handle comma-separated numbers."""
+        if field.data is None:
+            return
+        try:
+            if isinstance(field.data, str):
+                field.data = float(strip_commas(field.data))
+            current_app.logger.debug(f"Validated expenses for session {session.get('sid', 'no-session-id')}: {field.data}")
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid expenses value for session {session.get('sid', 'no-session-id')}: {field.data}")
+            raise ValidationError(trans('financial_health_expenses_invalid', session.get('lang', 'en')) or 'Invalid expenses format')
+
+    def validate_debt(self, field):
+        """Custom validator to handle comma-separated numbers."""
+        if field.data is None:
+            return
+        try:
+            if isinstance(field.data, str):
+                field.data = float(strip_commas(field.data))
+            current_app.logger.debug(f"Validated debt for session {session.get('sid', 'no-session-id')}: {field.data}")
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid debt value for session {session.get('sid', 'no-session-id')}: {field.data}")
+            raise ValidationError(trans('financial_health_debt_invalid', session.get('lang', 'en')) or 'Invalid debt format')
 
 @financial_health_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
@@ -161,9 +155,9 @@ def main():
                     current_app.logger.error(f"Failed to log financial health score calculation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('financial_health_log_error', default='Error logging financial health score calculation. Continuing with submission.'), 'warning')
                 
-                debt = float(clean_currency(form.debt.data)) if form.debt.data else 0
-                income = float(clean_currency(form.income.data))
-                expenses = float(clean_currency(form.expenses.data))
+                debt = form.debt.data or 0
+                income = form.income.data
+                expenses = form.expenses.data
 
                 if income <= 0:
                     current_app.logger.error(f"Income is zero or negative for session {session['sid']}", extra={'session_id': session['sid']})
@@ -314,21 +308,21 @@ def main():
                 'user_id': record.get('user_id'),
                 'session_id': record.get('session_id'),
                 'user_email': record.get('user_email'),
-                'income': float(clean_currency(record.get('income', 0))),
+                'income': float(record.get('income', 0)),
                 'income_formatted': format_currency(record.get('income', 0)),
-                'income_raw': float(clean_currency(record.get('income', 0))),
-                'expenses': float(clean_currency(record.get('expenses', 0))),
+                'income_raw': float(record.get('income', 0)),
+                'expenses': float(record.get('expenses', 0)),
                 'expenses_formatted': format_currency(record.get('expenses', 0)),
-                'expenses_raw': float(clean_currency(record.get('expenses', 0))),
-                'debt': float(clean_currency(record.get('debt', 0))),
+                'expenses_raw': float(record.get('expenses', 0)),
+                'debt': float(record.get('debt', 0)),
                 'debt_formatted': format_currency(record.get('debt', 0)),
-                'debt_raw': float(clean_currency(record.get('debt', 0))),
-                'debt_to_income': float(clean_currency(record.get('debt_to_income', 0))),
-                'debt_to_income_formatted': f"{float(clean_currency(record.get('debt_to_income', 0))):.2f}%",
-                'savings_rate': float(clean_currency(record.get('savings_rate', 0))),
-                'savings_rate_formatted': f"{float(clean_currency(record.get('savings_rate', 0))):.2f}%",
-                'expense_ratio': float(clean_currency(record.get('expense_ratio', 0))),
-                'expense_ratio_formatted': f"{float(clean_currency(record.get('expense_ratio', 0))):.2f}%",
+                'debt_raw': float(record.get('debt', 0)),
+                'debt_to_income': float(record.get('debt_to_income', 0)),
+                'debt_to_income_formatted': f"{float(record.get('debt_to_income', 0)):.2f}%",
+                'savings_rate': float(record.get('savings_rate', 0)),
+                'savings_rate_formatted': f"{float(record.get('savings_rate', 0)):.2f}%",
+                'expense_ratio': float(record.get('expense_ratio', 0)),
+                'expense_ratio_formatted': f"{float(record.get('expense_ratio', 0)):.2f}%",
                 'dti_score': record.get('dti_score', 0),
                 'savings_score': record.get('savings_score', 0),
                 'expense_score': record.get('expense_score', 0),
@@ -383,9 +377,9 @@ def main():
         insights = []
         cross_tool_insights = []
         try:
-            debt_to_income_float = float(clean_currency(latest_record['debt_to_income']))
-            savings_rate_float = float(clean_currency(latest_record['savings_rate']))
-            expense_ratio_float = float(clean_currency(latest_record['expense_ratio']))
+            debt_to_income_float = float(latest_record['debt_to_income'])
+            savings_rate_float = float(latest_record['savings_rate'])
+            expense_ratio_float = float(latest_record['expense_ratio'])
             
             if debt_to_income_float > 35:
                 insights.append(trans("financial_health_insight_high_debt", default='Your debt-to-income ratio is high. Consider reducing debt.'))
@@ -417,7 +411,7 @@ def main():
         if budget_data:
             latest_budget = budget_data[0]
             if latest_budget.get('income') and latest_budget.get('fixed_expenses'):
-                savings_possible = float(clean_currency(latest_budget['income'])) - float(clean_currency(latest_budget['fixed_expenses']))
+                savings_possible = float(latest_budget['income']) - float(latest_budget['fixed_expenses'])
                 if savings_possible > 0:
                     cross_tool_insights.append(trans(
                         'financial_health_cross_tool_savings_possible',
