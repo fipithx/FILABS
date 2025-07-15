@@ -2,16 +2,15 @@ from flask import Blueprint, jsonify, current_app, redirect, url_for, flash, ren
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from wtforms import BooleanField, SubmitField, FloatField
-from wtforms.validators import DataRequired, NumberRange, Optional
+from wtforms.validators import DataRequired, NumberRange, Optional, ValidationError
 from flask_login import current_user, login_required
 from translations import trans
 from mailersend_email import send_email, EMAIL_CONFIG
+from bson import ObjectId
 from datetime import datetime
 from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage
-from bson import ObjectId
 from models import log_tool_usage
 from session_utils import create_anonymous_session
-import re
 
 net_worth_bp = Blueprint(
     'net_worth',
@@ -32,31 +31,17 @@ def custom_login_required(f):
         return redirect(url_for('users.login', next=request.url))
     return decorated_function
 
-def clean_currency(value):
-    """Strip commas and handle edge cases for numeric inputs."""
-    if not value or value == '0':
-        return '0'
+def strip_commas(value):
+    """Strip commas from string values."""
     if isinstance(value, str):
-        value = re.sub(r'[^\d.]', '', value.strip())
-        parts = value.split('.')
-        if len(parts) > 2:
-            value = parts[0] + '.' + ''.join(parts[1:])
-        if not value or value == '.':
-            return '0'
-        try:
-            float_value = float(value)
-            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
-            return str(float_value)
-        except ValueError as e:
-            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            return '0'
-    return str(float(value))
+        return value.replace(',', '')
+    return value
 
 def format_currency(value):
     """Format a numeric value with comma separation, no currency symbol."""
     try:
         if isinstance(value, str):
-            cleaned_value = clean_currency(value)
+            cleaned_value = strip_commas(value)
             numeric_value = float(cleaned_value)
         else:
             numeric_value = float(value)
@@ -67,43 +52,33 @@ def format_currency(value):
         current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         return "0.00"
 
-class CommaSeparatedFloatField(FloatField):
-    def process_formdata(self, valuelist):
-        if valuelist:
-            try:
-                cleaned_value = clean_currency(valuelist[0])
-                self.data = float(cleaned_value) if cleaned_value else None
-            except (ValueError, TypeError):
-                self.data = None
-                raise ValidationError(self.gettext('Not a valid number'))
-
 class NetWorthForm(FlaskForm):
     send_email = BooleanField(
         trans('general_send_email', default='Send Email'),
         default=False
     )
-    cash_savings = CommaSeparatedFloatField(
+    cash_savings = FloatField(
         trans('net_worth_cash_savings', default='Cash & Savings'),
         validators=[
             DataRequired(message=trans('net_worth_cash_savings_required', default='Please enter your cash and savings.')),
             NumberRange(min=0, max=10000000000, message=trans('net_worth_cash_savings_max', default='Cash & Savings exceeds maximum limit.'))
         ]
     )
-    investments = CommaSeparatedFloatField(
+    investments = FloatField(
         trans('net_worth_investments', default='Investments'),
         validators=[
             DataRequired(message=trans('net_worth_investments_required', default='Please enter your investments.')),
             NumberRange(min=0, max=10000000000, message=trans('net_worth_investments_max', default='Investments exceed maximum limit.'))
         ]
     )
-    property = CommaSeparatedFloatField(
+    property = FloatField(
         trans('net_worth_property', default='Physical Property'),
         validators=[
             DataRequired(message=trans('net_worth_property_required', default='Please enter your physical property value.')),
             NumberRange(min=0, max=10000000000, message=trans('net_worth_property_max', default='Physical Property exceeds maximum limit.'))
         ]
     )
-    loans = CommaSeparatedFloatField(
+    loans = FloatField(
         trans('net_worth_loans', default='Loans & Debts'),
         validators=[
             Optional(),
@@ -111,6 +86,21 @@ class NetWorthForm(FlaskForm):
         ]
     )
     submit = SubmitField(trans('net_worth_submit', default='Submit'))
+
+    def validate(self, extra_validators=None):
+        """Custom validation for all float fields."""
+        if not super().validate(extra_validators):
+            return False
+        for field in [self.cash_savings, self.investments, self.property, self.loans]:
+            try:
+                if isinstance(field.data, str):
+                    field.data = float(strip_commas(field.data))
+                current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
+            except ValueError as e:
+                current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
+                field.errors.append(trans(f'net_worth_{field.name}_invalid', default=f'Invalid {field.label.text} format', lang=session.get('lang', 'en')))
+                return False
+        return True
 
 @net_worth_bp.route('/main', methods=['GET', 'POST'])
 @custom_login_required
@@ -126,15 +116,15 @@ def main():
         current_app.logger.error(f"Failed to fetch recent activities: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
         flash(trans('bill_activities_load_error', default='Error loading recent activities.'), 'warning')
         activities = []
-    
+
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.debug(f"New anonymous session created with sid: {session['sid']}", extra={'session_id': session['sid']})
     session.permanent = True
     session.modified = True
-    
+
     form = NetWorthForm()
-    
+
     try:
         log_tool_usage(
             tool_name='net_worth',
@@ -143,12 +133,12 @@ def main():
             session_id=session.get('sid', 'unknown'),
             action='main_view'
         )
-        
+
         filter_criteria = {} if is_admin() else {'user_id': current_user.id} if current_user.is_authenticated else {'session_id': session['sid']}
-        
+
         if request.method == 'POST':
             action = request.form.get('action')
-            
+
             if action == 'calculate_net_worth' and form.validate_on_submit():
                 log_tool_usage(
                     tool_name='net_worth',
@@ -157,11 +147,11 @@ def main():
                     session_id=session.get('sid', 'unknown'),
                     action='calculate_net_worth'
                 )
-                
-                cash_savings = float(clean_currency(form.cash_savings.data))
-                investments = float(clean_currency(form.investments.data))
-                property = float(clean_currency(form.property.data))
-                loans = float(clean_currency(form.loans.data or 0))
+
+                cash_savings = form.cash_savings.data
+                investments = form.investments.data
+                property = form.property.data
+                loans = form.loans.data or 0
 
                 total_assets = cash_savings + investments + property
                 total_liabilities = loans
@@ -193,7 +183,7 @@ def main():
                     'badges': badges,
                     'created_at': datetime.utcnow()
                 }
-                
+
                 try:
                     db.net_worth_data.insert_one(net_worth_record)
                     current_app.logger.info(f"Successfully saved record {net_worth_record['_id']} for session {session.get('sid', 'unknown')}", extra={'session_id': session.get('sid', 'unknown')})
@@ -234,11 +224,14 @@ def main():
                     current_app.logger.error(f"Failed to save net worth data to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans("net_worth_storage_error", default="Error saving net worth data."), "danger")
                     return redirect(url_for('personal.net_worth.main', tab='calculator'))
+            else:
+                current_app.logger.warning(f"Form validation failed for session {session.get('sid', 'unknown')}: {form.errors}", extra={'session_id': session.get('sid', 'unknown')})
+                flash(trans("net_worth_form_validation_error", default="Please correct the errors in the form"), "danger")
 
         user_records = db.net_worth_data.find(filter_criteria).sort('created_at', -1)
         if db.net_worth_data.count_documents(filter_criteria) == 0 and current_user.is_authenticated and current_user.email:
             user_records = db.net_worth_data.find({'user_email': current_user.email}).sort('created_at', -1)
-        
+
         records_data = []
         for record in user_records:
             record_data = {
@@ -247,32 +240,32 @@ def main():
                 'session_id': record.get('session_id'),
                 'user_email': record.get('user_email', 'N/A'),
                 'send_email': record.get('send_email', False),
-                'cash_savings': float(clean_currency(record.get('cash_savings', 0))),
+                'cash_savings': float(strip_commas(record.get('cash_savings', 0))),
                 'cash_savings_formatted': format_currency(record.get('cash_savings', 0)),
-                'cash_savings_raw': float(clean_currency(record.get('cash_savings', 0))),
-                'investments': float(clean_currency(record.get('investments', 0))),
+                'cash_savings_raw': float(strip_commas(record.get('cash_savings', 0))),
+                'investments': float(strip_commas(record.get('investments', 0))),
                 'investments_formatted': format_currency(record.get('investments', 0)),
-                'investments_raw': float(clean_currency(record.get('investments', 0))),
-                'property': float(clean_currency(record.get('property', 0))),
+                'investments_raw': float(strip_commas(record.get('investments', 0))),
+                'property': float(strip_commas(record.get('property', 0))),
                 'property_formatted': format_currency(record.get('property', 0)),
-                'property_raw': float(clean_currency(record.get('property', 0))),
-                'loans': float(clean_currency(record.get('loans', 0))),
+                'property_raw': float(strip_commas(record.get('property', 0))),
+                'loans': float(strip_commas(record.get('loans', 0))),
                 'loans_formatted': format_currency(record.get('loans', 0)),
-                'loans_raw': float(clean_currency(record.get('loans', 0))),
-                'total_assets': float(clean_currency(record.get('total_assets', 0))),
+                'loans_raw': float(strip_commas(record.get('loans', 0))),
+                'total_assets': float(strip_commas(record.get('total_assets', 0))),
                 'total_assets_formatted': format_currency(record.get('total_assets', 0)),
-                'total_assets_raw': float(clean_currency(record.get('total_assets', 0))),
-                'total_liabilities': float(clean_currency(record.get('total_liabilities', 0))),
+                'total_assets_raw': float(strip_commas(record.get('total_assets', 0))),
+                'total_liabilities': float(strip_commas(record.get('total_liabilities', 0))),
                 'total_liabilities_formatted': format_currency(record.get('total_liabilities', 0)),
-                'total_liabilities_raw': float(clean_currency(record.get('total_liabilities', 0))),
-                'net_worth': float(clean_currency(record.get('net_worth', 0))),
+                'total_liabilities_raw': float(strip_commas(record.get('total_liabilities', 0))),
+                'net_worth': float(strip_commas(record.get('net_worth', 0))),
                 'net_worth_formatted': format_currency(record.get('net_worth', 0)),
-                'net_worth_raw': float(clean_currency(record.get('net_worth', 0))),
+                'net_worth_raw': float(strip_commas(record.get('net_worth', 0))),
                 'badges': record.get('badges', []),
                 'created_at': record.get('created_at').strftime('%b %d, %Y') if record.get('created_at') else 'N/A'
             }
             records_data.append((record_data['id'], record_data))
-        
+
         latest_record = records_data[0][1] if records_data else {
             'cash_savings': 0.0,
             'cash_savings_formatted': format_currency(0.0),
@@ -300,24 +293,24 @@ def main():
         }
 
         all_records = list(db.net_worth_data.find())
-        all_net_worths = [float(clean_currency(record['net_worth'])) for record in all_records if record.get('net_worth') is not None]
+        all_net_worths = [float(strip_commas(record['net_worth'])) for record in all_records if record.get('net_worth') is not None]
         total_users = len(all_net_worths)
         rank = 0
         average_net_worth = 0.0
         if all_net_worths:
             all_net_worths.sort(reverse=True)
-            user_net_worth = float(clean_currency(latest_record['net_worth']))
+            user_net_worth = float(strip_commas(latest_record['net_worth']))
             rank = sum(1 for nw in all_net_worths if nw > user_net_worth) + 1
             average_net_worth = sum(all_net_worths) / total_users if total_users else 0.0
 
         insights = []
         try:
-            net_worth_float = float(clean_currency(latest_record['net_worth']))
-            total_liabilities_float = float(clean_currency(latest_record['total_liabilities']))
-            total_assets_float = float(clean_currency(latest_record['total_assets']))
-            cash_savings_float = float(clean_currency(latest_record['cash_savings']))
-            investments_float = float(clean_currency(latest_record['investments']))
-            
+            net_worth_float = float(strip_commas(latest_record['net_worth']))
+            total_liabilities_float = float(strip_commas(latest_record['total_liabilities']))
+            total_assets_float = float(strip_commas(latest_record['total_assets']))
+            cash_savings_float = float(strip_commas(latest_record['cash_savings']))
+            investments_float = float(strip_commas(latest_record['investments']))
+
             if net_worth_float != 0:
                 if total_liabilities_float > total_assets_float * 0.5:
                     insights.append(trans("net_worth_insight_high_liabilities", default="Your liabilities are high relative to assets."))
@@ -436,18 +429,18 @@ def summary():
             session_id=session.get('sid', 'unknown'),
             action='summary_view'
         )
-        
+
         filter_criteria = {} if is_admin() else {'user_id': current_user.id}
         net_worth_collection = db.net_worth_data
-        
+
         latest_record = net_worth_collection.find(filter_criteria).sort('created_at', -1).limit(1)
         latest_records = list(latest_record)
-        
+
         if not latest_records:
             current_app.logger.info(f"No net worth found for user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
             return jsonify({'net_worth': format_currency(0.0)})
-        
-        net_worth = float(clean_currency(latest_records[0].get('net_worth', 0.0)))
+
+        net_worth = float(strip_commas(latest_records[0].get('net_worth', 0.0)))
         current_app.logger.info(f"Fetched net worth summary for user {current_user.id}: {net_worth}", extra={'session_id': session.get('sid', 'unknown')})
         return jsonify({'net_worth': format_currency(net_worth)})
     except Exception as e:
@@ -463,7 +456,7 @@ def unsubscribe():
     if 'sid' not in session:
         create_anonymous_session()
         current_app.logger.info(f"New anonymous session created with sid {session['sid']}", extra={'session_id': session.get('sid', 'unknown')})
-    
+
     try:
         log_tool_usage(
             tool_name='net_worth',
@@ -472,9 +465,9 @@ def unsubscribe():
             session_id=session.get('sid', 'unknown'),
             action='unsubscribe'
         )
-        
+
         filter_criteria = {'user_email': current_user.email} if current_user.is_authenticated else {'session_id': session['sid']}
-        
+
         net_worth_collection = db.net_worth_data
         result = net_worth_collection.update_many(
             filter_criteria,
