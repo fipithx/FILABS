@@ -171,7 +171,7 @@ def feedback():
             current_app.logger.info(f'Feedback submitted: tool={tool_name}, rating={rating}', 
                                    extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr})
             flash(trans('general_thank_you', default='Thank you for your feedback!'), 'success')
-            return redirect(url_for('home'))
+            return redirect(url_for('general_bp.home'))
         except ValueError as e:
             current_app.logger.error(f'User not found: {str(e)}', extra={'ip_address': request.remote_addr})
             flash(trans('general_error', default='User not found'), 'danger')
