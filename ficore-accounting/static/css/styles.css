@@ -2642,6 +2642,43 @@ h2.card-title {
     color: var(--accent-blue);
 }
 
+
+/* === Dropdown Override Fixes === */
+
+.dropdown-container {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  z-index: 9999 !important;
+  background-color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  padding: 0.5rem 0 !important;
+  border-radius: 6px !important;
+  min-width: 160px !important;
+  overflow: visible !important;
+}
+
+.dropdown-item {
+  color: var(--text-color) !important;
+  padding: 0.5rem 1rem !important;
+  font-size: clamp(0.875rem, 2vw, 0.9375rem) !important;
+  transition: var(--transition-base) !important;
+  white-space: normal !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--button-secondary-hover) !important;
+  color: var(--accent-blue) !important;
+}
+
+/* Optional: Parent override to prevent clipping */
+body, .app, .main-wrapper, .top-header {
+  overflow: visible !important;
+  position: relative !important;
+  z-index: auto !important;
+}
+
 /* Remove text truncation and ensure proper text wrapping */
 .snapshot-label,
 .notification-description,
