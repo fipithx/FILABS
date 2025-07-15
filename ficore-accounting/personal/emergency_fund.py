@@ -22,7 +22,6 @@ emergency_fund_bp = Blueprint(
 csrf = CSRFProtect()
 
 def custom_login_required(f):
-    """Custom login decorator that allows both authenticated users and anonymous sessions."""
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -32,46 +31,36 @@ def custom_login_required(f):
     return decorated_function
 
 def clean_currency(value):
-    """Strip commas and handle edge cases for numeric inputs."""
+    """Transform input into a float, returning None for invalid cases."""
     if not value or value == '0':
-        return '0'
+        return 0.0
     if isinstance(value, str):
         value = re.sub(r'[^\d.]', '', value.strip())
         parts = value.split('.')
         if len(parts) > 2:
             value = parts[0] + '.' + ''.join(parts[1:])
         if not value or value == '.':
-            return '0'
+            return 0.0
         try:
             float_value = float(value)
             if float_value > 1e308:
-                raise ValueError("Value exceeds maximum float limit")
-            current_app.logger.debug(f"Cleaned value: '{value}' -> {float_value}", extra={'session_id': session.get('sid', 'unknown')})
-            return str(float_value)
-        except ValueError as e:
-            current_app.logger.warning(f"Invalid value: '{value}' - Error: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
-            raise ValidationError(trans('emergency_fund_number_invalid', default='Invalid number format'))
-    return str(float(value))
+                return None  # Exceeds float limit
+            return float_value
+        except ValueError:
+            return None
+    return float(value) if value else 0.0
 
 def strip_commas(value):
-    """Strip commas from string values, delegating to clean_currency."""
-    if isinstance(value, str):
-        return clean_currency(value)
-    return str(value)
+    """Filter to remove commas and return a float."""
+    return clean_currency(value)
 
 def format_currency(value):
     """Format a numeric value with comma separation, no currency symbol."""
     try:
-        if isinstance(value, str):
-            cleaned_value = clean_currency(value)
-            numeric_value = float(cleaned_value)
-        else:
-            numeric_value = float(value)
+        numeric_value = float(value)
         formatted = f"{numeric_value:,.2f}"
-        current_app.logger.debug(f"Formatted value: input={value}, output={formatted}", extra={'session_id': session.get('sid', 'unknown')})
         return formatted
-    except (ValueError, TypeError) as e:
-        current_app.logger.warning(f"Format Error: input={value}, error={str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+    except (ValueError, TypeError):
         return "0.00"
 
 class CommaSeparatedIntegerField(IntegerField):
@@ -79,7 +68,7 @@ class CommaSeparatedIntegerField(IntegerField):
         if valuelist:
             try:
                 cleaned_value = clean_currency(valuelist[0])
-                self.data = int(float(cleaned_value)) if cleaned_value else None
+                self.data = int(cleaned_value) if cleaned_value is not None else None
             except (ValueError, TypeError):
                 self.data = None
                 raise ValidationError(trans('emergency_fund_dependents_invalid', default='Not a valid integer'))
@@ -153,30 +142,9 @@ class EmergencyFundForm(FlaskForm):
         self.submit.label.text = trans('emergency_fund_calculate_button', lang) or 'Calculate Emergency Fund'
 
     def validate(self, extra_validators=None):
-        """Custom validation for all float and integer fields to ensure proper number format."""
         if not super().validate(extra_validators):
             return False
-        for field in [self.monthly_expenses, self.monthly_income, self.current_savings]:
-            if field.data is not None:
-                try:
-                    if isinstance(field.data, str):
-                        field.data = float(strip_commas(field.data))
-                    current_app.logger.debug(f"Validated {field.name} for session {session.get('sid', 'no-session-id')}: {field.data}")
-                except ValueError as e:
-                    current_app.logger.warning(f"Invalid {field.name} value for session {session.get('sid', 'no-session-id')}: {field.data}")
-                    field.errors.append(trans(f'emergency_fund_{field.name}_invalid', session.get('lang', 'en')) or f'Invalid {field.label.text} format')
-                    return False
-        if self.dependents.data is not None:
-            try:
-                if isinstance(self.dependents.data, str):
-                    self.dependents.data = int(float(strip_commas(self.dependents.data)))
-                current_app.logger.debug(f"Validated dependents for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
-            except ValueError as e:
-                current_app.logger.warning(f"Invalid dependents value for session {session.get('sid', 'no-session-id')}: {self.dependents.data}")
-                self.dependents.errors.append(trans('emergency_fund_dependents_invalid', session.get('lang', 'en')) or 'Invalid dependents format')
-                return False
         if self.email_opt_in.data and not current_user.is_authenticated:
-            current_app.logger.warning(f"Email opt-in selected but no email available for session {session.get('sid', 'no-session-id')}")
             self.email_opt_in.errors.append(trans('emergency_fund_email_required', session.get('lang', 'en')) or 'Email notifications require an authenticated user')
             return False
         return True
@@ -186,7 +154,6 @@ class EmergencyFundForm(FlaskForm):
 @requires_role(['personal', 'admin'])
 @limiter.limit("10 per minute")
 def main():
-    """Main emergency fund interface with tabbed layout."""
     if 'sid' not in session:
         create_anonymous_session()
         session['is_anonymous'] = True
@@ -239,7 +206,7 @@ def main():
                         action='create_plan'
                     )
                 except Exception as e:
-                    current_app.logger.error(f"Failed to log emergency fund plan creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    current_app.logger.error(f"Failed to log Sfemergency fund plan creation: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('emergency_fund_log_error', default='Error logging emergency fund plan creation. Continuing with submission.'), 'warning')
 
                 months = int(form.timeline.data)
@@ -276,16 +243,16 @@ def main():
                     'email': current_user.email if current_user.is_authenticated else '',
                     'email_opt_in': form.email_opt_in.data,
                     'lang': session.get('lang', 'en'),
-                    'monthly_expenses': float(form.monthly_expenses.data),
-                    'monthly_income': float(form.monthly_income.data) if form.monthly_income.data else None,
-                    'current_savings': float(form.current_savings.data or 0),
+                    'monthly_expenses': form.monthly_expenses.data,
+                    'monthly_income': form.monthly_income.data,
+                    'current_savings': form.current_savings.data or 0,
                     'risk_tolerance_level': form.risk_tolerance_level.data,
-                    'dependents': int(form.dependents.data or 0),
+                    'dependents': form.dependents.data or 0,
                     'timeline': months,
                     'recommended_months': recommended_months,
-                    'target_amount': float(target_amount),
-                    'savings_gap': float(gap),
-                    'monthly_savings': float(monthly_savings),
+                    'target_amount': target_amount,
+                    'savings_gap': gap,
+                    'monthly_savings': monthly_savings,
                     'percent_of_income': percent_of_income,
                     'badges': badges,
                     'created_at': datetime.utcnow()
@@ -482,7 +449,6 @@ def main():
 @requires_role(['personal', 'admin'])
 @limiter.limit("5 per minute")
 def summary():
-    """Return the latest emergency fund target amount or savings gap for the current user."""
     db = get_mongo_db()
     try:
         log_tool_usage(
@@ -512,7 +478,6 @@ def summary():
 @requires_role(['personal', 'admin'])
 @limiter.limit("5 per minute")
 def unsubscribe():
-    """Unsubscribe user from emergency fund emails."""
     db = get_mongo_db()
     if 'sid' not in session:
         create_anonymous_session()
@@ -549,7 +514,6 @@ def unsubscribe():
 
 @emergency_fund_bp.errorhandler(CSRFError)
 def handle_csrf_error(e):
-    """Handle CSRF errors with user-friendly message."""
     current_app.logger.error(f"CSRF error on {request.path}: {e.description}", extra={'session_id': session.get('sid', 'unknown')})
     flash(trans('emergency_fund_csrf_error', default='Form submission failed due to a missing security token. Please refresh and try again.'), 'danger')
     return redirect(url_for('personal.emergency_fund.main', tab='create-plan')), 403
