@@ -85,17 +85,17 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.income.id }}" class="form-label">{{ t('financial_health_monthly_income', default='Monthly Income', lang=lang) }}</label>
-                                    {{ form.income(class="form-control number-input", placeholder=t('financial_health_income_placeholder', default='e.g., 500000.00', lang=lang), required=True) }}
-                                    <div class="invalid-feedback">{{ t('financial_health_income_invalid', default='Income must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('financial_health_income_help', default='Enter amount without commas (e.g., 500000 or 500000.00)', lang=lang) }}</div>
+                                    {{ form.income(class="form-control number-input", placeholder=t('financial_health_income_placeholder', default='e.g., 500,000.00', lang=lang), required=True) }}
+                                    <div class="invalid-feedback" id="income-error">{{ t('financial_health_income_invalid', default='Income must be a valid number', lang=lang) }}</div>
+                                    <div class="form-text" id="income-help">{{ t('financial_health_income_help', default='Enter your monthly income (e.g., 500,000)', lang=lang) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.expenses.id }}" class="form-label">{{ t('financial_health_monthly_expenses', default='Monthly Expenses', lang=lang) }}</label>
-                                    {{ form.expenses(class="form-control number-input", placeholder=t('financial_health_expenses_placeholder', default='e.g., 300000.00', lang=lang), required=True) }}
-                                    <div class="invalid-feedback">{{ t('financial_health_expenses_invalid', default='Expenses must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('financial_health_expenses_help', default='Enter amount without commas (e.g., 300000 or 300000.00)', lang=lang) }}</div>
+                                    {{ form.expenses(class="form-control number-input", placeholder=t('financial_health_expenses_placeholder', default='e.g., 300,000.00', lang=lang), required=True) }}
+                                    <div class="invalid-feedback" id="expenses-error">{{ t('financial_health_expenses_invalid', default='Expenses must be a valid number', lang=lang) }}</div>
+                                    <div class="form-text" id="expenses-help">{{ t('financial_health_expenses_help', default='Enter your monthly expenses (e.g., 300,000)', lang=lang) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -112,9 +112,9 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="{{ form.debt.id }}" class="form-label">{{ t('financial_health_total_debt', default='Total Debt', lang=lang) }}</label>
-                                    {{ form.debt(class="form-control number-input", placeholder=t('financial_health_debt_placeholder', default='e.g., 200000.00', lang=lang)) }}
-                                    <div class="invalid-feedback">{{ t('financial_health_debt_invalid', default='Debt must be a valid number', lang=lang) }}</div>
-                                    <div class="form-text">{{ t('financial_health_debt_help', default='Enter amount without commas (e.g., 200000 or 200000.00)', lang=lang) }}</div>
+                                    {{ form.debt(class="form-control number-input", placeholder=t('financial_health_debt_placeholder', default='e.g., 200,000.00', lang=lang)) }}
+                                    <div class="invalid-feedback" id="debt-error">{{ t('financial_health_debt_invalid', default='Debt must be a valid number', lang=lang) }}</div>
+                                    <div class="form-text" id="debt-help">{{ t('financial_health_debt_help', default='Enter your total debt (e.g., 200,000)', lang=lang) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -405,50 +405,56 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Number input validation and formatting with comma separation
+    // Number input validation and formatting
     function formatNumberInput(input) {
-        input.addEventListener('input', function(e) {
-            // Store cursor position
-            const cursorPosition = e.target.selectionStart;
-            const oldLength = e.target.value.length;
-
-            // Remove all non-numeric characters except decimal point
-            let value = e.target.value.replace(/,/g, '');
-            if (!value) {
-                e.target.value = '';
-                return;
-            }
-
-            // Handle currency fields (allow decimals)
-            const parts = value.split('.');
+        const format = (val) => {
+            // Remove non-numeric and non-decimal characters
+            let clean = val.replace(/[^0-9.]/g, '');
+            if (!clean) return '';
+            // Prevent multiple decimal points
+            const parts = clean.split('.');
             if (parts.length > 2) {
-                value = parts[0] + '.' + parts.slice(1).join('');
+                clean = parts[0] + '.' + parts.slice(1).join('');
             }
+            // Limit to 2 decimal places
             if (parts.length > 1) {
                 parts[1] = parts[1].slice(0, 2);
-                value = parts[0] + (parts[1] ? '.' + parts[1] : '');
+                clean = parts[0] + (parts[1] ? '.' + parts[1] : '');
             }
-            const numericValue = parseFloat(value) || 0;
-            if (numericValue > 10000000000) {
-                value = '10000000000';
-                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
+            // Apply comma formatting to integer part
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return parts.join('.');
+        };
+
+        input.addEventListener('input', function(e) {
+            let cursor = input.selectionStart;
+            let oldLength = input.value.length;
+            let oldValue = input.value;
+            input.value = format(input.value);
+            let newLength = input.value.length;
+            let delta = newLength - oldLength;
+            let newCursor = cursor + delta;
+            if (delta < 0 && oldValue[cursor - 1] === ',') {
+                newCursor--;
+            } else if (delta > 0 && input.value[cursor] === ',') {
+                newCursor++;
             }
-            const formattedValue = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            e.target.value = formattedValue;
+            input.setSelectionRange(newCursor, newCursor);
 
-            // Adjust cursor position to account for added/removed commas
-            const newLength = e.target.value.length;
-            const cursorAdjustment = newLength - oldLength;
-            e.target.selectionStart = e.target.selectionEnd = cursorPosition + cursorAdjustment;
-
-            // Show warning if invalid characters were entered
-            if (/[^0-9.]/.test(e.target.value)) {
-                const warning = document.createElement('div');
-                warning.className = 'invalid-feedback';
-                warning.textContent = '{{ t('financial_health_number_only', default='Please enter numbers only (e.g., 5000 or 5000.00)', lang=lang) }}';
-                warning.style.display = 'block';
-                e.target.parentNode.appendChild(warning);
-                setTimeout(() => warning.remove(), 3000);
+            // Validate input
+            const numericValue = input.value.replace(/,/g, '');
+            const fieldId = input.id;
+            const helpElement = document.getElementById(`${fieldId}-help`);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            if (input.value && (isNaN(numericValue) || parseFloat(numericValue) < 0)) {
+                input.classList.add('is-invalid');
+                helpElement.innerText = "{{ t('financial_health_' + fieldId + '_invalid', default='Please enter a valid number', lang=lang) | escape }}";
+            } else if (parseFloat(numericValue) > 10000000000) {
+                input.classList.add('is-invalid');
+                helpElement.innerText = "{{ t('financial_health_' + fieldId + '_max', default='Value must be less than 10 billion', lang=lang) | escape }}";
+            } else {
+                input.classList.remove('is-invalid');
+                helpElement.innerText = "{{ t('financial_health_' + fieldId + '_help', default='Enter your ' + fieldId + ' (e.g., 500,000)', lang=lang) | escape }}";
             }
         });
 
@@ -457,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
             let pasted = (e.clipboardData || window.clipboardData).getData('text');
             let clean = pasted.replace(/[^0-9.]/g, '');
             if (!clean) return;
-
             const parts = clean.split('.');
             if (parts.length > 2) {
                 clean = parts[0] + '.' + parts.slice(1).join('');
@@ -469,9 +474,10 @@ document.addEventListener('DOMContentLoaded', function() {
             let numericValue = parseFloat(clean) || 0;
             if (numericValue > 10000000000) {
                 numericValue = 10000000000;
-                alert('{{ t('general_input_cannot_exceed_10_billion', default='Input cannot exceed 10 billion', lang=lang) | escape }}');
+                const helpElement = document.getElementById(`${input.id}-help`);
+                helpElement.innerText = "{{ t('financial_health_' + input.id + '_max', default='Value must be less than 10 billion', lang=lang) | escape }}";
             }
-            e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            input.value = format(numericValue.toString());
         });
 
         input.addEventListener('blur', function(e) {
@@ -487,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 let numericValue = parseFloat(value) || 0;
                 if (numericValue > 10000000000) numericValue = 10000000000;
-                e.target.value = numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                e.target.value = format(numericValue.toString());
             }
         });
     }
@@ -499,9 +505,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function() {
             form.querySelectorAll('.number-input').forEach(input => {
-                if (input.value) {
-                    input.value = input.value.replace(/,/g, '');
-                }
+                let rawValue = input.value;
+                input.value = input.value.replace(/,/g, '');
+                console.log(`Submitting ${input.name}: ${input.value} (raw: ${rawValue})`);
             });
         });
     });
