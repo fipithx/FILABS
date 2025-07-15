@@ -90,7 +90,7 @@ def generate_pdf(id):
         # Check credit balance for non-admin users
         if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
             flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate receipt'), 'danger')
-            return redirect(url_for('credits.request'))
+            return redirect(url_for('credits.request_credits'))
         
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -157,7 +157,7 @@ def add():
     # TODO: Restore original check_ficore_credit_balance(1) for production
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('debtors_insufficient_credits', default='Insufficient credits to add a payment. Request more credits.'), 'danger')
-        return redirect(url_for('credits.request'))
+        return redirect(url_for('credits.request_credits'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
