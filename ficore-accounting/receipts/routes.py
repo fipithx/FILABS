@@ -80,9 +80,9 @@ def generate_pdf(id):
         if not receipt:
             flash(trans('receipts_record_not_found', default='Record not found'), 'danger')
             return redirect(url_for('index'))
-        if not utils.is_admin() and not utils.check_coin_balance(1):
-            flash(trans('receipts_insufficient_coins', default='Insufficient coins to generate receipt'), 'danger')
-            return redirect(url_for('coins.purchase'))
+        if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+            flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate receipt'), 'danger')
+            return redirect(url_for('credits.request'))
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
@@ -107,13 +107,13 @@ def generate_pdf(id):
         p.save()
         if not utils.is_admin():
             user_query = utils.get_user_query(str(current_user.id))
-            db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-            db.coin_transactions.insert_one({
+            db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+            db.credit_transactions.insert_one({
                 'user_id': str(current_user.id),
                 'amount': -1,
                 'type': 'spend',
                 'date': datetime.utcnow(),
-                'ref': f"Receipt PDF generated for {receipt['party_name']}"
+                'ref': f"Receipt PDF generated for {receipt['party_name']} (Ficore Credits)"
             })
         buffer.seek(0)
         return Response(
@@ -134,9 +134,9 @@ def generate_pdf(id):
 def add():
     """Add a new receipt cashflow."""
     form = ReceiptForm()
-    if not utils.is_admin() and not utils.check_coin_balance(1):
-        flash(trans('receipts_insufficient_coins', default='Insufficient coins to add a receipt. Purchase more coins.'), 'danger')
-        return redirect(url_for('coins.purchase'))
+    if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
+        flash(trans('debtors_insufficient_credits', default='Insufficient credits to add a receipt. Request more credits.'), 'danger')
+        return redirect(url_for('credits.request'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
@@ -154,13 +154,13 @@ def add():
             db.cashflows.insert_one(cashflow)
             if not utils.is_admin():
                 user_query = utils.get_user_query(str(current_user.id))
-                db.users.update_one(user_query, {'$inc': {'coin_balance': -1}})
-                db.coin_transactions.insert_one({
+                db.users.update_one(user_query, {'$inc': {'ficore_credit_balance': -1}})
+                db.credit_transactions.insert_one({
                     'user_id': str(current_user.id),
                     'amount': -1,
                     'type': 'spend',
                     'date': datetime.utcnow(),
-                    'ref': f"Receipt creation: {cashflow['party_name']}"
+                    'ref': f"Receipt creation: {cashflow['party_name']} (Ficore Credits)"
                 })
             flash(trans('receipts_add_success', default='Receipt added successfully'), 'success')
             return redirect(url_for('receipts.index'))
