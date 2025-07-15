@@ -264,7 +264,7 @@ def generate_iou(id):
         
         if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
             flash(trans('debtors_insufficient_credits', default='Insufficient credits to generate IOU'), 'danger')
-            return redirect(url_for('credits.request'))
+            return redirect(url_for('credits.request_credits'))
         
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
@@ -326,7 +326,7 @@ def add():
     form = CreditorForm()
     if not utils.is_admin() and not utils.check_ficore_credit_balance(1):
         flash(trans('debtors_insufficient_credits', default='Insufficient credits to create a creditor. Request more credits.'), 'danger')
-        return redirect(url_for('credits.request'))
+        return redirect(url_for('credits.request_credits'))
     if form.validate_on_submit():
         try:
             db = utils.get_mongo_db()
