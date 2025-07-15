@@ -150,6 +150,10 @@
         <a href="{{ url_for('admin.admin_net_worth') }}" class="btn btn-primary">{{ t('admin_manage_net_worth', default='Manage Net Worth') | escape }}</a>
         <a href="{{ url_for('admin.admin_quiz_results') }}" class="btn btn-primary">{{ t('admin_manage_quiz_results', default='Manage Quiz Results') | escape }}</a>
         <a href="{{ url_for('admin.admin_learning_hub') }}" class="btn btn-primary">{{ t('admin_manage_learning_hub', default='Manage Learning Hub') | escape }}</a>
+        <!-- New Buttons Added -->
+        <a href="{{ url_for('admin.view_feedbacks') }}" class="btn btn-primary">{{ t('admin_view_feedbacks', default='View Feedbacks') | escape }}</a>
+        <a href="{{ url_for('admin.generate_agent_ids') }}" class="btn btn-primary">{{ t('admin_generate_agent_ids', default='Generate Agent IDs') | escape }}</a>
+        <a href="{{ url_for('admin.view_credit_requests') }}" class="btn btn-primary">{{ t('admin_approve_credit_requests', default='Approve Credit Requests') | escape }}</a>
     </div>
     <h2 class="mb-3">{{ t('admin_recent_users', default='Recent Users') | escape }}</h2>
     {% if recent_users %}
