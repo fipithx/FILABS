@@ -17,7 +17,7 @@ budget_bp = Blueprint(
     'budget',
     __name__,
     template_folder='templates/personal/BUDGET',
-    url_prefix=None  # Handled by personal_bp
+    url_prefix='/budget'
 )
 
 csrf = CSRFProtect()
