@@ -9,7 +9,7 @@ from datetime import datetime, date, timedelta
 from translations import trans
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
-from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage, check_ficore_credit_balance
 from session_utils import create_anonymous_session
 import re
 
@@ -79,6 +79,41 @@ def calculate_next_due_date(due_date, frequency):
     elif frequency == 'quarterly':
         return due_date + timedelta(days=90)
     return due_date
+
+def deduct_ficore_credits(db, user_id, amount, action, bill_id=None):
+    """Deduct Ficore Credits from user balance and log the transaction."""
+    try:
+        user = db.users.find_one({'_id': user_id})
+        if not user:
+            current_app.logger.error(f"User {user_id} not found for credit deduction", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        current_balance = user.get('ficore_credit_balance', 0)
+        if current_balance < amount:
+            current_app.logger.warning(f"Insufficient credits for user {user_id}: required {amount}, available {current_balance}", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        result = db.users.update_one(
+            {'_id': user_id},
+            {'$inc': {'ficore_credit_balance': -amount}}
+        )
+        if result.modified_count == 0:
+            current_app.logger.error(f"Failed to deduct {amount} credits for user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
+            return False
+        transaction = {
+            '_id': ObjectId(),
+            'user_id': user_id,
+            'action': action,
+            'amount': -amount,
+            'bill_id': str(bill_id) if bill_id else None,
+            'timestamp': datetime.utcnow(),
+            'session_id': session.get('sid', 'unknown'),
+            'status': 'completed'
+        }
+        db.credit_transactions.insert_one(transaction)
+        current_app.logger.info(f"Deducted {amount} Ficore Credits for {action} by user {user_id}", extra={'session_id': session.get('sid', 'unknown')})
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error deducting {amount} Ficore Credits for {action} by user {user_id}: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+        return False
 
 class CommaSeparatedIntegerField(IntegerField):
     def process_formdata(self, valuelist):
@@ -369,6 +404,11 @@ def main():
         if request.method == 'POST':
             action = request.form.get('action')
             if action == 'add_bill' and form.validate_on_submit():
+                if current_user.is_authenticated and not is_admin():
+                    if not check_ficore_credit_balance(required_amount=1, user_id=current_user.id):
+                        current_app.logger.warning(f"Insufficient Ficore Credits for adding bill by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_insufficient_credits', default='Insufficient Ficore Credits to add a bill. Please purchase more credits.'), 'danger')
+                        return redirect(url_for('agents_bp.manage_credits'))
                 try:
                     log_tool_usage(
                         tool_name='bill',
@@ -385,8 +425,9 @@ def main():
                 status = form.status.data
                 if status not in ['paid', 'pending'] and due_date < date.today():
                     status = 'overdue'
+                bill_id = ObjectId()
                 bill_data = {
-                    '_id': ObjectId(),
+                    '_id': bill_id,
                     'user_id': current_user.id if current_user.is_authenticated else None,
                     'session_id': session['sid'] if not current_user.is_authenticated else None,
                     'user_email': current_user.email if current_user.is_authenticated else '',
@@ -403,7 +444,13 @@ def main():
                 }
                 try:
                     bills_collection.insert_one(bill_data)
-                    current_app.logger.info(f"Bill added successfully for user {bill_data['user_email']}: {bill_data['bill_name']}", extra={'session_id': session.get('sid', 'unknown')})
+                    if current_user.is_authenticated and not is_admin():
+                        if not deduct_ficore_credits(db, current_user.id, 1, 'add_bill', bill_id):
+                            bills_collection.delete_one({'_id': bill_id})  # Rollback on failure
+                            current_app.logger.error(f"Failed to deduct Ficore Credit for adding bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for adding bill.'), 'danger')
+                            return redirect(url_for('personal.bill.main', tab='add-bill'))
+                    current_app.logger.info(f"Bill {bill_id} added successfully for user {bill_data['user_email']}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('bill_added_success', default='Bill added successfully!'), 'success')
                     if form.send_email.data and bill_data['user_email']:
                         try:
@@ -435,7 +482,7 @@ def main():
                             flash(trans('general_email_send_failed', default='Failed to send email.'), 'warning')
                     return redirect(url_for('personal.bill.main', tab='dashboard'))
                 except Exception as e:
-                    current_app.logger.error(f"Failed to save bill to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    current_app.logger.error(f"Failed to save bill {bill_id} to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('bill_storage_error', default='Error saving bill.'), 'danger')
                     return redirect(url_for('personal.bill.main', tab='add-bill'))
             elif action in ['update_bill', 'delete_bill', 'toggle_status']:
@@ -445,6 +492,11 @@ def main():
                     current_app.logger.warning(f"Bill {bill_id} not found for update/delete/toggle", extra={'session_id': session.get('sid', 'unknown')})
                     flash(trans('bill_not_found', default='Bill not found.'), 'danger')
                     return redirect(url_for('personal.bill.main', tab='manage-bills'))
+                if current_user.is_authenticated and not is_admin():
+                    if not check_ficore_credit_balance(required_amount=1, user_id=current_user.id):
+                        current_app.logger.warning(f"Insufficient Ficore Credits for {action} on bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                        flash(trans('bill_insufficient_credits', default='Insufficient Ficore Credits to perform this action. Please purchase more credits.'), 'danger')
+                        return redirect(url_for('agents_bp.manage_credits'))
                 if action == 'update_bill':
                     edit_form = EditBillForm(formdata=request.form)
                     if edit_form.validate():
@@ -459,6 +511,11 @@ def main():
                         }
                         try:
                             bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': update_data})
+                            if current_user.is_authenticated and not is_admin():
+                                if not deduct_ficore_credits(db, current_user.id, 1, 'update_bill', bill_id):
+                                    current_app.logger.error(f"Failed to deduct Ficore Credit for updating bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                    flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for updating bill.'), 'danger')
+                                    return redirect(url_for('personal.bill.main', tab='manage-bills'))
                             current_app.logger.info(f"Bill {bill_id} updated successfully", extra={'session_id': session.get('sid', 'unknown')})
                             flash(trans('bill_updated_success', default='Bill updated successfully!'), 'success')
                         except Exception as e:
@@ -471,6 +528,11 @@ def main():
                 elif action == 'delete_bill':
                     try:
                         bills_collection.delete_one({'_id': ObjectId(bill_id), **filter_kwargs})
+                        if current_user.is_authenticated and not is_admin():
+                            if not deduct_ficore_credits(db, current_user.id, 1, 'delete_bill', bill_id):
+                                current_app.logger.error(f"Failed to deduct Ficore Credit for deleting bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for deleting bill.'), 'danger')
+                                return redirect(url_for('personal.bill.main', tab='manage-bills'))
                         current_app.logger.info(f"Bill {bill_id} deleted successfully", extra={'session_id': session.get('sid', 'unknown')})
                         flash(trans('bill_deleted_success', default='Bill deleted successfully!'), 'success')
                     except Exception as e:
@@ -481,6 +543,11 @@ def main():
                     new_status = 'paid' if bill['status'] == 'unpaid' else 'unpaid'
                     try:
                         bills_collection.update_one({'_id': ObjectId(bill_id), **filter_kwargs}, {'$set': {'status': new_status, 'updated_at': datetime.utcnow()}})
+                        if current_user.is_authenticated and not is_admin():
+                            if not deduct_ficore_credits(db, current_user.id, 1, 'toggle_bill_status', bill_id):
+                                current_app.logger.error(f"Failed to deduct Ficore Credit for toggling status of bill {bill_id} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for toggling bill status.'), 'danger')
+                                return redirect(url_for('personal.bill.main', tab='manage-bills'))
                         if new_status == 'paid' and bill['frequency'] != 'one-time':
                             try:
                                 due_date = bill['due_date']
@@ -493,7 +560,13 @@ def main():
                                 new_bill['status'] = 'unpaid'
                                 new_bill['created_at'] = datetime.utcnow()
                                 bills_collection.insert_one(new_bill)
-                                current_app.logger.info(f"Recurring bill created for {bill['bill_name']}", extra={'session_id': session.get('sid', 'unknown')})
+                                if current_user.is_authenticated and not is_admin():
+                                    if not deduct_ficore_credits(db, current_user.id, 1, 'add_recurring_bill', new_bill['_id']):
+                                        bills_collection.delete_one({'_id': new_bill['_id']})  # Rollback on failure
+                                        current_app.logger.error(f"Failed to deduct Ficore Credit for adding recurring bill {new_bill['_id']} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                                        flash(trans('bill_credit_deduction_failed', default='Failed to deduct Ficore Credit for adding recurring bill.'), 'danger')
+                                        return redirect(url_for('personal.bill.main', tab='manage-bills'))
+                                current_app.logger.info(f"Recurring bill {new_bill['_id']} created for {bill['bill_name']}", extra={'session_id': session.get('sid', 'unknown')})
                                 flash(trans('bill_new_recurring_bill_success', default='New recurring bill created for {bill_name}.').format(bill_name=bill['bill_name']), 'success')
                             except Exception as e:
                                 current_app.logger.error(f"Error creating recurring bill: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
