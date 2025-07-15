@@ -16,7 +16,7 @@ net_worth_bp = Blueprint(
     'net_worth',
     __name__,
     template_folder='templates/personal/NETWORTH',
-    url_prefix='/NET_WORTH'
+    url_prefix='/NETWORTH'
 )
 
 csrf = CSRFProtect()
