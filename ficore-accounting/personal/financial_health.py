@@ -10,7 +10,6 @@ from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_
 from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from session_utils import create_anonymous_session
-import re
 
 financial_health_bp = Blueprint(
     'financial_health',
@@ -19,6 +18,7 @@ financial_health_bp = Blueprint(
     url_prefix='/health_score'
 )
 
+# CSRF protection (must be initialized with app in main app setup)
 csrf = CSRFProtect()
 
 def custom_login_required(f):
@@ -36,6 +36,54 @@ def strip_commas(value):
     if isinstance(value, str):
         return value.replace(',', '')
     return value
+
+def clean_currency(value):
+    """Clean and convert currency string to float."""
+    if value is None:
+        return None
+    try:
+        if isinstance(value, str):
+            value = value.replace(',', '').replace('$', '').strip()
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+def format_currency(value):
+    """Format a number as currency."""
+    try:
+        return f"${value:,.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
+
+def deduct_ficore_credits(db, user_id, amount, action, budget_id=None):
+    """Deduct Ficore Credits from user balance and log the transaction."""
+    try:
+        user = db.users.find_one({'_id': user_id})
+        if not user:
+            return False
+        current_balance = user.get('ficore_credit_balance', 0)
+        if current_balance < amount:
+            return False
+        result = db.users.update_one(
+            {'_id': user_id},
+            {'$inc': {'ficore_credit_balance': -amount}}
+        )
+        if result.modified_count == 0:
+            return False
+        transaction = {
+            '_id': ObjectId(),
+            'user_id': user_id,
+            'action': action,
+            'amount': -amount,
+            'budget_id': str(budget_id) if budget_id else None,
+            'timestamp': datetime.utcnow(),
+            'session_id': session.get('sid', 'unknown'),
+            'status': 'completed'
+        }
+        db.credit_transactions.insert_one(transaction)
+        return True
+    except Exception:
+        return False
 
 class FinancialHealthForm(FlaskForm):
     send_email = BooleanField(
@@ -252,6 +300,176 @@ def main():
                     badges.append(trans("financial_health_badge_financial_star", default='Financial Star'))
                 if debt_to_income <= 20:
                     badges.append(trans("financial_health_badge_debt_manager", default='Debt Manager'))
+                if savings_rate >= 20:
+                    badges.append(trans("financial_health_badge_savings_pro", default='Savings Pro'))
+                if expense_ratio <= 50:
+                    badges.append(trans("financial_health_badge_expense_master", default='Expense Master'))
+
+                record_data = {
+                    '_id': ObjectId(),
+                    'user_id': current_user.id if current_user.is_authenticated else None,
+                    'session_id': session['sid'],
+                    'user_email': current_user.email if current_user.is_authenticated else None,
+                    'income': income,
+                    'expenses': expenses,
+                    'debt': debt,
+                    'debt_to_income': debt_to_income,
+                    'savings_rate': savings_rate,
+                    'expense_ratio': expense_ratio,
+                    'dti_score': dti_score,
+                    'savings_score': savings_score,
+                    'expense_score': expense_score,
+                    'score': score,
+                    'status': status,
+                    'status_key': status_key,
+                    'badges': badges,
+                    'send_email': form.send_email.data,
+                    'created_at': datetime.utcnow()
+                }
+
+                try:
+                    db.financial_health.insert_one(record_data)
+                    if current_user.is_authenticated and not is_admin():
+                        if not deduct_ficore_credits(db, current_user.id, 1, 'calculate_score', record_data['_id']):
+                            db.financial_health.delete_one({'_id': record_data['_id']})  # Rollback on failure
+                            current_app.logger.error(f"Failed to deduct Ficore Credit for calculating score {record_data['_id']} by user {current_user.id}", extra={'session_id': session.get('sid', 'unknown')})
+                            flash(trans('financial_health_credit_deduction_failed', default='Failed to deduct Ficore Credit for calculating score.'), 'danger')
+                            return redirect(url_for('personal.financial_health.main', tab='assessment'))
+                    current_app.logger.info(f"Financial health data saved to MongoDB with ID {record_data['_id']} for session {session['sid']}", extra={'session_id': session['sid']})
+                    flash(trans("financial_health_completed_success", default='Financial health score calculated successfully!'), "success")
+                except Exception as e:
+                    current_app.logger.error(f"Failed to save financial health data to MongoDB: {str(e)}", extra={'session_id': session.get('sid', 'unknown')})
+                    flash(trans("financial_health_storage_error", default='Error saving financial health score.'), "danger")
+                    return redirect(url_for('personal.financial_health.main', tab='assessment'))
+
+                if form.send_email.data and current_user.is_authenticated:
+                    try:
+                        config = EMAIL_CONFIG["financial_health"]
+                        subject = trans(config["subject_key"], default='Your Financial Health Score')
+                        template = config["template"]
+                        send_email(
+                            app=current_app,
+                            logger=current_app.logger,
+                            to_email=current_user.email,
+                            subject=subject,
+                            template_name=template,
+                            data={
+                                "first_name": current_user.get_first_name(),
+                                "score": score,
+                                "status": status,
+                                "income": format_currency(income),
+                                "expenses": format_currency(expenses),
+                                "debt": format_currency(debt),
+                                "debt_to_income": f"{debt_to_income:.2f}%",
+                                "savings_rate": f"{savings_rate:.2f}%",
+                                "expense_ratio": f"{expense_ratio:.2f}%",
+                                "dti_score": dti_score,
+                                "savings_score": savings_score,
+                                "expense_score": expense_score,
+                                "badges": badges,
+                                "created_at": record_data['created_at'].strftime('%Y-%m-%d'),
+                                "cta_url": url_for('personal.financial_health.main', _external=True),
+                                "unsubscribe_url": url_for('personal.financial_health.unsubscribe', _external=True)
+                            },
+                            lang=session.get('lang', 'en')
+                        )
+                        current_app.logger.info(f"Email sent to {current_user.email} for session {session['sid']}", extra={'session_id': session['sid']})
+                    except Exception as e:
+                        current_app.logger.error(f"Failed to send email: {str(e)}", extra={'session_id': session['sid']})
+                        flash(trans("general_email_send_failed", default='Failed to send email.'), "warning")
+
+                return redirect(url_for('personal.financial_health.main', tab='dashboard'))
+
+        stored_records = list(db.financial_health.find(filter_criteria).sort('created_at', -1))
+        current_app.logger.info(f"Read {len(stored_records)} records from MongoDB financial_health collection [session: {session['sid']}]", extra={'session_id': session['sid']})
+
+        records = []
+        for record in stored_records:
+            record_data = {
+                'id': str(record['_id']),
+                'user_id': record.get('user_id'),
+                'session_id': record.get('session_id'),
+                'user_email': record.get('user_email'),
+                'income': float(record.get('income', 0)),
+                'income_formatted': format_currency(record.get('income', 0)),
+                'income_raw': float(record.get('income', 0)),
+                'expenses': float(record.get('expenses', 0)),
+                'expenses_formatted': format_currency(record.get('expenses', 0)),
+                'expenses_raw': float(record.get('expenses', 0)),
+                'debt': float(record.get('debt', 0)),
+                'debt_formatted': format_currency(record.get('debt', 0)),
+                'debt_raw': float(record.get('debt', 0)),
+                'debt_to_income': float(record.get('debt_to_income', 0)),
+                'debt_to_income_formatted': f"{float(record.get('debt_to_income', 0)):.2f}%",
+                'savings_rate': float(record.get('savings_rate', 0)),
+                'savings_rate_formatted': f"{float(record.get('savings_rate', 0)):.2f}%",
+                'expense_ratio': float(record.get('expense_ratio', 0)),
+                'expense_ratio_formatted': f"{float(record.get('expense_ratio', 0)):.2f}%",
+                'dti_score': record.get('dti_score', 0),
+                'savings_score': record.get('savings_score', 0),
+                'expense_score': record.get('expense_score', 0),
+                'score': record.get('score', 0),
+                'status': record.get('status', 'Unknown'),
+                'status_key': record.get('status_key', 'unknown'),
+                'badges': record.get('badges', []),
+                'send_email': record.get('send_email', False),
+                'created_at': record.get('created_at').strftime('%Y-%m-%d') if record.get('created_at') else 'N/A'
+            }
+            records.append((record_data['id'], record_data))
+
+        latest_record = records[0][1] if records else {
+            'id': None,
+            'user_id': None,
+            'session_id': session.get('sid', 'unknown'),
+            'user_email': current_user.email if current_user.is_authenticated else '',
+            'score': 0,
+            'status': 'Unknown',
+            'status_key': 'unknown',
+            'income': 0.0,
+            'income_formatted': format_currency(0.0),
+            'income_raw': 0.0,
+            'expenses': 0.0,
+            'expenses_formatted': format_currency(0.0),
+            'expenses_raw': 0.0,
+            'debt': 0.0,
+            'debt_formatted': format_currency(0.0),
+            'debt_raw': 0.0,
+            'debt_to_income': 0.0,
+            'debt_to_income_formatted': '0.00%',
+            'savings_rate': 0.0,
+            'savings_rate_formatted': '0.00%',
+            'expense_ratio': 0.0,
+            'expense_ratio_formatted': '0.00%',
+            'dti_score': 0,
+            'savings_score': 0,
+            'expense_score': 0,
+            'badges': [],
+            'created_at': 'N/A'
+        }
+
+        all_records = list(db.financial_health.find())
+        all_scores_for_comparison = [record['score'] for record in all_records if record.get('score') is not None]
+
+        total_users = len(all_scores_for_comparison)
+        rank = 0
+        average_score = 0
+        if all_scores_for_comparison:
+            all_scores_for_comparison.sort(reverse=True)
+            user_score = latest_record.get("score", 0)
+            rank = sum(1 for s in all_scores_for_comparison if s > user_score) + 1
+            average_score = sum(all_scores_for_comparison) / total_users if total_users else 0
+
+        insights = []
+        cross_tool_insights = []
+        try:
+            debt_to_income_float = float(latest_record['debt_to_income'])
+            savings_rate_float = float(latest_record['savings_rate'])
+            expense_ratio_float = float(latest_record['expense_ratio'])
+
+            if debt_to_income_float > 35:
+                insights.append(trans("financial_health_insight_high_debt", default='Your debt-to-income ratio is high. Consider reducing debt.'))
+            elif debt_to_income_float <= 20:
+                insights.append(trans("financial_health_insight_low_debt", defaultentials.append(trans("financial_health_badge_savings_pro", default='Savings Pro'))
                 if savings_rate >= 20:
                     badges.append(trans("financial_health_badge_savings_pro", default='Savings Pro'))
                 if expense_ratio <= 50:
