@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, NumberRange, Optional, ValidationEr
 from flask_login import current_user, login_required
 from datetime import datetime
 from bson import ObjectId
-from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage, check_ficore_credit_balance, format_currency, clean_currency
+from utils import get_all_recent_activities, requires_role, is_admin, get_mongo_db, limiter, log_tool_usage, check_ficore_credit_balance 
 from mailersend_email import send_email, EMAIL_CONFIG
 from translations import trans
 from session_utils import create_anonymous_session
