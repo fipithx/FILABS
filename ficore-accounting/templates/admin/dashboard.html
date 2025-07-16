@@ -135,7 +135,7 @@
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <a href="{{ url_for('agents_bp.created_traders') }}" class="btn btn-primary">{{ t('admin_view_created_traders', default='View Created Traders') | escape }}</a>
         <a href="{{ url_for('admin.manage_users') }}" class="btn btn-primary">{{ t('admin_manage_users', default='Manage Users') | escape }}</a>
-        <a href="{{ url_for('admin.credit_coins') }}" class="btn btn-primary">{{ t('admin_credit_coins', default='Credit Coins') | escape }}</a>
+        <a href="{{ url_for('credits.manage_credit_request') }}" class="btn btn-primary">{{ t('admin_credit_coins', default='Credit Coins') | escape }}</a>
         <a href="{{ url_for('admin.audit') }}" class="btn btn-primary">{{ t('admin_view_audit_logs', default='View Audit Logs') | escape }}</a>
         <a href="{{ url_for('admin.manage_agents') }}" class="btn btn-primary">{{ t('admin_manage_agents', default='Manage Agents') | escape }}</a>
         <a href="{{ url_for('admin.news_management') }}" class="btn btn-primary">{{ t('admin_manage_news', default='Manage News') | escape }}</a>
