@@ -670,7 +670,7 @@ _ADMIN_EXPLORE_FEATURES = [
 ]
 
 def get_explore_features():
-    """Return explore features for unauthenticated users on the landing page with resolved URLs and ensured title_key."""
+    """Return explore features for unauthenticated users on the landing page with resolved URLs and ensured label_key."""
     try:
         with current_app.app_context():
             features = [
@@ -801,13 +801,16 @@ def get_explore_features():
                     "category": "Learning"
                 },
             ]
+            required_keys = ['endpoint', 'label', 'label_key', 'description_key', 'tooltip_key', 'icon']
             for feature in features:
-                if 'title_key' not in feature:
-                    feature['title_key'] = feature.get('label', 'default_feature').lower().replace(' ', '_') + '_title'
-                    logger.warning(
-                        f"Missing title_key for feature {feature.get('label', 'unknown')}, assigned default: {feature['title_key']}",
-                        extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
-                    )
+                for key in required_keys:
+                    if key not in feature:
+                        default_value = feature.get('label', 'default_feature').lower().replace(' ', '_') + f'_{key}' if key == 'label_key' else 'default_' + key
+                        feature[key] = default_value
+                        logger.warning(
+                            f"Missing {key} for feature {feature.get('label', 'unknown')}, assigned default: {feature[key]}",
+                            extra={'session_id': session.get('sid', 'no-session-id'), 'ip_address': request.remote_addr if has_request_context() else 'unknown'}
+                        )
             return generate_tools_with_urls(features)
     except Exception as e:
         logger.error(f"Error generating explore features: {str(e)}", exc_info=True)
